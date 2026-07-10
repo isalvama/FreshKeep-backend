@@ -1,0 +1,43 @@
+services:
+  postgresql-dev:
+    image: postgres:16-alpine
+    container_name: fresh-keep-db-dev
+    ports:
+      - "${DEV_POSTGRES_PORT}:5432"
+    volumes:
+      - dev-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${DEV_POSTGRES_DATABASE}
+      - POSTGRES_USER=${DEV_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${DEV_POSTGRES_PASSWORD}
+    networks:
+      - fresh-keep-network-dev
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DEV_POSTGRES_USER} -d ${DEV_POSTGRES_DATABASE}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  fresh-keep-app-dev:
+    build: .
+    container_name: fresh-keep-app-dev
+    ports:
+      - "${DEV_APP_PORT}:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql-dev:5432/${DEV_POSTGRES_DATABASE}
+      - SPRING_DATASOURCE_USERNAME=${DEV_POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DEV_POSTGRES_PASSWORD}
+      - SPRING_AI_GOOGLE_GENAI_API_KEY=${GOOGLE_GENAI_API_KEY}
+    networks:
+      - fresh-keep-network-dev
+    depends_on:
+      postgresql-dev:
+        condition: service_healthy
+
+volumes:
+  dev-data:
+
+networks:
+  fresh-keep-network-dev:
+    driver: bridge
