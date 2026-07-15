@@ -6,7 +6,7 @@ import lombok.Builder;
 import java.util.Set;
 
 @Builder
-public record RegisterAccountCommand(
+public record RegisterAdminAccountCommand(
         String email,
         String rawPassword
 ) {
