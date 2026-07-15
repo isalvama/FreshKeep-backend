@@ -8,7 +8,6 @@ import lombok.Getter;
 
 @Getter
 public class Token {
-    private Long id;
     private final AuthToken authToken;
     private boolean revoked;
     private boolean expired;
@@ -24,21 +23,9 @@ public class Token {
                 authToken,
                 userId
         );
-       token.id = null;
        token.revoked = false;
        token.expired = false;
        return token;
-    }
-
-    public static Token reconstitute(Long id, AuthToken authToken, AccountId userId, Boolean revoked, Boolean expired){
-        Token token = new Token(
-                authToken,
-                userId
-        );
-        token.id = validateNotNull(id, "id");
-        token.revoked = validateNotNull(revoked, "revoked");
-        token.expired = validateNotNull(expired, "expired");
-        return token;
     }
 
 
