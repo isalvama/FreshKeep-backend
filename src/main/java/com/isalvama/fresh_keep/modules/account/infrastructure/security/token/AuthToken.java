@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.account.infrastructure.security;
+package com.isalvama.fresh_keep.modules.account.infrastructure.security.token;
 
 import com.isalvama.fresh_keep.modules.account.domain.exception.InvalidTokenException;
 
