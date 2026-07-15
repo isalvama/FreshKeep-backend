@@ -12,17 +12,25 @@ public record Email(String value) {
 
     public Email {
         if (value == null) {
-            throw new InvalidEmailException("Email can't be null");
+            throw new InvalidEmailException("Email cannot be null");
         }
 
         if (value.isBlank()) {
-            throw new InvalidEmailException("Email can't be empty");
+            throw new InvalidEmailException("Email cannot be empty");
         }
 
         value = value.trim().toLowerCase();
 
+        if (value.length() < 8) {
+            throw new InvalidEmailException("Email must be at least 8 characters long.");
+        }
+
+        if (value.length() > 20) {
+            throw new InvalidEmailException("Email must be at least 8 characters long.");
+        }
+
         if (!EMAIL_PATTERN.matcher(value).matches()) {
-            throw new InvalidEmailException("the email's format is invalid");
+            throw new InvalidEmailException("Email must not exceed 20 characters.");
         }
     }
 
