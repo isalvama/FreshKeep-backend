@@ -6,7 +6,6 @@ import com.isalvama.fresh_keep.modules.account.application.port.in.dto.response.
 import com.isalvama.fresh_keep.modules.account.application.port.out.AccountRepositoryPort;
 import com.isalvama.fresh_keep.modules.account.application.port.out.JwtTokenGeneratorPort;
 import com.isalvama.fresh_keep.modules.account.application.port.out.PasswordHasherPort;
-import com.isalvama.fresh_keep.modules.account.application.port.out.TokenRepositoryPort;
 import com.isalvama.fresh_keep.modules.account.domain.exception.AccountAlreadyExistsException;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.account.domain.model.Token;
@@ -23,13 +22,12 @@ public class AuthenticationService implements AuthenticationUseCase {
     private final AccountRepositoryPort accountRepositoryPort;
     private final PasswordHasherPort passwordHasherPort;
     private final JwtTokenGeneratorPort jwtTokenGeneratorPort;
-    private final TokenRepositoryPort tokenRepositoryPort;
 
     @Override
     public AuthResponseDto register(RegisterAccountCommand command) {
 
         if (accountRepositoryPort.findByEmail(command.email()).isPresent()){
-            throw new AccountAlreadyExistsException("an account with the email " + command.email() + " already exists.");
+            throw new AccountAlreadyExistsException("An account with the email address " + command.email() + " already exists.");
         }
 
         String passwordHash = passwordHasherPort.hash(command.rawPassword());
@@ -42,9 +40,6 @@ public class AuthenticationService implements AuthenticationUseCase {
         Account savedAccount = accountRepositoryPort.save(account);
 
         AuthToken jwtToken = jwtTokenGeneratorPort.generateToken(savedAccount);
-
-
-        tokenRepositoryPort.save(Token.create(jwtToken, savedAccount.getId()));
 
         return new AuthResponseDto(savedAccount.getId().toString(), savedAccount.getEmail().toString(), jwtToken.token());
     }
