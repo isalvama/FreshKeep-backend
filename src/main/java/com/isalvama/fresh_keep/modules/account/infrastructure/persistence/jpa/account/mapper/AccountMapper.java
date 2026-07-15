@@ -27,7 +27,6 @@ public class AccountMapper {
                 .email(account.getEmail().toString())
                 .passwordHash(account.getPasswordHash())
                 .role(account.getRole())
-                .tokens(Collections.emptyList())
                 .build();
     }
 }
