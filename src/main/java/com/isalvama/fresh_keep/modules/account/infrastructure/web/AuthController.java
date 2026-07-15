@@ -1,7 +1,9 @@
 package com.isalvama.fresh_keep.modules.account.infrastructure.web;
 
-import com.isalvama.fresh_keep.modules.account.application.command.RegisterAccountCommand;
-import com.isalvama.fresh_keep.modules.account.application.port.in.AuthenticationUseCase;
+import com.isalvama.fresh_keep.modules.account.application.command.RegisterAdminAccountCommand;
+import com.isalvama.fresh_keep.modules.account.application.command.RegisterUserAccountCommand;
+import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterAdminAccountUseCase;
+import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterUserAccountUseCase;
 import com.isalvama.fresh_keep.modules.account.application.port.in.dto.request.RegisterUserAuthRequest;
 import com.isalvama.fresh_keep.modules.account.application.port.in.dto.response.AuthResponseDto;
 import jakarta.validation.Valid;
@@ -20,12 +22,34 @@ import java.net.URI;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthenticationUseCase authenticationUseCase;
+    private final RegisterUserAccountUseCase registerUserAccountUseCase;
+    private final RegisterAdminAccountUseCase registerAdminAccountUseCase;
 
-    @PostMapping("/user/register")
+
+    @PostMapping("/register/user")
     public ResponseEntity<AuthResponseDto> registerUser(@Valid @RequestBody RegisterUserAuthRequest request) {
-        AuthResponseDto response = authenticationUseCase.register(
-                RegisterAccountCommand.builder()
+        AuthResponseDto response = registerUserAccountUseCase.execute(
+                RegisterUserAccountCommand.builder()
+                        .email(request.email())
+                        .rawPassword(request.password())
+                        .build()
+        );
+
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(response.accountId())
+                .toUri();
+
+        return ResponseEntity.created(location).body(response);
+    }
+
+    @PostMapping("/register/user")
+
+    // TODO *Gestión:* Este endpoint no debería ser public, debería estar protegido en tu capa de infraestructura (Security Config) con algo como `.hasRole('ADMIN')`.
+    public ResponseEntity<AuthResponseDto> registerAdmin(@Valid @RequestBody RegisterUserAuthRequest request) {
+        AuthResponseDto response = registerAdminAccountUseCase.execute(
+                RegisterAdminAccountCommand.builder()
                         .email(request.email())
                         .rawPassword(request.password())
                         .build()
