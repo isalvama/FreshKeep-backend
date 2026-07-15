@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.account.infrastructure.security;
+package com.isalvama.fresh_keep.modules.account.infrastructure.security.password;
 
 import com.isalvama.fresh_keep.modules.account.application.port.out.PasswordHasherPort;
 import lombok.RequiredArgsConstructor;
