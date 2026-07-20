@@ -6,18 +6,23 @@ import com.isalvama.fresh_keep.modules.account.domain.value_object.Email;
 import com.isalvama.fresh_keep.shared.domain.Role;
 import lombok.Getter;
 
+import java.util.Set;
+
 @Getter
 public class Account {
     private final AccountId id;
     private final Email email;
     private final String passwordHash;
-    private final Role role;
+    private final Set<Role> roles;
 
-    private Account(AccountId id, Email email, String passwordHash, Role role){
+    private Account(AccountId id, Email email, String passwordHash, Set<Role> roles){
+        if (roles.isEmpty()){
+            throw new InvalidAccountException("the set of roles cannot be empty");
+        }
         this.id = validateNotNull(id, "id");
         this.email = validateNotNull(email, "email");
         this.passwordHash = validateNotNull(passwordHash, "passwordHash");
-        this.role = validateNotNull(role, "role");
+        this.roles = validateNotNull(roles, "roles");
     }
 
     public static Account createUser(Email email, String passwordHash){
@@ -25,7 +30,7 @@ public class Account {
                 AccountId.generate(),
                 email,
                 passwordHash,
-                Role.USER
+                Set.of(Role.USER)
         );
     }
 
@@ -34,16 +39,16 @@ public class Account {
                 id,
                 email,
                 passwordHash,
-                Role.ADMIN
+                Set.of(Role.ADMIN)
         );
     }
 
-    public static Account reconstitute (AccountId id, Email email, String passwordHash, Role role){
+    public static Account reconstitute (AccountId id, Email email, String passwordHash, Set<Role> roles){
         return new Account(
                 id,
                 email,
                 passwordHash,
-                role
+                roles
         );
     }
 
