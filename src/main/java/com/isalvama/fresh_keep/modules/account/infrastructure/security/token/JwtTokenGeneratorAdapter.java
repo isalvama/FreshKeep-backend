@@ -6,7 +6,6 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -16,15 +15,21 @@ import java.util.function.Function;
 
 
 @Service
-@RequiredArgsConstructor
 public class JwtTokenGeneratorAdapter implements JwtTokenGeneratorPort {
     private final CustomUserPrincipalMapper customUserPrincipalMapper;
+    private final String secretKey;
+    private final long jwtExpiration;
 
-    @Value("${jwt.secret}")
-    private String secretKey;
 
-    @Value("${jwt.expiration}")
-    private long jwtExpiration;
+    public JwtTokenGeneratorAdapter (
+            CustomUserPrincipalMapper customUserPrincipalMapper,
+            @Value("${jwt.secret}") String secretKey,
+            @Value("${jwt.expiration}") long jwtExpiration
+    ){
+      this.customUserPrincipalMapper = customUserPrincipalMapper;
+      this.secretKey = secretKey;
+      this.jwtExpiration = jwtExpiration;
+    }
 
     @Override
     public AuthToken generateToken(Account account){
@@ -35,12 +40,12 @@ public class JwtTokenGeneratorAdapter implements JwtTokenGeneratorPort {
     public AuthToken generateToken(Account account, Map<String, Object> extraClaims){
         return buildToken(customUserPrincipalMapper.fromDomain(account), extraClaims);
     }
-    public AuthToken buildToken(
+    private AuthToken buildToken(
             CustomUserPrincipal customUserPrincipal,
             Map<String, Object> extraClaims
             ) {
-        Date currentDate = new Date(System.currentTimeMillis());
-        Date expirationDate = new Date(System.currentTimeMillis() + jwtExpiration);
+
+        long now = System.currentTimeMillis();
 
         List<String> roleNames = customUserPrincipal.roles().stream()
                 .map(r -> "ROLE_" + r)
@@ -51,13 +56,14 @@ public class JwtTokenGeneratorAdapter implements JwtTokenGeneratorPort {
                 .claim("roles", roleNames)
                 .claim("userId", customUserPrincipal.id())
                 .subject(customUserPrincipal.getUsername())
-                .issuedAt(currentDate)
-                .expiration(expirationDate)
+                .issuedAt(new Date(now))
+                .expiration(new Date(now + jwtExpiration))
                 .signWith(getSignInKey())
                 .compact();
         return new AuthToken(token);
     }
 
+    @Override
     public CustomUserPrincipal extractCustomUserPrincipal(String token){
         Claims claims = extractAllClaims(token);
         return new CustomUserPrincipal(
@@ -69,34 +75,28 @@ public class JwtTokenGeneratorAdapter implements JwtTokenGeneratorPort {
     }
 
     private List<String> extractRoles (List<String> roles){
-        if (roles == null || roles.isEmpty()) {
+        if (roles == null) {
             return List.of();
         }
         return roles.stream().map(Objects::toString).map(r ->
             r.startsWith("ROLE_") ? r.substring(5) : r).toList();
     }
 
-    public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
+    @Override
+    public long getExpirationTime() {
+        return jwtExpiration;
     }
 
-
+    @Override
     public boolean isTokenValid (String token){
             try {
-                extractAllClaims(token);
-                return true;
+                Claims claims = extractAllClaims(token);
+                String email = claims.getSubject();
+                return !(email == null) && !(email.isBlank());
             } catch (Exception e) {
                 return false;
             }
         }
-
-    private boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
-    }
-
-    private Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
-    }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
@@ -104,16 +104,11 @@ public class JwtTokenGeneratorAdapter implements JwtTokenGeneratorPort {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts
-                .parser()
+        return Jwts.parser()
                 .verifyWith(getSignInKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-    }
-
-    public long getExpirationTime() {
-        return jwtExpiration;
     }
 
     private SecretKey getSignInKey() {

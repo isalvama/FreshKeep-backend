@@ -6,7 +6,7 @@ import com.isalvama.fresh_keep.modules.account.domain.value_object.Email;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.account.JpaAccountEntity;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
+import java.time.Instant;
 
 @Component
 public class AccountMapper {
@@ -15,7 +15,7 @@ public class AccountMapper {
                 AccountId.of(account.getId()),
                 Email.of(account.getEmail()),
                 account.getPasswordHash(),
-                account.getRole()
+                account.getRoles()
         );
     }
 
@@ -26,7 +26,8 @@ public class AccountMapper {
                 .id(account.getId().value())
                 .email(account.getEmail().toString())
                 .passwordHash(account.getPasswordHash())
-                .role(account.getRole())
+                .roles(account.getRoles())
+                .lastLogIn(Instant.now())
                 .build();
     }
 }

@@ -16,13 +16,13 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class RegisterUserAccountService implements RegisterUserAccountUseCase {
     private final AccountRepositoryPort accountRepositoryPort;
     private final PasswordHasherPort passwordHasherPort;
     private final JwtTokenGeneratorPort jwtTokenGeneratorPort;
 
     @Override
+    @Transactional
     public AuthResponseDto execute(RegisterUserAccountCommand command) {
 
         if (accountRepositoryPort.findByEmail(command.email()).isPresent()){

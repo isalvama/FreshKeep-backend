@@ -34,9 +34,9 @@ public class Account {
         );
     }
 
-    public static Account createAdmin (AccountId id, Email email, String passwordHash){
+    public static Account createAdmin (Email email, String passwordHash){
         return new Account(
-                id,
+                AccountId.generate(),
                 email,
                 passwordHash,
                 Set.of(Role.ADMIN)

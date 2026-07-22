@@ -7,9 +7,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 
 @Data
@@ -32,13 +32,16 @@ public class JpaAccountEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
-    private Role role;
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "role",
+            joinColumns = @JoinColumn(name = "account_id"))
+    private Set<Role> roles;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
-    @UpdateTimestamp
     @Column(name = "last_log_in", nullable = false)
     private Instant lastLogIn;
 }
