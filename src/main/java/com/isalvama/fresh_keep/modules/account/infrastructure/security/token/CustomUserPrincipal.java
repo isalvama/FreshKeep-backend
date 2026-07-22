@@ -19,7 +19,7 @@ public record CustomUserPrincipal(
         if (roles == null){
             return List.of();
         }
-        return roles.stream().map(SimpleGrantedAuthority::new).toList();
+        return roles.stream().map(r -> new SimpleGrantedAuthority("ROLE_" + r)).toList();
     }
 
     @Override

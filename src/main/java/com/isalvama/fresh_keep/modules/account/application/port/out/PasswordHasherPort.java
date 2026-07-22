@@ -1,5 +1,6 @@
 package com.isalvama.fresh_keep.modules.account.application.port.out;
 
 public interface PasswordHasherPort {
-    public String hash(String rawPassword);
+    String hash(String rawPassword);
+    boolean matches(String rawPassword, String hashedPassword);
 }
