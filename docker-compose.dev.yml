@@ -29,6 +29,8 @@ services:
       - SPRING_DATASOURCE_USERNAME=${DEV_POSTGRES_USER}
       - SPRING_DATASOURCE_PASSWORD=${DEV_POSTGRES_PASSWORD}
       - SPRING_AI_GOOGLE_GENAI_API_KEY=${GOOGLE_GENAI_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
     networks:
       - fresh-keep-network-dev
     depends_on:
