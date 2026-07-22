@@ -1,6 +1,6 @@
 package com.isalvama.fresh_keep;
 
-import com.isalvama.fresh_keep.modules.account.application.port.in.dto.request.RegisterUserAuthRequest;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.RegisterAccountAuthRequest;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.account.domain.value_object.Email;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.account.JpaAccountRepositoryAdapter;
@@ -80,7 +80,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 201 with information about the new account generated authenticated login token")
                 @Test
                 void shouldReturn201AndRegisterUserSuccessfully() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(EMAIL, PASSWORD);
+                    RegisterAccountAuthRequest registerRequest = new RegisterAccountAuthRequest(EMAIL, PASSWORD);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -116,7 +116,7 @@ public class FreshKeepIntegrationTests {
                     Account user = Account.createUser(Email.of(EMAIL), PASSWORD);
                     jpaAccountRepositoryAdapter.save(user);
 
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(EMAIL, PASSWORD);
+                    RegisterAccountAuthRequest registerRequest = new RegisterAccountAuthRequest(EMAIL, PASSWORD);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -132,7 +132,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 400 Bad Request with information about the error (size of password)")
                 @Test
                 void shouldReturnBadRequestPasswordTooSmall() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(EMAIL, "ps");
+                    RegisterAccountAuthRequest registerRequest = new RegisterAccountAuthRequest(EMAIL, "ps");
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -146,7 +146,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 400 Bad Request with information about the error (size of password)")
                 @Test
                 void shouldReturnBadRequestPasswordTooLong() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(EMAIL, "passwordIsTooLongToValid");
+                    RegisterAccountAuthRequest registerRequest = new RegisterAccountAuthRequest(EMAIL, "passwordIsTooLongToValid");
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -160,7 +160,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 400 Bad Request with information about the error (invalid email)")
                 @Test
                 void shouldReturnBadRequestInvalidEmail() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest("email.com", PASSWORD);
+                    RegisterAccountAuthRequest registerRequest = new RegisterAccountAuthRequest("email.com", PASSWORD);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -190,7 +190,7 @@ public class FreshKeepIntegrationTests {
                 @Test
                 void shouldRegisterNewAdminSuccessfully() throws Exception {
                     String email = "admin@admin.com";
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(email, PASSWORD);
+                    RegisterAccountAuthRequest registerRequest = new RegisterAccountAuthRequest(email, PASSWORD);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/admin")
                             .header("Authorization", "Bearer " + adminToken)
@@ -223,7 +223,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 409 Conflict when an account with a matching email already exists")
                 @Test
                 void shouldReturnBadRequestWhenRequestHasNullParams() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(EMAIL, PASSWORD);
+                    RegisterAccountAuthRequest registerRequest = new RegisterAccountAuthRequest(EMAIL, PASSWORD);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/admin")
                             .header("Authorization", "Bearer " + adminToken)
@@ -242,7 +242,7 @@ public class FreshKeepIntegrationTests {
                 @Test
                 void shouldReturnEuthErrorDoesNotHaveAdminRole() throws Exception {
                     String email = "admin@admin.com";
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(email, PASSWORD);
+                    RegisterAccountAuthRequest registerRequest = new RegisterAccountAuthRequest(email, PASSWORD);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/admin")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -257,7 +257,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 400 Bad Request with information about the error (size of password)")
                 @Test
                 void shouldReturnBadRequestPasswordTooSmall() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(EMAIL, "ps");
+                    RegisterAccountAuthRequest registerRequest = new RegisterAccountAuthRequest(EMAIL, "ps");
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/admin")
                             .header("Authorization", "Bearer " + adminToken)
@@ -272,7 +272,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 400 Bad Request with information about the error (size of password)")
                 @Test
                 void shouldReturnBadRequestPasswordTooLong() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(EMAIL, "passwordIsTooLongToValid");
+                    RegisterAccountAuthRequest registerRequest = new RegisterAccountAuthRequest(EMAIL, "passwordIsTooLongToValid");
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/admin")
                             .header("Authorization", "Bearer " + adminToken)
@@ -287,7 +287,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 400 Bad Request with information about the error (invalid email)")
                 @Test
                 void shouldReturnBadRequestInvalidEmail() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest("email.com", PASSWORD);
+                    RegisterAccountAuthRequest registerRequest = new RegisterAccountAuthRequest("email.com", PASSWORD);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/admin")
                             .header("Authorization", "Bearer " + adminToken)
@@ -316,7 +316,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 400 Bad Request with information about the error (request with null parameters)")
                 @Test
                 void shouldReturnBadRequestRequestWithNullParams() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(null, null);
+                    RegisterAccountAuthRequest registerRequest = new RegisterAccountAuthRequest(null, null);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/admin")
                             .header("Authorization", "Bearer " + adminToken)

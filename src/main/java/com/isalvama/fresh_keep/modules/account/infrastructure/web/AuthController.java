@@ -4,8 +4,8 @@ import com.isalvama.fresh_keep.modules.account.application.command.RegisterAdmin
 import com.isalvama.fresh_keep.modules.account.application.command.RegisterUserAccountCommand;
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterAdminAccountUseCase;
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterUserAccountUseCase;
-import com.isalvama.fresh_keep.modules.account.application.port.in.dto.request.RegisterUserAuthRequest;
-import com.isalvama.fresh_keep.modules.account.application.port.in.dto.response.AuthResponseDto;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.RegisterAccountAuthRequest;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,8 +28,8 @@ public class AuthController {
 
 
     @PostMapping("/register/user")
-    public ResponseEntity<AuthResponseDto> registerUser(@Valid @RequestBody RegisterUserAuthRequest request) {
-        AuthResponseDto response = registerUserAccountUseCase.execute(
+    public ResponseEntity<AuthResponse> registerUser(@Valid @RequestBody RegisterAccountAuthRequest request) {
+        AuthResponse response = registerUserAccountUseCase.execute(
                 RegisterUserAccountCommand.builder()
                         .email(request.email())
                         .rawPassword(request.password())
@@ -47,8 +47,26 @@ public class AuthController {
 
     @PostMapping("/register/admin")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AuthResponseDto> registerAdmin(@Valid @RequestBody RegisterUserAuthRequest request) {
-        AuthResponseDto response = registerAdminAccountUseCase.execute(
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody RegisterAccountAuthRequest request) {
+        AuthResponse response = registerAdminAccountUseCase.execute(
+                RegisterAdminAccountCommand.builder()
+                        .email(request.email())
+                        .rawPassword(request.password())
+                        .build()
+        );
+
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentContextPath()
+                .path("/api/v1/admins/{id}")
+                .buildAndExpand(response.accountId())
+                .toUri();
+
+        return ResponseEntity.created(location).body(response);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> registerAdmin(@Valid @RequestBody RegisterAccountAuthRequest request) {
+        AuthResponse response = registerAdminAccountUseCase.execute(
                 RegisterAdminAccountCommand.builder()
                         .email(request.email())
                         .rawPassword(request.password())
