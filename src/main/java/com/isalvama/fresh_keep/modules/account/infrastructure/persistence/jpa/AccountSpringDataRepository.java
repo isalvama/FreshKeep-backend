@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.account;
+package com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
