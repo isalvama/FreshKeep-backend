@@ -40,6 +40,11 @@ public class RegisterAdminAccountService implements RegisterAdminAccountUseCase 
 
         AuthToken jwtToken = jwtTokenGeneratorPort.generateToken(savedAccount);
 
-        return new AuthResponse(savedAccount.getId().toString(), savedAccount.getEmail().toString(), jwtToken.token());
+        return AuthResponse.constitute(
+                savedAccount.getId().toString(),
+                savedAccount.getEmail().toString(),
+                jwtToken.token(),
+                jwtToken.expiration()
+        );
     }
 }
