@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.shared.config;
+package com.isalvama.fresh_keep.modules.account.infrastructure.security.config;
 
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.handler.CustomAccessDeniedHandler;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.handler.CustomAuthenticationEntryPoint;
@@ -19,7 +19,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
-public class SecurityConfiguration {
+public class AppSecurityConfiguration {
        private final JwtAuthenticationFilter jwtAuthenticationFilter;
        private final AuthenticationProvider authenticationProvider;
        private final CustomAccessDeniedHandler accessDeniedHandler;
