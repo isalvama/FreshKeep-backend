@@ -1,8 +1,8 @@
-package com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.account;
+package com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa;
 
 import com.isalvama.fresh_keep.modules.account.application.port.out.AccountRepositoryPort;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
-import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.account.mapper.AccountMapper;
+import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.mapper.AccountMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
