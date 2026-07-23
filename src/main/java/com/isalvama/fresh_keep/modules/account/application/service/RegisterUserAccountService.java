@@ -40,6 +40,11 @@ public class RegisterUserAccountService implements RegisterUserAccountUseCase {
 
         AuthToken jwtToken = jwtTokenGeneratorPort.generateToken(savedAccount);
 
-        return new AuthResponse(savedAccount.getId().toString(), savedAccount.getEmail().toString(), jwtToken.token());
+        return AuthResponse.constitute(
+                savedAccount.getId().toString(),
+                savedAccount.getEmail().toString(),
+                jwtToken.token(),
+                jwtToken.expiration()
+        );
     }
 }

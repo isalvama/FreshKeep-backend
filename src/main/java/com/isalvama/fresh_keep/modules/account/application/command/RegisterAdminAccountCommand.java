@@ -11,7 +11,7 @@ public record RegisterAdminAccountCommand(
         String rawPassword
 ) {
     public Set<Role> roles() {
-        return Set.of(Role.USER);
+        return Set.of(Role.ADMIN);
     }
 
 }
