@@ -1,7 +1,9 @@
 package com.isalvama.fresh_keep.modules.account.infrastructure.web;
 
+import com.isalvama.fresh_keep.modules.account.application.command.LoginCommand;
 import com.isalvama.fresh_keep.modules.account.application.command.RegisterAdminAccountCommand;
 import com.isalvama.fresh_keep.modules.account.application.command.RegisterUserAccountCommand;
+import com.isalvama.fresh_keep.modules.account.application.port.in.LoginUseCase;
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterAdminAccountUseCase;
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterUserAccountUseCase;
 import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.RegisterAccountAuthRequest;
@@ -25,7 +27,7 @@ public class AuthController {
 
     private final RegisterUserAccountUseCase registerUserAccountUseCase;
     private final RegisterAdminAccountUseCase registerAdminAccountUseCase;
-
+    private final LoginUseCase loginUseCase;
 
     @PostMapping("/register/user")
     public ResponseEntity<AuthResponse> registerUser(@Valid @RequestBody RegisterAccountAuthRequest request) {
@@ -47,7 +49,7 @@ public class AuthController {
 
     @PostMapping("/register/admin")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody RegisterAccountAuthRequest request) {
+    public ResponseEntity<AuthResponse> registerAdmin(@Valid @RequestBody RegisterAccountAuthRequest request) {
         AuthResponse response = registerAdminAccountUseCase.execute(
                 RegisterAdminAccountCommand.builder()
                         .email(request.email())
@@ -65,21 +67,15 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> registerAdmin(@Valid @RequestBody RegisterAccountAuthRequest request) {
-        AuthResponse response = registerAdminAccountUseCase.execute(
-                RegisterAdminAccountCommand.builder()
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody RegisterAccountAuthRequest request) {
+        AuthResponse response = loginUseCase.execute(
+                LoginCommand.builder()
                         .email(request.email())
                         .rawPassword(request.password())
                         .build()
         );
 
-        URI location = ServletUriComponentsBuilder
-                .fromCurrentContextPath()
-                .path("/api/v1/admins/{id}")
-                .buildAndExpand(response.accountId())
-                .toUri();
-
-        return ResponseEntity.created(location).body(response);
+        return ResponseEntity.ok(response);
     }
 
 }
