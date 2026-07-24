@@ -28,7 +28,7 @@ public class JpaAccountRepositoryAdapter implements AccountRepositoryPort {
     }
 
     @Override
-    public void updateLastLogIn(AccountId id) {
-        accountSpringDataRepository.updateLastLogIn(id.value(), Instant.now());
+    public void updateLastLogIn(AccountId id, Instant now) {
+        accountSpringDataRepository.updateLastLogIn(id.value(), now);
     }
 }
