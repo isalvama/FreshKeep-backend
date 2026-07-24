@@ -2,10 +2,12 @@ package com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa;
 
 import com.isalvama.fresh_keep.modules.account.application.port.out.AccountRepositoryPort;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
+import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.mapper.AccountMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Optional;
 
 @Repository
@@ -23,5 +25,10 @@ public class JpaAccountRepositoryAdapter implements AccountRepositoryPort {
     public Account save(Account account) {
         JpaAccountEntity savedEntity = accountSpringDataRepository.save(accountMapper.toEntity(account));
         return accountMapper.toDomain(savedEntity);
+    }
+
+    @Override
+    public void updateLastLogIn(AccountId id) {
+        accountSpringDataRepository.updateLastLogIn(id.value(), Instant.now());
     }
 }
