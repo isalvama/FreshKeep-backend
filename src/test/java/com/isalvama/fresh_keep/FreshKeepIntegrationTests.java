@@ -329,6 +329,82 @@ public class FreshKeepIntegrationTests {
                             .andExpect(jsonPath("$.errors.email", containsString("must not be blank")));
                 }
             }
+
+            @Nested
+            @DisplayName("POST " + API_AUTH + "/login")
+            class Login {
+
+                private static final RegisterAccountAuthRequest REQUEST = new RegisterAccountAuthRequest(EMAIL, PASSWORD);
+
+
+                @BeforeEach
+                void setUp() throws Exception {
+                    mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(REQUEST)))
+                            .andExpect(status().isCreated());
+                }
+
+                @DisplayName("should return 200 with generated auth session token and information about the logged in account")
+                @Test
+                void shouldReturn200WithAccountInfoAndJwtAuthTokenAndLoginUserSuccessfully() throws Exception {
+                    ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(REQUEST)));
+
+                    result.andExpect(status().isOk())
+                            .andExpect(jsonPath("$.accountId").exists())
+                            .andExpect(jsonPath("$.email").value(EMAIL))
+                            .andExpect(jsonPath("$.jwtString").exists())
+                            .andExpect(jsonPath("$.expiresIn").exists());
+
+                    String resultAsString = result.andReturn().getResponse().getContentAsString();
+                    String resultToken = com.jayway.jsonpath.JsonPath.read(resultAsString, "$.jwtString");
+
+                    CustomUserPrincipal userPrincipal = jwtTokenGeneratorAdapter.extractCustomUserPrincipal(resultToken);
+                    assertNotNull(userPrincipal.id());
+                    assertEquals(EMAIL, userPrincipal.getUsername());
+                    assertNull(userPrincipal.passwordHash());
+
+                    Collection<? extends GrantedAuthority> authorities = userPrincipal.getAuthorities();
+
+                    assertThat(authorities)
+                            .hasSize(1)
+                            .extracting(GrantedAuthority::getAuthority)
+                            .containsExactly("ROLE_USER")
+                            .doesNotContain("ROLE_ADMIN");
+                }
+
+                @DisplayName("should return 401 Unauthorized with Invalid email or password error message when the email does not exist")
+                @Test
+                void shouldReturn401InvalidEmailOrPasswordWhenEmailDoesNotExist() throws Exception {
+                    RegisterAccountAuthRequest request = new RegisterAccountAuthRequest("unregistered@mail.com", "password");
+
+                    ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)));
+
+                    result.andExpect(status().isUnauthorized())
+                            .andExpect(jsonPath("$.title", containsString("Unauthorized Error")))
+                            .andExpect(jsonPath("$.detail", containsString("Invalid Credentials Error")))
+                            .andExpect(jsonPath("$.detail", containsString("Invalid email or password")));
+                }
+
+                @DisplayName("should return 401 Unauthorized with Invalid email or password error message when the password is not correct")
+                @Test
+                void shouldReturn401InvalidEmailOrPasswordWhenPasswordIsIncorrect() throws Exception {
+                    RegisterAccountAuthRequest request = new RegisterAccountAuthRequest(EMAIL, "incorrectPassword");
+
+                    ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)));
+
+                    result.andExpect(status().isUnauthorized())
+                            .andExpect(jsonPath("$.title", containsString("Unauthorized Error")))
+                            .andExpect(jsonPath("$.detail", containsString("Invalid Credentials Error")))
+                            .andExpect(jsonPath("$.detail", containsString("Invalid email or password")));
+                }
+            }
         }
     }
 }
