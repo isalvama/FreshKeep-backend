@@ -44,7 +44,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     public ProblemDetail handleUnauthorizedException(UnauthorizedException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED);
-        problemDetail.setTitle("Conflict Error");
+        problemDetail.setTitle("Unauthorized Error");
         problemDetail.setDetail(ex.getMessage());
         return problemDetail;
     }

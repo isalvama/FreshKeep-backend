@@ -34,7 +34,7 @@ public class AppSecurityConfiguration {
                         .accessDeniedHandler(accessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/register/user").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/auth/register/admin").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
