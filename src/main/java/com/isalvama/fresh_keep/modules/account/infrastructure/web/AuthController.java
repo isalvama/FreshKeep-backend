@@ -6,7 +6,7 @@ import com.isalvama.fresh_keep.modules.account.application.command.RegisterUserA
 import com.isalvama.fresh_keep.modules.account.application.port.in.LoginUseCase;
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterAdminAccountUseCase;
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterUserAccountUseCase;
-import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.RegisterAccountAuthRequest;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.AuthRequest;
 import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +30,7 @@ public class AuthController {
     private final LoginUseCase loginUseCase;
 
     @PostMapping("/register/user")
-    public ResponseEntity<AuthResponse> registerUser(@Valid @RequestBody RegisterAccountAuthRequest request) {
+    public ResponseEntity<AuthResponse> registerUser(@Valid @RequestBody AuthRequest request) {
         AuthResponse response = registerUserAccountUseCase.execute(
                 RegisterUserAccountCommand.builder()
                         .email(request.email())
@@ -49,7 +49,7 @@ public class AuthController {
 
     @PostMapping("/register/admin")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AuthResponse> registerAdmin(@Valid @RequestBody RegisterAccountAuthRequest request) {
+    public ResponseEntity<AuthResponse> registerAdmin(@Valid @RequestBody AuthRequest request) {
         AuthResponse response = registerAdminAccountUseCase.execute(
                 RegisterAdminAccountCommand.builder()
                         .email(request.email())
@@ -67,7 +67,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody RegisterAccountAuthRequest request) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
         AuthResponse response = loginUseCase.execute(
                 LoginCommand.builder()
                         .email(request.email())
