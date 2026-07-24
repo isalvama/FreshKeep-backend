@@ -12,6 +12,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+
 @Service
 @RequiredArgsConstructor
 public class LoginService implements LoginUseCase {
@@ -27,7 +29,7 @@ public class LoginService implements LoginUseCase {
                 loginCommand.email(),
                 loginCommand.rawPassword()
         );
-        accountRepositoryPort.updateLastLogIn(account.getId());
+        accountRepositoryPort.updateLastLogIn(account.getId(), Instant.now());
 
         AuthToken token = jwtTokenGeneratorPort.generateToken(account);
 

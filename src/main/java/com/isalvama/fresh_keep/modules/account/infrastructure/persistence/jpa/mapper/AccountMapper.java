@@ -27,7 +27,6 @@ public class AccountMapper {
                 .email(account.getEmail().toString())
                 .passwordHash(account.getPasswordHash())
                 .roles(account.getRoles())
-                .lastLogIn(Instant.now())
                 .build();
     }
 }

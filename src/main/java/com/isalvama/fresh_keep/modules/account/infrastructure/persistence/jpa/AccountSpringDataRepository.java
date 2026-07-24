@@ -11,7 +11,7 @@ import java.util.UUID;
 
 public interface AccountSpringDataRepository extends JpaRepository<JpaAccountEntity, UUID> {
     Optional<JpaAccountEntity> findByEmail(String email);
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query(value = "UPDATE JpaAccountEntity a SET a.lastLogIn = :now WHERE a.id = :id")
     void updateLastLogIn(@Param("id") UUID id, @Param("now") Instant now);
 }

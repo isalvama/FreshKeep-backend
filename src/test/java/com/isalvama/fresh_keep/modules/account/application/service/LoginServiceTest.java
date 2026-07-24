@@ -19,6 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
 
@@ -64,7 +65,7 @@ class LoginServiceTest {
         assertEquals(EMAIL, response.email());
         assertEquals("jwt-token", response.jwtString());
 
-        verify(accountRepositoryPort).updateLastLogIn(account.getId());
+        verify(accountRepositoryPort).updateLastLogIn(account.getId(), any(Instant.class));
         verify(authenticatorPort).authenticate(EMAIL, PASSWORD);
         verify(jwtTokenGeneratorPort).generateToken(account);
     }
