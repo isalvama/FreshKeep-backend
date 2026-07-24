@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.account;
+package com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa;
 
 import com.isalvama.fresh_keep.shared.domain.Role;
 import jakarta.persistence.*;
@@ -31,7 +31,7 @@ public class JpaAccountEntity {
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20, nullable = false)
+    @Column(name = "role", length = 20, nullable = false)
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
             name = "role",
@@ -42,6 +42,6 @@ public class JpaAccountEntity {
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 
-    @Column(name = "last_log_in", nullable = false)
+    @Column(name = "last_log_in", nullable = true)
     private Instant lastLogIn;
 }

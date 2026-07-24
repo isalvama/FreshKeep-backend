@@ -1,9 +1,10 @@
 package com.isalvama.fresh_keep;
 
-import com.isalvama.fresh_keep.modules.account.application.port.in.dto.request.RegisterUserAuthRequest;
+import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.AccountSpringDataRepository;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.AuthRequest;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.account.domain.value_object.Email;
-import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.account.JpaAccountRepositoryAdapter;
+import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.JpaAccountRepositoryAdapter;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.CustomUserPrincipal;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.JwtTokenGeneratorAdapter;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,6 +68,9 @@ public class FreshKeepIntegrationTests {
         private JpaAccountRepositoryAdapter jpaAccountRepositoryAdapter;
 
         @Autowired
+        private AccountSpringDataRepository accountSpringDataRepository;
+
+        @Autowired
         private JwtTokenGeneratorAdapter jwtTokenGeneratorAdapter;
 
         @Nested
@@ -80,7 +84,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 201 with information about the new account generated authenticated login token")
                 @Test
                 void shouldReturn201AndRegisterUserSuccessfully() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(EMAIL, PASSWORD);
+                    AuthRequest registerRequest = new AuthRequest(EMAIL, PASSWORD);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -116,7 +120,7 @@ public class FreshKeepIntegrationTests {
                     Account user = Account.createUser(Email.of(EMAIL), PASSWORD);
                     jpaAccountRepositoryAdapter.save(user);
 
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(EMAIL, PASSWORD);
+                    AuthRequest registerRequest = new AuthRequest(EMAIL, PASSWORD);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -132,7 +136,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 400 Bad Request with information about the error (size of password)")
                 @Test
                 void shouldReturnBadRequestPasswordTooSmall() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(EMAIL, "ps");
+                    AuthRequest registerRequest = new AuthRequest(EMAIL, "ps");
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -146,7 +150,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 400 Bad Request with information about the error (size of password)")
                 @Test
                 void shouldReturnBadRequestPasswordTooLong() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(EMAIL, "passwordIsTooLongToValid");
+                    AuthRequest registerRequest = new AuthRequest(EMAIL, "passwordIsTooLongToValid");
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -160,7 +164,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 400 Bad Request with information about the error (invalid email)")
                 @Test
                 void shouldReturnBadRequestInvalidEmail() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest("email.com", PASSWORD);
+                    AuthRequest registerRequest = new AuthRequest("email.com", PASSWORD);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -180,17 +184,17 @@ public class FreshKeepIntegrationTests {
 
                 @BeforeEach
                 void setUp() {
+                    accountSpringDataRepository.deleteAll();
                     Account admin = Account.createAdmin(Email.of(EMAIL), PASSWORD);
                     jpaAccountRepositoryAdapter.save(admin);
                     adminToken = jwtTokenGeneratorAdapter.generateToken(admin).token();
-
                 }
 
                 @DisplayName("should return 201 Created with login token and information about the new account")
                 @Test
                 void shouldRegisterNewAdminSuccessfully() throws Exception {
                     String email = "admin@admin.com";
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(email, PASSWORD);
+                    AuthRequest registerRequest = new AuthRequest(email, PASSWORD);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/admin")
                             .header("Authorization", "Bearer " + adminToken)
@@ -223,7 +227,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 409 Conflict when an account with a matching email already exists")
                 @Test
                 void shouldReturnBadRequestWhenRequestHasNullParams() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(EMAIL, PASSWORD);
+                    AuthRequest registerRequest = new AuthRequest(EMAIL, PASSWORD);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/admin")
                             .header("Authorization", "Bearer " + adminToken)
@@ -242,7 +246,7 @@ public class FreshKeepIntegrationTests {
                 @Test
                 void shouldReturnEuthErrorDoesNotHaveAdminRole() throws Exception {
                     String email = "admin@admin.com";
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(email, PASSWORD);
+                    AuthRequest registerRequest = new AuthRequest(email, PASSWORD);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/admin")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -257,7 +261,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 400 Bad Request with information about the error (size of password)")
                 @Test
                 void shouldReturnBadRequestPasswordTooSmall() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(EMAIL, "ps");
+                    AuthRequest registerRequest = new AuthRequest(EMAIL, "ps");
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/admin")
                             .header("Authorization", "Bearer " + adminToken)
@@ -272,7 +276,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 400 Bad Request with information about the error (size of password)")
                 @Test
                 void shouldReturnBadRequestPasswordTooLong() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(EMAIL, "passwordIsTooLongToValid");
+                    AuthRequest registerRequest = new AuthRequest(EMAIL, "passwordIsTooLongToValid");
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/admin")
                             .header("Authorization", "Bearer " + adminToken)
@@ -287,7 +291,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 400 Bad Request with information about the error (invalid email)")
                 @Test
                 void shouldReturnBadRequestInvalidEmail() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest("email.com", PASSWORD);
+                    AuthRequest registerRequest = new AuthRequest("email.com", PASSWORD);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/admin")
                             .header("Authorization", "Bearer " + adminToken)
@@ -316,7 +320,7 @@ public class FreshKeepIntegrationTests {
                 @DisplayName("should return 400 Bad Request with information about the error (request with null parameters)")
                 @Test
                 void shouldReturnBadRequestRequestWithNullParams() throws Exception {
-                    RegisterUserAuthRequest registerRequest = new RegisterUserAuthRequest(null, null);
+                    AuthRequest registerRequest = new AuthRequest(null, null);
 
                     ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/admin")
                             .header("Authorization", "Bearer " + adminToken)
@@ -327,6 +331,82 @@ public class FreshKeepIntegrationTests {
                             .andExpect(jsonPath("$.title").value("Validation Error In Body Data"))
                             .andExpect(jsonPath("$.errors.password", containsString("must not be blank")))
                             .andExpect(jsonPath("$.errors.email", containsString("must not be blank")));
+                }
+            }
+
+            @Nested
+            @DisplayName("POST " + API_AUTH + "/login")
+            class Login {
+
+                private static final AuthRequest REQUEST = new AuthRequest(EMAIL, PASSWORD);
+
+                @BeforeEach
+                void setUp() throws Exception {
+                    accountSpringDataRepository.deleteAll();
+                    mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(REQUEST)))
+                            .andExpect(status().isCreated());
+                }
+
+                @DisplayName("should return 200 with generated auth session token and information about the logged in account")
+                @Test
+                void shouldReturn200WithAccountInfoAndJwtAuthTokenAndLoginUserSuccessfully() throws Exception {
+                    ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(REQUEST)));
+
+                    result.andExpect(status().isOk())
+                            .andExpect(jsonPath("$.accountId").exists())
+                            .andExpect(jsonPath("$.email").value(EMAIL))
+                            .andExpect(jsonPath("$.jwtString").exists())
+                            .andExpect(jsonPath("$.expiresIn").exists());
+
+                    String resultAsString = result.andReturn().getResponse().getContentAsString();
+                    String resultToken = com.jayway.jsonpath.JsonPath.read(resultAsString, "$.jwtString");
+
+                    CustomUserPrincipal userPrincipal = jwtTokenGeneratorAdapter.extractCustomUserPrincipal(resultToken);
+                    assertNotNull(userPrincipal.id());
+                    assertEquals(EMAIL, userPrincipal.getUsername());
+                    assertNull(userPrincipal.passwordHash());
+
+                    Collection<? extends GrantedAuthority> authorities = userPrincipal.getAuthorities();
+
+                    assertThat(authorities)
+                            .hasSize(1)
+                            .extracting(GrantedAuthority::getAuthority)
+                            .containsExactly("ROLE_USER")
+                            .doesNotContain("ROLE_ADMIN");
+                }
+
+                @DisplayName("should return 401 Unauthorized with Invalid email or password error message when the email does not exist")
+                @Test
+                void shouldReturn401InvalidEmailOrPasswordWhenEmailDoesNotExist() throws Exception {
+                    AuthRequest request = new AuthRequest("unregistered@mail.com", "password");
+
+                    ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)));
+
+                    result.andExpect(status().isUnauthorized())
+                            .andExpect(jsonPath("$.title", containsString("Unauthorized Error")))
+                            .andExpect(jsonPath("$.detail", containsString("Invalid Credentials Error")))
+                            .andExpect(jsonPath("$.detail", containsString("Invalid email or password")));
+                }
+
+                @DisplayName("should return 401 Unauthorized with Invalid email or password error message when the password is not correct")
+                @Test
+                void shouldReturn401InvalidEmailOrPasswordWhenPasswordIsIncorrect() throws Exception {
+                    AuthRequest request = new AuthRequest(EMAIL, "incorrectPassword");
+
+                    ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)));
+
+                    result.andExpect(status().isUnauthorized())
+                            .andExpect(jsonPath("$.title", containsString("Unauthorized Error")))
+                            .andExpect(jsonPath("$.detail", containsString("Invalid Credentials Error")))
+                            .andExpect(jsonPath("$.detail", containsString("Invalid email or password")));
                 }
             }
         }

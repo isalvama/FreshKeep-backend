@@ -1,7 +1,10 @@
 package com.isalvama.fresh_keep.shared.infrastructure.web.handler;
 
+import com.isalvama.fresh_keep.modules.account.domain.exception.ForbiddenException;
+import com.isalvama.fresh_keep.modules.account.domain.exception.UnauthorizedException;
 import com.isalvama.fresh_keep.shared.domain.exception.ConflictException;
 import com.isalvama.fresh_keep.shared.domain.exception.DomainException;
+import com.isalvama.fresh_keep.shared.infrastructure.exception.InfrastructureException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -18,6 +21,33 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ResponseBody
+    @ExceptionHandler(InfrastructureException.class)
+    public ProblemDetail handleInfrastructureException(InfrastructureException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+        problemDetail.setTitle("Server Error");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    @ResponseBody
+    @ExceptionHandler(ForbiddenException.class)
+    public ProblemDetail handleForbiddenException(ForbiddenException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
+        problemDetail.setTitle("Forbidden Request");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    @ResponseBody
+    @ExceptionHandler(UnauthorizedException.class)
+    public ProblemDetail handleUnauthorizedException(UnauthorizedException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED);
+        problemDetail.setTitle("Unauthorized Error");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
 
     @ResponseBody
     @ExceptionHandler(ConflictException.class)

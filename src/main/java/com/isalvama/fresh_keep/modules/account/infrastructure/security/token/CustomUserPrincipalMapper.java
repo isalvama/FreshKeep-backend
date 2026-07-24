@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 @Component
 public class CustomUserPrincipalMapper {
 
-    public CustomUserPrincipal fromDomain (Account account){
+    public CustomUserPrincipal fromDomain (Account account) {
         return new CustomUserPrincipal(
                 account.getId().toString(),
                 account.getEmail().toString(),

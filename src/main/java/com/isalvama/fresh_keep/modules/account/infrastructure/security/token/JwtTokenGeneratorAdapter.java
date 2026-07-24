@@ -60,7 +60,8 @@ public class JwtTokenGeneratorAdapter implements JwtTokenGeneratorPort {
                 .expiration(new Date(now + jwtExpiration))
                 .signWith(getSignInKey())
                 .compact();
-        return new AuthToken(token);
+
+        return new AuthToken(token, jwtExpiration);
     }
 
     @Override
