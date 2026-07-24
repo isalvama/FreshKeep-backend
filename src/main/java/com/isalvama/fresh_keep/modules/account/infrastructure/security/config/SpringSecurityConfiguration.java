@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.shared.config;
+package com.isalvama.fresh_keep.modules.account.infrastructure.security.config;
 
 import com.isalvama.fresh_keep.modules.account.application.port.out.AccountRepositoryPort;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
@@ -17,7 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 @RequiredArgsConstructor
-public class AppConfig {
+public class SpringSecurityConfiguration {
 
     private final AccountRepositoryPort accountRepositoryPort;
     private final CustomUserPrincipalMapper customUserPrincipalMapper;

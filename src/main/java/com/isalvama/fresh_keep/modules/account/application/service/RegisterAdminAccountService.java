@@ -2,7 +2,7 @@ package com.isalvama.fresh_keep.modules.account.application.service;
 
 import com.isalvama.fresh_keep.modules.account.application.command.RegisterAdminAccountCommand;
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterAdminAccountUseCase;
-import com.isalvama.fresh_keep.modules.account.application.port.in.dto.response.AuthResponseDto;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthResponse;
 import com.isalvama.fresh_keep.modules.account.application.port.out.AccountRepositoryPort;
 import com.isalvama.fresh_keep.modules.account.application.port.out.JwtTokenGeneratorPort;
 import com.isalvama.fresh_keep.modules.account.application.port.out.PasswordHasherPort;
@@ -23,7 +23,7 @@ public class RegisterAdminAccountService implements RegisterAdminAccountUseCase 
 
     @Override
     @Transactional
-    public AuthResponseDto execute(RegisterAdminAccountCommand command) {
+    public AuthResponse execute(RegisterAdminAccountCommand command) {
 
         if (accountRepositoryPort.findByEmail(command.email()).isPresent()){
             throw new AccountAlreadyExistsException("An account with the email address " + command.email() + " already exists.");
@@ -40,6 +40,11 @@ public class RegisterAdminAccountService implements RegisterAdminAccountUseCase 
 
         AuthToken jwtToken = jwtTokenGeneratorPort.generateToken(savedAccount);
 
-        return new AuthResponseDto(savedAccount.getId().toString(), savedAccount.getEmail().toString(), jwtToken.token());
+        return AuthResponse.constitute(
+                savedAccount.getId().toString(),
+                savedAccount.getEmail().toString(),
+                jwtToken.token(),
+                jwtToken.expiration()
+        );
     }
 }
