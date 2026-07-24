@@ -1,5 +1,6 @@
 package com.isalvama.fresh_keep;
 
+import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.AccountSpringDataRepository;
 import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.AuthRequest;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.account.domain.value_object.Email;
@@ -65,6 +66,9 @@ public class FreshKeepIntegrationTests {
 
         @Autowired
         private JpaAccountRepositoryAdapter jpaAccountRepositoryAdapter;
+
+        @Autowired
+        private AccountSpringDataRepository accountSpringDataRepository;
 
         @Autowired
         private JwtTokenGeneratorAdapter jwtTokenGeneratorAdapter;
@@ -180,10 +184,10 @@ public class FreshKeepIntegrationTests {
 
                 @BeforeEach
                 void setUp() {
+                    accountSpringDataRepository.deleteAll();
                     Account admin = Account.createAdmin(Email.of(EMAIL), PASSWORD);
                     jpaAccountRepositoryAdapter.save(admin);
                     adminToken = jwtTokenGeneratorAdapter.generateToken(admin).token();
-
                 }
 
                 @DisplayName("should return 201 Created with login token and information about the new account")
@@ -336,9 +340,9 @@ public class FreshKeepIntegrationTests {
 
                 private static final AuthRequest REQUEST = new AuthRequest(EMAIL, PASSWORD);
 
-
                 @BeforeEach
                 void setUp() throws Exception {
+                    accountSpringDataRepository.deleteAll();
                     mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(objectMapper.writeValueAsString(REQUEST)))
