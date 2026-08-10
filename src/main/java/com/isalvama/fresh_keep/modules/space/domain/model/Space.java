@@ -19,7 +19,6 @@ public class Space {
     private Set<StorageSpot> storageSpots;
     private final UserId creatorId;
     private Set<UserId> participantIds;
-    private Set<ShoppingReceiptId> shoppingReceiptIds;
 
     private Space(SpaceId spaceId, SpaceName spaceName, Set<StorageSpot> storageSpots, UserId creatorId) {
         this.id = validateNotNull(spaceId, "spaceId");
@@ -36,7 +35,6 @@ public class Space {
                 creatorId
         );
         space.setParticipantIds(Set.of(creatorId));
-        space.setShoppingReceiptIds(Set.of());
         return space;
     }
 
@@ -48,7 +46,6 @@ public class Space {
                 creatorId
         );
         location.setParticipantIds(validateNotNull(participantIds, "participantIds"));
-        location.setShoppingReceiptIds(validateNotNull(shoppingReceiptIds, "shoppingReceiptIds"));
         return location;
     }
 
@@ -66,5 +63,14 @@ public class Space {
         return fieldValue;
     }
 
+    private static Set<StorageSpot> validateStorageSpots(Set<StorageSpot> storageSpots) {
+        validateNotNullAndNotEmpty(storageSpots, "storageSpots");
+
+        boolean hasDuplicates = storageSpots.stream().map(spot -> spot.getName().toString() + spot.getType()).distinct().count() < storageSpots.size();
+        if (hasDuplicates){
+            throw new InvalidSpaceException("Two or more storage spots cannot share the same name and type.");
+        }
+        return storageSpots;
+    }
 
 }
