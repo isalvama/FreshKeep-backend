@@ -13,7 +13,7 @@ public record SpaceName(String value) {
         }
         value = value.trim();
         if (value.length() > 30) {
-            throw new InvalidIdException("LocationName cannot have more than 30 characters");
+            throw new InvalidIdException("value cannot have more than 30 characters");
         }
     }
 

@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.Set;
@@ -21,7 +23,8 @@ import java.util.UUID;
 public class JpaAccountEntity {
 
     @Id
-    @Column(columnDefinition = "id", updatable = false, nullable = false)
+    @Column(name = "id", updatable = false, nullable = false)
+    @JdbcTypeCode(SqlTypes.UUID)
     private UUID id;
 
     @Column(unique = true, nullable = false)
