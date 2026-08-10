@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa;
+package com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.entity;
 
 import com.isalvama.fresh_keep.shared.domain.Role;
 import jakarta.persistence.*;

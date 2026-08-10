@@ -3,6 +3,7 @@ package com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
 import com.isalvama.fresh_keep.modules.account.domain.value_object.Email;
+import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.entity.JpaAccountEntity;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.mapper.AccountMapper;
 import com.isalvama.fresh_keep.shared.domain.Role;
 import org.junit.jupiter.api.DisplayName;

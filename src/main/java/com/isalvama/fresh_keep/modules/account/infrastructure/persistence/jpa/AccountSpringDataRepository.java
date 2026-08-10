@@ -1,5 +1,6 @@
 package com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa;
 
+import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.entity.JpaAccountEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
