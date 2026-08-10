@@ -9,6 +9,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Setter
@@ -31,7 +33,7 @@ public class Space {
         Space space = new Space(
                 SpaceId.create(),
                 name,
-                storageSpots,
+                validateStorageSpots(storageSpots),
                 creatorId
         );
         space.setParticipantIds(Set.of(creatorId));
@@ -66,9 +68,14 @@ public class Space {
     private static Set<StorageSpot> validateStorageSpots(Set<StorageSpot> storageSpots) {
         validateNotNullAndNotEmpty(storageSpots, "storageSpots");
 
-        boolean hasDuplicates = storageSpots.stream().map(spot -> spot.getName().toString() + spot.getType()).distinct().count() < storageSpots.size();
-        if (hasDuplicates){
-            throw new InvalidSpaceException("Two or more storage spots cannot share the same name and type.");
+        Set<String> seen = new HashSet<>();
+
+        List<StorageSpot> duplicates = storageSpots.stream()
+                .filter(spot -> !seen.add(spot.getName().toString() + spot.getType()))
+                .toList();
+
+        if (!duplicates.isEmpty()){
+            throw new InvalidSpaceException(String.format("Two or more storage spots of the same space cannot share the same name and type. %storage spots are duplicates", duplicates.stream().map(d -> d.getName() + " ")));
         }
         return storageSpots;
     }
