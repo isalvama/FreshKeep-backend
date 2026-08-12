@@ -103,7 +103,6 @@ CREATE TABLE products
 
 CREATE TABLE spaces_participants
 (
-    id             UUID PRIMARY KEY,
     participant_id UUID,
     space_id       UUID NOT NULL,
     CONSTRAINT fk_spaces_participants_participant
@@ -118,7 +117,6 @@ CREATE TABLE spaces_participants
 
 CREATE TABLE product_storage_spot_history
 (
-    id                  UUID PRIMARY KEY,
     product_id          UUID NOT NULL,
     user_id             UUID,
     new_expiration_date TIMESTAMP WITH TIME ZONE NOT NULL,
