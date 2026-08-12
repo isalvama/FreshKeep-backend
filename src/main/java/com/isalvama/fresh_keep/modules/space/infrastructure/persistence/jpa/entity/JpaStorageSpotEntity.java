@@ -27,4 +27,8 @@ public class JpaStorageSpotEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "storage_spot_type", nullable = false, length = 30)
     private StorageSpotType type;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "space_id", nullable = false)
+    private JpaSpaceEntity space;
 }

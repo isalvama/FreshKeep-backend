@@ -4,10 +4,12 @@ import com.isalvama.fresh_keep.modules.space.domain.model.Space;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceName;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaSpaceEntity;
+import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaStorageSpotEntity;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
@@ -26,11 +28,19 @@ public class SpaceMapper {
     }
 
     public JpaSpaceEntity toEntity(Space domainEntity){
-        return JpaSpaceEntity.builder().
+        JpaSpaceEntity spaceEntity = JpaSpaceEntity.builder().
                 id(domainEntity.getId().value())
                         .name(domainEntity.getName().value())
                                 .creatorId(domainEntity.getCreatorId().value())
-                .storageSpots(domainEntity.getStorageSpots().stream().map(storageSpotsMapper::toEntity).collect(Collectors.toSet()))
                 .participantIds(domainEntity.getParticipantIds().stream().map(UserId::value).collect(Collectors.toSet())).build();
+
+        Set<JpaStorageSpotEntity> spotEntities = domainEntity.getStorageSpots().stream().map(spot -> {
+            JpaStorageSpotEntity spotEntity = storageSpotsMapper.toEntity(spot);
+            spotEntity.setSpace(spaceEntity);
+            return spotEntity;
+        })
+                .collect(Collectors.toSet());
+        spaceEntity.setStorageSpots(spotEntities);
+        return spaceEntity;
     }
 }
