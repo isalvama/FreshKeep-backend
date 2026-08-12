@@ -8,7 +8,7 @@ public record ProductId(UUID value) {
 
     public ProductId {
         if (value == null) {
-            throw new InvalidIdException("ProductId cannot be null");
+            throw new InvalidIdException("value of ProductId cannot be null.");
         }
     }
 
@@ -16,11 +16,19 @@ public record ProductId(UUID value) {
         return new ProductId(value);
     }
 
-    public static ProductId of(String value) {
+    public static ProductId from(String value) {
+        if (value == null){
+            throw new InvalidIdException("string value to create ProductId cannot be null.");
+        }
+
+        if (value.isBlank()){
+            throw new InvalidIdException("string value to create ProductId cannot be blank or empty.");
+        }
+
         try {
             return new ProductId(UUID.fromString(value));
         } catch (IllegalArgumentException e) {
-            throw new InvalidIdException("Invalid UUID format for ProductId: " + value);
+            throw new InvalidIdException("invalid UUID format for ProductId of '" + value + "'.");
         }
     }
 

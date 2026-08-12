@@ -1,6 +1,5 @@
 package com.isalvama.fresh_keep.modules.space.domain.model;
 
-import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ShoppingReceiptId;
 import com.isalvama.fresh_keep.modules.space.domain.exception.InvalidSpaceException;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceName;
@@ -12,6 +11,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Setter
 @Getter
@@ -22,33 +22,32 @@ public class Space {
     private final UserId creatorId;
     private Set<UserId> participantIds;
 
-    private Space(SpaceId spaceId, SpaceName spaceName, Set<StorageSpot> storageSpots, UserId creatorId) {
+    private Space(SpaceId spaceId, SpaceName spaceName, Set<StorageSpot> storageSpots, UserId creatorId, Set<UserId> participantIds) {
         this.id = validateNotNull(spaceId, "spaceId");
         this.name = validateNotNull(spaceName, "spaceName");
-        this.storageSpots = validateNotNullAndNotEmpty(storageSpots, "storageSpots");
-        this.creatorId = creatorId;
+        this.storageSpots = validateNonDuplicateStorageSpots(storageSpots);
+        this.creatorId = validateNotNull(creatorId, "creatorId");
+        this.participantIds = validateNotNullAndNotEmpty(participantIds, "participantIds");
     }
 
-    public Space create(SpaceName name, Set<StorageSpot> storageSpots, UserId creatorId){
-        Space space = new Space(
+    public static Space create(SpaceName name, Set<StorageSpot> storageSpots, UserId creatorId){
+        return new Space(
                 SpaceId.create(),
                 name,
-                validateStorageSpots(storageSpots),
-                creatorId
+                storageSpots,
+                creatorId,
+                Set.of(creatorId)
         );
-        space.setParticipantIds(Set.of(creatorId));
-        return space;
     }
 
-    public Space reconstitute(SpaceId id, SpaceName name, Set<StorageSpot> storageSpots, UserId creatorId, Set<UserId> participantIds, Set<ShoppingReceiptId> shoppingReceiptIds){
-        Space location = new Space(
+    public static Space reconstitute(SpaceId id, SpaceName name, Set<StorageSpot> storageSpots, UserId creatorId, Set<UserId> participantIds){
+        return new Space(
                 id,
                 name,
                 storageSpots,
-                creatorId
+                creatorId,
+                participantIds
         );
-        location.setParticipantIds(validateNotNull(participantIds, "participantIds"));
-        return location;
     }
 
     private static <T> T validateNotNull(T fieldValue, String fieldName) {
@@ -65,7 +64,7 @@ public class Space {
         return fieldValue;
     }
 
-    private static Set<StorageSpot> validateStorageSpots(Set<StorageSpot> storageSpots) {
+    private static Set<StorageSpot> validateNonDuplicateStorageSpots(Set<StorageSpot> storageSpots) {
         validateNotNullAndNotEmpty(storageSpots, "storageSpots");
 
         Set<String> seen = new HashSet<>();
@@ -75,7 +74,7 @@ public class Space {
                 .toList();
 
         if (!duplicates.isEmpty()){
-            throw new InvalidSpaceException(String.format("Two or more storage spots of the same space cannot share the same name and type. %storage spots are duplicates", duplicates.stream().map(d -> d.getName() + " ")));
+            throw new InvalidSpaceException(String.format("Two or more storage spots of the same space cannot share the same name and type. %s storage spots are duplicates", duplicates.stream().map(d -> d.getName().value()).collect(Collectors.joining(", "))));
         }
         return storageSpots;
     }

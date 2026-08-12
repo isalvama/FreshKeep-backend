@@ -8,8 +8,12 @@ public record UserId(UUID value) {
 
     public UserId {
         if (value == null) {
-            throw new InvalidIdException("UserId cannot be null");
+            throw new InvalidIdException("value of UserId cannot be null.");
         }
+    }
+
+    public static UserId create() {
+        return new UserId(UUID.randomUUID());
     }
 
     public static UserId of(UUID value) {
@@ -17,10 +21,18 @@ public record UserId(UUID value) {
     }
 
     public static UserId from(String value) {
+        if (value == null){
+            throw new InvalidIdException("string value to create UserId cannot be null.");
+        }
+
+        if (value.isBlank()){
+            throw new InvalidIdException("string value to create UserId cannot be blank or empty.");
+        }
+
         try {
             return new UserId(UUID.fromString(value));
         } catch (IllegalArgumentException e) {
-            throw new InvalidIdException("Invalid UUID format for UserId: " + value);
+            throw new InvalidIdException("invalid UUID format for UserId of '" + value + "'.");
         }
     }
 
