@@ -8,7 +8,7 @@ public record SpaceId(UUID value) {
 
     public SpaceId {
         if (value == null) {
-            throw new InvalidIdException("LocationId cannot be null");
+            throw new InvalidIdException("value of SpaceId cannot be null.");
         }
     }
 
@@ -20,11 +20,19 @@ public record SpaceId(UUID value) {
         return new SpaceId(value);
     }
 
-    public static SpaceId of(String value) {
+    public static SpaceId from(String value) {
+        if (value == null){
+            throw new InvalidIdException("string value to create SpaceId cannot be null.");
+        }
+
+        if (value.isBlank()){
+            throw new InvalidIdException("string value to create SpaceId cannot be blank or empty.");
+        }
+
         try {
             return new SpaceId(UUID.fromString(value));
         } catch (IllegalArgumentException e) {
-            throw new InvalidIdException("Invalid UUID format for LocationId: " + value);
+            throw new InvalidIdException("invalid UUID format for SpaceId of '" + value + "'.");
         }
     }
 
