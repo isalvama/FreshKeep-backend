@@ -1,17 +1,15 @@
-package com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa;
+package com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity;
 
 import com.isalvama.fresh_keep.modules.space.domain.model.StorageSpotType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.util.UUID;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
