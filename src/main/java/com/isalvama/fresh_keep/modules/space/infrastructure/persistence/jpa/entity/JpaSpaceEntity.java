@@ -1,10 +1,7 @@
-package com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa;
+package com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -14,7 +11,8 @@ import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -34,7 +32,7 @@ public class JpaSpaceEntity {
     @JdbcTypeCode(SqlTypes.UUID)
     private UUID creatorId;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "space_id")
     private Set<JpaStorageSpotEntity> storageSpots;
 

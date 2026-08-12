@@ -15,24 +15,8 @@ CREATE TABLE users
 CREATE TABLE receipt_images
 (
     id         UUID PRIMARY KEY,
-    image_url  VARCHAR(255) UNIQUE NOT NULL,
+    image_url  VARCHAR(512) UNIQUE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE storage_spots
-(
-    id                UUID PRIMARY KEY,
-    name VARCHAR(30) NOT NULL,
-    storage_spot_type VARCHAR(30) NOT NULL,
-    space_id          UUID NOT NULL,
-    CONSTRAINT fk_storage_spots_space
-        FOREIGN KEY (space_id)
-            REFERENCES spaces (id)
-            ON DELETE CASCADE,
-    CONSTRAINT chk_storage_spots_storage_spot_type CHECK (storage_spot_type IN
-                                                          ('FRIDGE', 'FREEZER', 'PANTRY', 'FRUIT_BOWL', 'WINE_CELLAR',
-                                                           'COUNTERTOP', 'SHELF'))
-        ADD CONSTRAINT uq_space_spot_name UNIQUE (space_id, name);
 );
 
 CREATE TABLE spaces
@@ -49,6 +33,22 @@ CREATE TABLE spaces
 );
 
 
+CREATE TABLE storage_spots
+(
+    id                UUID PRIMARY KEY,
+    name VARCHAR(30) NOT NULL,
+    storage_spot_type VARCHAR(30) NOT NULL,
+    space_id          UUID NOT NULL,
+    CONSTRAINT fk_storage_spots_space
+        FOREIGN KEY (space_id)
+            REFERENCES spaces (id)
+            ON DELETE CASCADE,
+    CONSTRAINT chk_storage_spots_storage_spot_type CHECK (storage_spot_type IN
+                                                          ('FRIDGE', 'FREEZER', 'PANTRY', 'FRUIT_BOWL', 'WINE_CELLAR',
+                                                           'COUNTERTOP', 'SHELF')),
+    CONSTRAINT uq_space_spot_name UNIQUE (space_id, name)
+);
+
 CREATE TABLE shopping_receipts
 (
     id               UUID PRIMARY KEY,
@@ -60,7 +60,7 @@ CREATE TABLE shopping_receipts
     CONSTRAINT fk_shopping_receipt_creator
         FOREIGN KEY (creator_id)
             REFERENCES users (id)
-            ON DELETE SET NULL
+            ON DELETE SET NULL,
     CONSTRAINT fk_shopping_receipt_space
         FOREIGN KEY (space_id)
             REFERENCES spaces (id)
@@ -79,7 +79,7 @@ CREATE TABLE products
     actual_storage_spot_id    UUID NOT NULL,
     product_type              VARCHAR(30) NOT NULL,
     shopping_receipt_id       UUID,
-    price                     NUMERIC(6, 2) NOT NULL
+    price                     NUMERIC(6, 2) NOT NULL,
     CONSTRAINT fk_products_suggested_storage_spot
         FOREIGN KEY (suggested_storage_spot_id)
             REFERENCES storage_spots (id)
@@ -95,10 +95,10 @@ CREATE TABLE products
     CONSTRAINT chk_products_product_type CHECK (product_type IN
                                                 ('FRUITS', 'VEGETABLES', 'OTHER FRESH PRODUCTS', 'MEAT', 'SEAFOOD',
                                                  'DAIRY',
-                                                 'DELI', 'BAKERY', 'VEGETABLES', 'PANTRY', 'SNACKS', 'SWEETS',
+                                                 'DELI', 'BAKERY', 'PANTRY', 'SNACKS', 'SWEETS',
                                                  'FROZEN FOODS',
-                                                 'ICE CREAM AND DESSERTS', 'BEVERAGES', 'INTERNATIONAL', "SAUCES",
-                                                 "OTHER"))
+                                                 'ICE CREAM AND DESSERTS', 'BEVERAGES', 'INTERNATIONAL', 'SAUCES',
+                                                 'OTHER'))
 );
 
 CREATE TABLE spaces_participants
