@@ -3,7 +3,7 @@ package com.isalvama.fresh_keep;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.AccountSpringDataRepository;
 import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.AuthRequest;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
-import com.isalvama.fresh_keep.modules.account.domain.value_object.Email;
+import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.JpaAccountRepositoryAdapter;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.CustomUserPrincipal;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.JwtTokenGeneratorAdapter;

@@ -1,7 +1,7 @@
 package com.isalvama.fresh_keep.modules.account.domain.model;
 import com.isalvama.fresh_keep.modules.account.domain.exception.InvalidAccountException;
 import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
-import com.isalvama.fresh_keep.modules.account.domain.value_object.Email;
+import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import com.isalvama.fresh_keep.shared.domain.Role;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

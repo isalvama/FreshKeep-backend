@@ -7,7 +7,7 @@ import com.isalvama.fresh_keep.modules.account.application.port.out.JwtTokenGene
 import com.isalvama.fresh_keep.modules.account.domain.exception.DisabledAccountException;
 import com.isalvama.fresh_keep.modules.account.domain.exception.InvalidCredentialsException;
 import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
-import com.isalvama.fresh_keep.modules.account.domain.value_object.Email;
+import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.AuthToken;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthResponse;
