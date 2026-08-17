@@ -57,10 +57,10 @@ class JpaSpaceRepositoryAdapterTest {
 
     @BeforeEach
     void setUp(){
-        creatorAccountId = AccountId.generate();
+        creatorAccountId = AccountId.create();
         creatorUserId = UserId.create();
         creatorUserEmail = "creator@email.com";
-        participantAccountId = AccountId.generate();
+        participantAccountId = AccountId.create();
         participantUserId = UserId.create();
         participantUserEmail = "participant@email.com";
         jdbcTemplate.update(
