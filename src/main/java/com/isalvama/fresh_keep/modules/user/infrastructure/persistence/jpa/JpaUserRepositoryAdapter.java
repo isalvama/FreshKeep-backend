@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 @RequiredArgsConstructor
@@ -18,6 +19,11 @@ public class JpaUserRepositoryAdapter implements UserRepositoryPort {
     @Override
     public Optional<User> findByEmail(String email) {
         return jpaUserSpringDataRepository.findByEmail(email).map(userMapper::toDomain);
+    }
+
+    @Override
+    public Optional<User> findByAccountId(UUID accountId) {
+        return jpaUserSpringDataRepository.findByAccountId(accountId).map(userMapper::toDomain);
     }
 
     @Override

@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface JpaUserSpringDataRepository extends JpaRepository<JpaUserEntity, UUID> {
     Optional<JpaUserEntity> findByEmail(String email);
+    Optional<JpaUserEntity> findByAccountId(UUID accountId);
 }

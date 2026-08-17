@@ -15,7 +15,7 @@ public class UserMapper {
                 UserId.of(jpaUserEntity.getId()),
                 AccountId.of(jpaUserEntity.getAccountId()),
                 Email.of(jpaUserEntity.getEmail()),
-                UserName.of(jpaUserEntity.getUserName())
+                jpaUserEntity.getUserName() != null ? UserName.of(jpaUserEntity.getUserName()) : null
         );
     }
 
@@ -24,7 +24,7 @@ public class UserMapper {
                 .id(user.getId().value())
                 .accountId(user.getAccountId().value())
                 .email(user.getEmail().value())
-                .userName(user.getUserName().toString())
+                .userName(user.getUserName() != null? user.getUserName().toString() : null)
                 .build();
 
     }

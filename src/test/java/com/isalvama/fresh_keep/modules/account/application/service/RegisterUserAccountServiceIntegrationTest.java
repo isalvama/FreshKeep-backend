@@ -40,7 +40,7 @@ import static org.mockito.Mockito.when;
         "application.security.jwt.refresh-token.expiration=86400000"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-    class RegisterUserAccountTransactionIT {
+    class RegisterUserAccountTransactionIntegrationTest {
 
     @Container
     @ServiceConnection
