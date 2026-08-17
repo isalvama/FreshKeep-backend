@@ -41,7 +41,7 @@ class AccountTest {
     @Test
     @DisplayName("Should reconstitute an account correctly")
     void shouldReconstituteAccount() {
-        AccountId id = AccountId.generate();
+        AccountId id = AccountId.create();
         Set<Role> roles = Set.of(Role.USER, Role.ADMIN);
 
         Account account = Account.reconstitute(id, VALID_EMAIL, VALID_PASSWORD, roles);
@@ -54,7 +54,7 @@ class AccountTest {
     @Test
     @DisplayName("Should throw exception when roles set is empty")
     void shouldThrowExceptionWhenRolesIsEmpty() {
-        AccountId id = AccountId.generate();
+        AccountId id = AccountId.create();
         Set<Role> emptyRoles = Set.of();
 
         assertThatThrownBy(() -> Account.reconstitute(id, VALID_EMAIL, VALID_PASSWORD, emptyRoles))

@@ -33,7 +33,7 @@ class RegisterUserAccountServiceTest {
     private static final String email = "user@gmail.com";
     private static final String password = "userpassword";
     private static final RegisterUserAccountCommand command = new RegisterUserAccountCommand(email, password);
-    private static final Account account = Account.reconstitute(AccountId.generate(), Email.of(email), password, Set.of(Role.USER));
+    private static final Account account = Account.reconstitute(AccountId.create(), Email.of(email), password, Set.of(Role.USER));
 
     @Mock
     private AccountRepositoryPort accountRepositoryPort;

@@ -27,7 +27,7 @@ public class Account {
 
     public static Account createUser(Email email, String passwordHash){
         return new Account(
-                AccountId.generate(),
+                AccountId.create(),
                 email,
                 passwordHash,
                 Set.of(Role.USER)
@@ -36,7 +36,7 @@ public class Account {
 
     public static Account createAdmin (Email email, String passwordHash){
         return new Account(
-                AccountId.generate(),
+                AccountId.create(),
                 email,
                 passwordHash,
                 Set.of(Role.ADMIN)

@@ -23,6 +23,8 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -53,16 +55,18 @@ class JpaUserRepositoryAdapterTest {
     private AccountId account2Id;
     private UserId user2Id;
     private String user2Email;
+    private String user2UserName;
 
     @BeforeEach
     void setUp(){
-        account1Id = AccountId.generate();
+        account1Id = AccountId.create();
         user1Id = UserId.create();
         user1Email = "user1@email.com";
         user1UserName = "testUserName1";
-        account2Id = AccountId.generate();
+        account2Id = AccountId.create();
         user2Id = UserId.create();
         user2Email = "user2@email.com";
+        user2UserName = "testUserName2";
         jdbcTemplate.update(
                 "INSERT INTO accounts (id, email, password_hash) VALUES (?, ?, ?)",
                 account1Id.value(), user1Email, "hf9843hf3fi8h"
@@ -77,24 +81,62 @@ class JpaUserRepositoryAdapterTest {
         );
         jdbcTemplate.update(
                 "INSERT INTO users (id, account_id, email, username) VALUES (?, ?, ?, ?)",
-                user2Id.value(), account2Id.value(), user2Email, "testUserName2"
+                user2Id.value(), account2Id.value(), user2Email, user2UserName
         );
     }
 
     @Test
     void findByEmail_shouldReturnUserDataWithMatchingEmail() {
-        User user = adapter.findByEmail(user1Email).orElseThrow();
+        User user1 = adapter.findByEmail(user1Email).orElseThrow();
 
-        assertEquals(user1Email, user.getEmail().toString());
-        assertEquals(user1Id, user.getId());
-        assertEquals(account1Id, user.getAccountId());
-        assertEquals(user1UserName.toLowerCase(), user.getUserName().toString());
+        assertEquals(user1Email, user1.getEmail().toString());
+        assertEquals(user1Id, user1.getId());
+        assertEquals(account1Id, user1.getAccountId());
+        assertEquals(user1UserName.toLowerCase(), user1.getUserName().toString());
+
+        User user2 = adapter.findByEmail(user2Email).orElseThrow();
+
+        assertEquals(user2Email, user2.getEmail().toString());
+        assertEquals(user2Id, user2.getId());
+        assertEquals(account2Id, user2.getAccountId());
+        assertEquals(user2UserName.toLowerCase(), user2.getUserName().toString());
+    }
+
+    @Test
+    void findByEmail_shouldReturnEmptyOptional() {
+        Optional<User> result = adapter.findByEmail("inexistant@mail.com");
+
+        assertEquals(Optional.empty(), result);
+    }
+
+    @Test
+    void findByAccountId_shouldReturnUserDataWithMatchingEmail() {
+        User user1 = adapter.findByAccountId(account1Id.value()).orElseThrow();
+
+        assertEquals(user1Email, user1.getEmail().toString());
+        assertEquals(user1Id, user1.getId());
+        assertEquals(account1Id, user1.getAccountId());
+        assertEquals(user1UserName.toLowerCase(), user1.getUserName().toString());
+
+        User user2 = adapter.findByAccountId(account2Id.value()).orElseThrow();
+
+        assertEquals(user2Email, user2.getEmail().toString());
+        assertEquals(user2Id, user2.getId());
+        assertEquals(account2Id, user2.getAccountId());
+        assertEquals(user2UserName.toLowerCase(), user2.getUserName().toString());
+    }
+
+    @Test
+    void findByAccountId_shouldReturnEmptyOptional() {
+        Optional<User> result = adapter.findByAccountId(UUID.randomUUID());
+
+        assertEquals(Optional.empty(), result);
     }
 
     @Test
     void save_shouldPersistSpaceAndItsRelationsInRealPostgres() {
         UserId newlyCreatedUserId = UserId.create();
-        AccountId newlyCreatedAccountId = AccountId.generate();
+        AccountId newlyCreatedAccountId = AccountId.create();
         String newlyCreatedEmail = "newuser@mail.com";
         String userName = "new.user.username";
 
