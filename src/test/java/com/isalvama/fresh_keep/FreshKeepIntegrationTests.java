@@ -1,8 +1,11 @@
 package com.isalvama.fresh_keep;
 
+import com.isalvama.fresh_keep.modules.account.application.service.RegisterUserAccountService;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.AccountSpringDataRepository;
 import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.AuthRequest;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
+import com.isalvama.fresh_keep.modules.user.domain.model.User;
+import com.isalvama.fresh_keep.modules.user.infrastructure.persistence.jpa.JpaUserRepositoryAdapter;
 import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.JpaAccountRepositoryAdapter;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.CustomUserPrincipal;
@@ -28,6 +31,8 @@ import tools.jackson.databind.ObjectMapper;
 import org.testcontainers.utility.DockerImageName;
 
 import java.util.Collection;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -68,10 +73,16 @@ public class FreshKeepIntegrationTests {
         private JpaAccountRepositoryAdapter jpaAccountRepositoryAdapter;
 
         @Autowired
+        private JpaUserRepositoryAdapter jpaUserRepositoryAdapter;
+
+        @Autowired
         private AccountSpringDataRepository accountSpringDataRepository;
 
         @Autowired
         private JwtTokenGeneratorAdapter jwtTokenGeneratorAdapter;
+
+        @Autowired
+        private RegisterUserAccountService registerUserAccountService;
 
         @Nested
         @DisplayName("POST " + API_AUTH + "/register")
@@ -111,6 +122,17 @@ public class FreshKeepIntegrationTests {
                             .extracting(GrantedAuthority::getAuthority)
                             .containsExactly("ROLE_USER")
                             .doesNotContain("ROLE_ADMIN");
+
+                    String resultAccountId = com.jayway.jsonpath.JsonPath.read(resultAsString, "$.accountId");
+
+                    Optional<User> userResult = jpaUserRepositoryAdapter.findByAccountId(UUID.fromString(resultAccountId));
+                    assertTrue(userResult.isPresent());
+                    User user = userResult.get();
+                    assertNotNull(user.getId());
+                    assertEquals(resultAccountId, user.getAccountId().toString());
+                    assertEquals(EMAIL, user.getEmail().toString());
+                    assertNull(user.getUserName());
+
                 }
 
                 @DisplayName("should return 409 Conflict when an account with a matching email already exists")
@@ -131,6 +153,9 @@ public class FreshKeepIntegrationTests {
                             .andExpect(jsonPath("$.detail", containsString(EMAIL)))
                             .andExpect(jsonPath("$.detail", containsString("Account Already Exists")))
                             .andExpect(jsonPath("$.detail", containsString("account with the email address")));
+
+                    Optional<User> userResult = jpaUserRepositoryAdapter.findByEmail(EMAIL);
+                    assertFalse(userResult.isPresent());
                 }
 
                 @DisplayName("should return 400 Bad Request with information about the error (size of password)")
