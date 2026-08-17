@@ -2,7 +2,7 @@ package com.isalvama.fresh_keep.modules.account.infrastructure.security.token;
 
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
-import com.isalvama.fresh_keep.modules.account.domain.value_object.Email;
+import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import com.isalvama.fresh_keep.shared.domain.Role;
 import org.springframework.stereotype.Component;
 
