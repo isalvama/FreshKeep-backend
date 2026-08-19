@@ -1,7 +1,9 @@
 package com.isalvama.fresh_keep.modules.account.infrastructure.security.token;
 
 import com.isalvama.fresh_keep.modules.account.application.port.out.JwtTokenGeneratorPort;
+import com.isalvama.fresh_keep.modules.account.application.port.out.dto.ResolvedEntities;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
+import com.isalvama.fresh_keep.modules.account.infrastructure.security.exception.InvalidResolvedEntitiesException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -32,13 +34,19 @@ public class JwtTokenGeneratorAdapter implements JwtTokenGeneratorPort {
     }
 
     @Override
-    public AuthToken generateToken(Account account){
-        return buildToken(customUserPrincipalMapper.fromDomain(account), new HashMap<>());
+    public AuthToken generateToken(Account account, ResolvedEntities resolvedEntities){
+        if (resolvedEntities.userId() == null && resolvedEntities.adminId() == null){
+            throw new InvalidResolvedEntitiesException("userId and adminId cannot be both null");
+        }
+        return buildToken(customUserPrincipalMapper.fromDomain(account, resolvedEntities), new HashMap<>());
     }
 
     @Override
-    public AuthToken generateToken(Account account, Map<String, Object> extraClaims){
-        return buildToken(customUserPrincipalMapper.fromDomain(account), extraClaims);
+    public AuthToken generateToken(Account account, ResolvedEntities resolvedEntities, Map<String, Object> extraClaims){
+        if (resolvedEntities.userId() == null && resolvedEntities.adminId() == null){
+            throw new InvalidResolvedEntitiesException("userId and adminId cannot be both null");
+        }
+        return buildToken(customUserPrincipalMapper.fromDomain(account, resolvedEntities), extraClaims);
     }
     private AuthToken buildToken(
             CustomUserPrincipal customUserPrincipal,
@@ -54,8 +62,10 @@ public class JwtTokenGeneratorAdapter implements JwtTokenGeneratorPort {
         String token = Jwts.builder()
                 .claims(extraClaims)
                 .claim("roles", roleNames)
-                .claim("userId", customUserPrincipal.id())
+                .claim("accountId", customUserPrincipal.id())
                 .subject(customUserPrincipal.getUsername())
+                .claim("userId", customUserPrincipal.userId())
+                .claim("adminId", customUserPrincipal.adminId())
                 .issuedAt(new Date(now))
                 .expiration(new Date(now + jwtExpiration))
                 .signWith(getSignInKey())
@@ -68,9 +78,11 @@ public class JwtTokenGeneratorAdapter implements JwtTokenGeneratorPort {
     public CustomUserPrincipal extractCustomUserPrincipal(String token){
         Claims claims = extractAllClaims(token);
         return new CustomUserPrincipal(
-                claims.get("userId", String.class),
+                claims.get("accountId", String.class),
                 claims.getSubject(),
                 null,
+                claims.get("userId", String.class),
+                claims.get("adminId", String.class),
                 extractRoles(claims.get("roles", List.class))
         );
     }

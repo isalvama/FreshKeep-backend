@@ -11,6 +11,8 @@ public record CustomUserPrincipal(
         String id,
         String email,
         String passwordHash,
+        String userId,
+        String adminId,
         List<String> roles
 ) implements UserDetails {
 
