@@ -1,9 +1,9 @@
 package com.isalvama.fresh_keep.modules.account.application.port.in;
 
 import com.isalvama.fresh_keep.modules.account.application.command.RegisterUserAccountCommand;
-import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthResponse;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthRegisterResponse;
 
 public interface RegisterUserAccountUseCase {
-    AuthResponse execute(RegisterUserAccountCommand registerUserAccountCommand);
+    AuthRegisterResponse execute(RegisterUserAccountCommand registerUserAccountCommand);
 
 }

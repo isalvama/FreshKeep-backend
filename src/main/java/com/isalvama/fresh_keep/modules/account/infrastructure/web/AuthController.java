@@ -7,7 +7,8 @@ import com.isalvama.fresh_keep.modules.account.application.port.in.LoginUseCase;
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterAdminAccountUseCase;
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterUserAccountUseCase;
 import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.AuthRequest;
-import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthResponse;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthJwtResponse;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthRegisterResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -30,8 +31,8 @@ public class AuthController {
     private final LoginUseCase loginUseCase;
 
     @PostMapping("/register/user")
-    public ResponseEntity<AuthResponse> registerUser(@Valid @RequestBody AuthRequest request) {
-        AuthResponse response = registerUserAccountUseCase.execute(
+    public ResponseEntity<AuthRegisterResponse> registerUser(@Valid @RequestBody AuthRequest request) {
+        AuthRegisterResponse response = registerUserAccountUseCase.execute(
                 RegisterUserAccountCommand.builder()
                         .email(request.email())
                         .rawPassword(request.password())
@@ -49,8 +50,8 @@ public class AuthController {
 
     @PostMapping("/register/admin")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AuthResponse> registerAdmin(@Valid @RequestBody AuthRequest request) {
-        AuthResponse response = registerAdminAccountUseCase.execute(
+    public ResponseEntity<AuthRegisterResponse> registerAdmin(@Valid @RequestBody AuthRequest request) {
+        AuthRegisterResponse response = registerAdminAccountUseCase.execute(
                 RegisterAdminAccountCommand.builder()
                         .email(request.email())
                         .rawPassword(request.password())
@@ -67,8 +68,8 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
-        AuthResponse response = loginUseCase.execute(
+    public ResponseEntity<AuthJwtResponse> login(@Valid @RequestBody AuthRequest request) {
+        AuthJwtResponse response = loginUseCase.execute(
                 LoginCommand.builder()
                         .email(request.email())
                         .rawPassword(request.password())

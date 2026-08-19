@@ -2,14 +2,14 @@ package com.isalvama.fresh_keep.modules.account.application.service;
 
 import com.isalvama.fresh_keep.modules.account.application.command.RegisterUserAccountCommand;
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterUserAccountUseCase;
+import com.isalvama.fresh_keep.modules.account.application.port.out.*;
+import com.isalvama.fresh_keep.modules.account.application.port.out.dto.ResolvedEntities;
 import com.isalvama.fresh_keep.modules.account.domain.event.UserAccountRegisteredEvent;
 import com.isalvama.fresh_keep.modules.account.domain.event.UserAccountRegisteredEventPublisher;
-import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthResponse;
-import com.isalvama.fresh_keep.modules.account.application.port.out.AccountRepositoryPort;
-import com.isalvama.fresh_keep.modules.account.application.port.out.JwtTokenGeneratorPort;
-import com.isalvama.fresh_keep.modules.account.application.port.out.PasswordHasherPort;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthJwtResponse;
 import com.isalvama.fresh_keep.modules.account.domain.exception.AccountAlreadyExistsException;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthRegisterResponse;
 import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.AuthToken;
 import jakarta.transaction.Transactional;
@@ -21,12 +21,11 @@ import org.springframework.stereotype.Service;
 public class RegisterUserAccountService implements RegisterUserAccountUseCase {
     private final AccountRepositoryPort accountRepositoryPort;
     private final PasswordHasherPort passwordHasherPort;
-    private final JwtTokenGeneratorPort jwtTokenGeneratorPort;
     private final UserAccountRegisteredEventPublisher accountEventPublisher;
 
     @Override
     @Transactional
-    public AuthResponse execute(RegisterUserAccountCommand command) {
+    public AuthRegisterResponse execute(RegisterUserAccountCommand command) {
 
         if (accountRepositoryPort.findByEmail(command.email()).isPresent()){
             throw new AccountAlreadyExistsException("An account with the email address " + command.email() + " already exists.");
@@ -43,13 +42,9 @@ public class RegisterUserAccountService implements RegisterUserAccountUseCase {
 
         accountEventPublisher.publish(UserAccountRegisteredEvent.from(savedAccount));
 
-        AuthToken jwtToken = jwtTokenGeneratorPort.generateToken(savedAccount);
-
-        return AuthResponse.constitute(
+        return AuthRegisterResponse.constitute(
                 savedAccount.getId().toString(),
-                savedAccount.getEmail().toString(),
-                jwtToken.token(),
-                jwtToken.expiration()
+                savedAccount.getEmail().toString()
         );
     }
 }
