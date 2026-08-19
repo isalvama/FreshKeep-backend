@@ -21,8 +21,6 @@ import org.springframework.stereotype.Service;
 public class RegisterAdminAccountService implements RegisterAdminAccountUseCase {
     private final AccountRepositoryPort accountRepositoryPort;
     private final PasswordHasherPort passwordHasherPort;
-    private final JwtTokenGeneratorPort jwtTokenGeneratorPort;
-    private final IdentityResolverService identityResolverService;
 
     @Override
     @Transactional
