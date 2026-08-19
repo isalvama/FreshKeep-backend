@@ -42,7 +42,7 @@ class AuthenticationAdapterTest {
     @DisplayName("Should return Account when authentication is successful")
     void authenticate_Success() {
         // Given
-        CustomUserPrincipal principal = new CustomUserPrincipal("1", EMAIL, "hash", List.of("USER"));
+        CustomUserPrincipal principal = new CustomUserPrincipal("1", EMAIL, "hash", "userid", null, List.of("USER"));
         Authentication authentication = mock(Authentication.class);
         Account expectedAccount = mock(Account.class);
 

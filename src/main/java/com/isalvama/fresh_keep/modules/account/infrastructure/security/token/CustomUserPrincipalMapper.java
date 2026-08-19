@@ -1,5 +1,6 @@
 package com.isalvama.fresh_keep.modules.account.infrastructure.security.token;
 
+import com.isalvama.fresh_keep.modules.account.application.port.out.dto.ResolvedEntities;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
 import com.isalvama.fresh_keep.shared.domain.value_object.Email;
@@ -11,11 +12,13 @@ import java.util.stream.Collectors;
 @Component
 public class CustomUserPrincipalMapper {
 
-    public CustomUserPrincipal fromDomain (Account account) {
+    public CustomUserPrincipal fromDomain (Account account, ResolvedEntities resolvedEntities) {
         return new CustomUserPrincipal(
                 account.getId().toString(),
                 account.getEmail().toString(),
                 account.getPasswordHash(),
+                resolvedEntities.userId(),
+                resolvedEntities.adminId(),
                 account.getRoles().stream().map(Enum::toString).toList()
         );
     }

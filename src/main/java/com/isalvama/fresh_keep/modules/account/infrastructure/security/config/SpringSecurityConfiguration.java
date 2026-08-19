@@ -1,6 +1,7 @@
 package com.isalvama.fresh_keep.modules.account.infrastructure.security.config;
 
 import com.isalvama.fresh_keep.modules.account.application.port.out.AccountRepositoryPort;
+import com.isalvama.fresh_keep.modules.account.application.port.out.dto.ResolvedEntities;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.CustomUserPrincipalMapper;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +32,7 @@ public class SpringSecurityConfiguration {
     public UserDetailsService userDetailsService(){
         return username -> {
             Account account = accountRepositoryPort.findByEmail(username).orElseThrow(() -> new UsernameNotFoundException("User with email " + username + " not found"));
-            return customUserPrincipalMapper.fromDomain(account);
+            return customUserPrincipalMapper.fromDomain(account, ResolvedEntities.constitute(null, null));
         };
     }
 

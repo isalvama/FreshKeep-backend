@@ -52,6 +52,10 @@ public class Account {
         );
     }
 
+    public boolean hasRole(Role role) {
+        return this.roles.contains(role);
+    }
+
     private static <T> T validateNotNull(T obj, String fieldName) {
         if (obj == null)
             throw new InvalidAccountException(fieldName + " cannot be null");

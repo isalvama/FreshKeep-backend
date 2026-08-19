@@ -76,7 +76,7 @@ import static org.mockito.Mockito.*;
             String token = "valid.jwt.token";
             request.addHeader("Authorization", "Bearer " + token);
 
-            CustomUserPrincipal mockPrincipal = new CustomUserPrincipal("1", "test@test.com", null, List.of("USER"));
+            CustomUserPrincipal mockPrincipal = new CustomUserPrincipal("accountid", "test@test.com", null, "userid", null, List.of("USER"));
 
             when(jwtTokenGeneratorAdapter.isTokenValid(token)).thenReturn(true);
             when(jwtTokenGeneratorAdapter.extractCustomUserPrincipal(token)).thenReturn(mockPrincipal);

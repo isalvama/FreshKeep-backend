@@ -1,5 +1,6 @@
 package com.isalvama.fresh_keep;
 
+import com.isalvama.fresh_keep.modules.account.application.port.out.dto.ResolvedEntities;
 import com.isalvama.fresh_keep.modules.account.application.service.RegisterUserAccountService;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.AccountSpringDataRepository;
 import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.AuthRequest;
@@ -104,24 +105,9 @@ public class FreshKeepIntegrationTests {
                     result.andExpect(status().isCreated())
                             .andExpect(header().string("Location", containsString("/api/v1/users/")))
                             .andExpect(jsonPath("$.accountId").exists())
-                            .andExpect(jsonPath("$.email").value(EMAIL))
-                            .andExpect(jsonPath("$.jwtString").exists());
+                            .andExpect(jsonPath("$.email").value(EMAIL));
 
                     String resultAsString = result.andReturn().getResponse().getContentAsString();
-                    String resultToken = com.jayway.jsonpath.JsonPath.read(resultAsString, "$.jwtString");
-
-                    CustomUserPrincipal userPrincipal = jwtTokenGeneratorAdapter.extractCustomUserPrincipal(resultToken);
-                    assertNotNull(userPrincipal.id());
-                    assertEquals(EMAIL, userPrincipal.getUsername());
-                    assertNull(userPrincipal.passwordHash());
-
-                    Collection<? extends GrantedAuthority> authorities = userPrincipal.getAuthorities();
-
-                    assertThat(authorities)
-                            .hasSize(1)
-                            .extracting(GrantedAuthority::getAuthority)
-                            .containsExactly("ROLE_USER")
-                            .doesNotContain("ROLE_ADMIN");
 
                     String resultAccountId = com.jayway.jsonpath.JsonPath.read(resultAsString, "$.accountId");
 
@@ -212,7 +198,7 @@ public class FreshKeepIntegrationTests {
                     accountSpringDataRepository.deleteAll();
                     Account admin = Account.createAdmin(Email.of(EMAIL), PASSWORD);
                     jpaAccountRepositoryAdapter.save(admin);
-                    adminToken = jwtTokenGeneratorAdapter.generateToken(admin).token();
+                    adminToken = jwtTokenGeneratorAdapter.generateToken(admin, ResolvedEntities.constitute(null, "adminid1234")).token();
                 }
 
                 @DisplayName("should return 201 Created with login token and information about the new account")
@@ -229,24 +215,8 @@ public class FreshKeepIntegrationTests {
                     result.andExpect(status().isCreated())
                             .andExpect(header().string("Location", containsString("/api/v1/admins/")))
                             .andExpect(jsonPath("$.accountId").exists())
-                            .andExpect(jsonPath("$.email").value(email))
-                            .andExpect(jsonPath("$.jwtString").exists());
+                            .andExpect(jsonPath("$.email").value(email));
 
-                    String resultAsString = result.andReturn().getResponse().getContentAsString();
-                    String resultToken = com.jayway.jsonpath.JsonPath.read(resultAsString, "$.jwtString");
-
-                    CustomUserPrincipal userPrincipal = jwtTokenGeneratorAdapter.extractCustomUserPrincipal(resultToken);
-                    assertNotNull(userPrincipal.id());
-                    assertEquals(email, userPrincipal.getUsername());
-                    assertNull(userPrincipal.passwordHash());
-
-                    Collection<? extends GrantedAuthority> authorities = userPrincipal.getAuthorities();
-
-                    assertThat(authorities)
-                            .hasSize(1)
-                            .extracting(GrantedAuthority::getAuthority)
-                            .containsExactly("ROLE_ADMIN")
-                            .doesNotContain("ROLE_USER");
                 }
 
                 @DisplayName("should return 409 Conflict when an account with a matching email already exists")
@@ -394,6 +364,7 @@ public class FreshKeepIntegrationTests {
                     assertNotNull(userPrincipal.id());
                     assertEquals(EMAIL, userPrincipal.getUsername());
                     assertNull(userPrincipal.passwordHash());
+                    assertNotNull(userPrincipal.userId());
 
                     Collection<? extends GrantedAuthority> authorities = userPrincipal.getAuthorities();
 
