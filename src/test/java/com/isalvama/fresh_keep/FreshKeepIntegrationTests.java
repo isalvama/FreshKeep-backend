@@ -93,6 +93,11 @@ public class FreshKeepIntegrationTests {
             @DisplayName("POST " + API_AUTH + "/register/user")
             class RegisterUser {
 
+                @BeforeEach
+                void setUp() {
+                    accountSpringDataRepository.deleteAll();
+                }
+
                 @DisplayName("should return 201 with information about the new account generated authenticated login token")
                 @Test
                 void shouldReturn201AndRegisterUserSuccessfully() throws Exception {
