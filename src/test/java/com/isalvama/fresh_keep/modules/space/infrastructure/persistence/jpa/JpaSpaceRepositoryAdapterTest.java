@@ -72,12 +72,12 @@ class JpaSpaceRepositoryAdapterTest {
                 participantAccountId.value(), participantUserEmail, "eugf23gfi"
         );
         jdbcTemplate.update(
-                "INSERT INTO users (id, account_id, email, username) VALUES (?, ?, ?)",
-                creatorUserId.value(), creatorAccountId.value(), creatorUserEmail, "testUserName"
+                "INSERT INTO users (id, account_id, email, username) VALUES (?, ?, ?, ?)",
+                creatorUserId.value(), creatorAccountId.value(), creatorUserEmail, "creatorUserName"
         );
         jdbcTemplate.update(
-                "INSERT INTO users (id, account_id, email, username) VALUES (?, ?, ?)",
-                participantUserId.value(), participantAccountId.value(), participantUserEmail, "testUserName"
+                "INSERT INTO users (id, account_id, email, username) VALUES (?, ?, ?, ?)",
+                participantUserId.value(), participantAccountId.value(), participantUserEmail, "participantUserName"
         );
     }
 
