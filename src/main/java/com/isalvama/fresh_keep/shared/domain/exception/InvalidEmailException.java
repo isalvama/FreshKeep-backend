@@ -1,6 +1,4 @@
-package com.isalvama.fresh_keep.modules.account.domain.exception;
-
-import com.isalvama.fresh_keep.shared.domain.exception.DomainException;
+package com.isalvama.fresh_keep.shared.domain.exception;
 
 public class InvalidEmailException extends DomainException {
     public InvalidEmailException(String message) {

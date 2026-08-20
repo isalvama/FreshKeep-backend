@@ -2,7 +2,7 @@ package com.isalvama.fresh_keep.modules.account.domain.model;
 
 import com.isalvama.fresh_keep.modules.account.domain.exception.InvalidAccountException;
 import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
-import com.isalvama.fresh_keep.modules.account.domain.value_object.Email;
+import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import com.isalvama.fresh_keep.shared.domain.Role;
 import lombok.Getter;
 
@@ -27,7 +27,7 @@ public class Account {
 
     public static Account createUser(Email email, String passwordHash){
         return new Account(
-                AccountId.generate(),
+                AccountId.create(),
                 email,
                 passwordHash,
                 Set.of(Role.USER)
@@ -36,7 +36,7 @@ public class Account {
 
     public static Account createAdmin (Email email, String passwordHash){
         return new Account(
-                AccountId.generate(),
+                AccountId.create(),
                 email,
                 passwordHash,
                 Set.of(Role.ADMIN)
@@ -50,6 +50,10 @@ public class Account {
                 passwordHash,
                 roles
         );
+    }
+
+    public boolean hasRole(Role role) {
+        return this.roles.contains(role);
     }
 
     private static <T> T validateNotNull(T obj, String fieldName) {

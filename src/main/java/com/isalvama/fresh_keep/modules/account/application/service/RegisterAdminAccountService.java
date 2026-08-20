@@ -2,13 +2,15 @@ package com.isalvama.fresh_keep.modules.account.application.service;
 
 import com.isalvama.fresh_keep.modules.account.application.command.RegisterAdminAccountCommand;
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterAdminAccountUseCase;
-import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthResponse;
+import com.isalvama.fresh_keep.modules.account.application.port.out.dto.ResolvedEntities;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthJwtResponse;
 import com.isalvama.fresh_keep.modules.account.application.port.out.AccountRepositoryPort;
 import com.isalvama.fresh_keep.modules.account.application.port.out.JwtTokenGeneratorPort;
 import com.isalvama.fresh_keep.modules.account.application.port.out.PasswordHasherPort;
 import com.isalvama.fresh_keep.modules.account.domain.exception.AccountAlreadyExistsException;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
-import com.isalvama.fresh_keep.modules.account.domain.value_object.Email;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthRegisterResponse;
+import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.AuthToken;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -19,11 +21,10 @@ import org.springframework.stereotype.Service;
 public class RegisterAdminAccountService implements RegisterAdminAccountUseCase {
     private final AccountRepositoryPort accountRepositoryPort;
     private final PasswordHasherPort passwordHasherPort;
-    private final JwtTokenGeneratorPort jwtTokenGeneratorPort;
 
     @Override
     @Transactional
-    public AuthResponse execute(RegisterAdminAccountCommand command) {
+    public AuthRegisterResponse execute(RegisterAdminAccountCommand command) {
 
         if (accountRepositoryPort.findByEmail(command.email()).isPresent()){
             throw new AccountAlreadyExistsException("An account with the email address " + command.email() + " already exists.");
@@ -38,13 +39,9 @@ public class RegisterAdminAccountService implements RegisterAdminAccountUseCase 
 
         Account savedAccount = accountRepositoryPort.save(account);
 
-        AuthToken jwtToken = jwtTokenGeneratorPort.generateToken(savedAccount);
-
-        return AuthResponse.constitute(
+        return AuthRegisterResponse.constitute(
                 savedAccount.getId().toString(),
-                savedAccount.getEmail().toString(),
-                jwtToken.token(),
-                jwtToken.expiration()
+                savedAccount.getEmail().toString()
         );
     }
 }

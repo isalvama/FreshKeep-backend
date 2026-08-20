@@ -1,8 +1,8 @@
 package com.isalvama.fresh_keep.modules.account.application.port.in;
 
 import com.isalvama.fresh_keep.modules.account.application.command.LoginCommand;
-import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthResponse;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthJwtResponse;
 
 public interface LoginUseCase {
-    AuthResponse execute (LoginCommand loginCommand);
+    AuthJwtResponse execute (LoginCommand loginCommand);
 }

@@ -4,13 +4,14 @@ import com.isalvama.fresh_keep.modules.account.application.command.LoginCommand;
 import com.isalvama.fresh_keep.modules.account.application.port.out.AccountRepositoryPort;
 import com.isalvama.fresh_keep.modules.account.application.port.out.AuthenticationPort;
 import com.isalvama.fresh_keep.modules.account.application.port.out.JwtTokenGeneratorPort;
+import com.isalvama.fresh_keep.modules.account.application.port.out.dto.ResolvedEntities;
 import com.isalvama.fresh_keep.modules.account.domain.exception.DisabledAccountException;
 import com.isalvama.fresh_keep.modules.account.domain.exception.InvalidCredentialsException;
 import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
-import com.isalvama.fresh_keep.modules.account.domain.value_object.Email;
+import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.AuthToken;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
-import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthResponse;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthJwtResponse;
 import com.isalvama.fresh_keep.shared.domain.Role;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,9 @@ class LoginServiceTest {
     @Mock
     private AccountRepositoryPort accountRepositoryPort;
 
+    @Mock
+    private IdentityResolverService identityResolverService;
+
     @InjectMocks
     private LoginService loginService;
 
@@ -55,19 +59,22 @@ class LoginServiceTest {
         AuthToken token = new AuthToken("jwt-token", 800000L);
 
         when(authenticatorPort.authenticate(EMAIL, PASSWORD)).thenReturn(account);
-        when(jwtTokenGeneratorPort.generateToken(account)).thenReturn(token);
+        when(identityResolverService.resolveFor(account)).thenReturn(ResolvedEntities.constitute("userid", "adminid"));
+        when(jwtTokenGeneratorPort.generateToken(account, ResolvedEntities.constitute("userid", "adminid"))).thenReturn(token);
 
         // When
-        AuthResponse response = loginService.execute(command);
+        AuthJwtResponse response = loginService.execute(command);
 
         // Then
         assertNotNull(response);
         assertEquals(EMAIL, response.email());
         assertEquals("jwt-token", response.jwtString());
 
-        verify(accountRepositoryPort).updateLastLogIn(account.getId(), any(Instant.class));
+        verify(accountRepositoryPort).updateLastLogIn(eq(account.getId()), any(Instant.class));
         verify(authenticatorPort).authenticate(EMAIL, PASSWORD);
-        verify(jwtTokenGeneratorPort).generateToken(account);
+        verify(identityResolverService).resolveFor(account);
+        verify(jwtTokenGeneratorPort).generateToken(account, ResolvedEntities.constitute("userid", "adminid"));
+
     }
 
     @Test
@@ -82,6 +89,7 @@ class LoginServiceTest {
         assertThrows(InvalidCredentialsException.class, () -> loginService.execute(command));
         verify(authenticatorPort).authenticate(EMAIL, PASSWORD);
         verifyNoInteractions(accountRepositoryPort);
+        verifyNoInteractions(identityResolverService);
         verifyNoInteractions(jwtTokenGeneratorPort);
     }
 

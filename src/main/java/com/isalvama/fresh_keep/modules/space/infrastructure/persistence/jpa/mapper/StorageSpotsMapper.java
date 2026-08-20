@@ -4,7 +4,9 @@ import com.isalvama.fresh_keep.modules.space.domain.model.StorageSpot;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotName;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaStorageSpotEntity;
+import org.springframework.stereotype.Component;
 
+@Component
 public class StorageSpotsMapper {
     public StorageSpot toDomain(JpaStorageSpotEntity jpaEntity) {
         return StorageSpot.reconstitute(

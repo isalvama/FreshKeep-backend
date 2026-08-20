@@ -46,34 +46,38 @@ class JpaSpaceRepositoryAdapterTest {
     private JpaSpaceRepositoryAdapter adapter;
 
     @Autowired
-    private SpaceSpringDataRepository spaceSpringDataRepository;
+    private JpaSpaceSpringDataRepository spaceSpringDataRepository;
 
     private AccountId creatorAccountId;
     private AccountId participantAccountId;
     private UserId participantUserId;
     private UserId creatorUserId;
+    private String participantUserEmail;
+    private String creatorUserEmail;
 
     @BeforeEach
     void setUp(){
-        creatorAccountId = AccountId.generate();
+        creatorAccountId = AccountId.create();
         creatorUserId = UserId.create();
-        participantAccountId = AccountId.generate();
+        creatorUserEmail = "creator@email.com";
+        participantAccountId = AccountId.create();
         participantUserId = UserId.create();
+        participantUserEmail = "participant@email.com";
         jdbcTemplate.update(
                 "INSERT INTO accounts (id, email, password_hash) VALUES (?, ?, ?)",
-                creatorAccountId.value(), "creator@email.com", "hf9843hf3fi8h"
+                creatorAccountId.value(), creatorUserEmail, "hf9843hf3fi8h"
         );
         jdbcTemplate.update(
                 "INSERT INTO accounts (id, email, password_hash) VALUES (?, ?, ?)",
-                participantAccountId.value(), "participant@email.com", "eugf23gfi"
+                participantAccountId.value(), participantUserEmail, "eugf23gfi"
         );
         jdbcTemplate.update(
-                "INSERT INTO users (id, account_id, username) VALUES (?, ?, ?)",
-                creatorUserId.value(), creatorAccountId.value(), "testUserName"
+                "INSERT INTO users (id, account_id, email, username) VALUES (?, ?, ?, ?)",
+                creatorUserId.value(), creatorAccountId.value(), creatorUserEmail, "creatorUserName"
         );
         jdbcTemplate.update(
-                "INSERT INTO users (id, account_id, username) VALUES (?, ?, ?)",
-                participantUserId.value(), participantAccountId.value(), "testUserName"
+                "INSERT INTO users (id, account_id, email, username) VALUES (?, ?, ?, ?)",
+                participantUserId.value(), participantAccountId.value(), participantUserEmail, "participantUserName"
         );
     }
 

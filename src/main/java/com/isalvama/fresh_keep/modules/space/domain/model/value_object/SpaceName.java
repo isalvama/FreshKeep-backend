@@ -12,10 +12,11 @@ public record SpaceName(String value) {
         if (value == null || value.isBlank()) {
             throw new InvalidSpaceNameException("value cannot be null or blank");
         }
-        if (!value.chars().anyMatch(Character::isLetter)){
+        if (value.chars().noneMatch(Character::isLetter)){
             throw new InvalidSpaceNameException("value should contain at least 1 letter");
         }
         value = value.trim();
+
         if (value.length() > MAX_LENGTH) {
             throw new InvalidSpaceNameException("value cannot have more than 30 characters");
         }
