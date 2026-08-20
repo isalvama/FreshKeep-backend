@@ -7,7 +7,7 @@ import com.isalvama.fresh_keep.modules.account.application.port.out.Authenticati
 import com.isalvama.fresh_keep.modules.account.application.port.out.JwtTokenGeneratorPort;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.AuthToken;
-import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthResponse;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthJwtResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,19 +21,20 @@ public class LoginService implements LoginUseCase {
     private final AuthenticationPort authenticatorPort;
     private final JwtTokenGeneratorPort jwtTokenGeneratorPort;
     private final AccountRepositoryPort accountRepositoryPort;
+    private final IdentityResolverService identityResolverService;
 
     @Transactional
     @Override
-    public AuthResponse execute(LoginCommand loginCommand) {
+    public AuthJwtResponse execute(LoginCommand loginCommand) {
         Account account = authenticatorPort.authenticate(
                 loginCommand.email(),
                 loginCommand.rawPassword()
         );
         accountRepositoryPort.updateLastLogIn(account.getId(), Instant.now());
 
-        AuthToken token = jwtTokenGeneratorPort.generateToken(account);
+        AuthToken token = jwtTokenGeneratorPort.generateToken(account, identityResolverService.resolveFor(account));
 
-        return AuthResponse.constitute(
+        return AuthJwtResponse.constitute(
                 account.getId().toString(),
                 account.getEmail().toString(),
                 token.token(),

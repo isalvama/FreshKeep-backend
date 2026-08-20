@@ -1,7 +1,9 @@
 package com.isalvama.fresh_keep.modules.account.infrastructure.security.token;
 
+import com.isalvama.fresh_keep.modules.account.application.port.out.dto.ResolvedEntities;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
-import com.isalvama.fresh_keep.modules.account.domain.value_object.Email;
+import com.isalvama.fresh_keep.modules.user.domain.model.User;
+import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +24,7 @@ class JwtTokenGeneratorAdapterTest {
 
     private JwtTokenGeneratorAdapter jwtTokenGeneratorAdapter;
     private Account account;
+    private User user;
     private String token;
 
     @BeforeEach
@@ -35,7 +38,8 @@ class JwtTokenGeneratorAdapterTest {
                 Email.of(EMAIL),
                 PASSWORD
         );
-        token = jwtTokenGeneratorAdapter.generateToken(account).token();
+        user = User.create(account.getId(), Email.of(EMAIL));
+        token = jwtTokenGeneratorAdapter.generateToken(account, ResolvedEntities.constitute(user.getId().toString(), null)).token();
     }
 
     @Test
@@ -73,7 +77,7 @@ class JwtTokenGeneratorAdapterTest {
                 Email.of("admin@test.com"), PASSWORD
         );
 
-        String token = jwtTokenGeneratorAdapter.generateToken(adminAccount).token();
+        String token = jwtTokenGeneratorAdapter.generateToken(adminAccount, ResolvedEntities.constitute("userid", "adminid")).token();
         CustomUserPrincipal extracted = jwtTokenGeneratorAdapter.extractCustomUserPrincipal(token);
 
         assertThat(extracted.getAuthorities())

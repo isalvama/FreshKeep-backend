@@ -37,7 +37,7 @@ public class JpaAccountEntity {
     @Column(name = "role", length = 20, nullable = false)
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
-            name = "role",
+            name = "roles",
             joinColumns = @JoinColumn(name = "account_id"))
     private Set<Role> roles;
 

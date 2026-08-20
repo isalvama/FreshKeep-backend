@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 public class JpaSpaceRepositoryAdapter implements SpaceRepositoryPort {
-    private final SpaceSpringDataRepository spaceSpringDataRepository;
+    private final JpaSpaceSpringDataRepository spaceSpringDataRepository;
     private final SpaceMapper spaceMapper;
 
     @Override

@@ -25,6 +25,8 @@ class CustomUserPrincipalTest {
                 ID,
                 EMAIL,
                 RANDOM_PASSWORD,
+                null,
+                "adminid",
                 List.of(ADMIN)
                 );
 
@@ -40,6 +42,8 @@ class CustomUserPrincipalTest {
                 ID,
                 EMAIL,
                 RANDOM_PASSWORD,
+                "userid",
+                null,
                 List.of(USER)
         );
 
@@ -56,6 +60,8 @@ class CustomUserPrincipalTest {
                 ID,
                 EMAIL,
                 RANDOM_PASSWORD,
+                "userid",
+                "adminid",
                 List.of(USER, ADMIN)
         );
 
@@ -69,7 +75,7 @@ class CustomUserPrincipalTest {
 
     @Test
     void getAuthorities_shouldReturnEmptyListWhenNoRoles() {
-        CustomUserPrincipal principal = new CustomUserPrincipal(ID, EMAIL, RANDOM_PASSWORD, List.of());
+        CustomUserPrincipal principal = new CustomUserPrincipal(ID, EMAIL, RANDOM_PASSWORD,null, null, List.of());
 
         Collection<? extends GrantedAuthority> authorities = principal.getAuthorities();
 
