@@ -6,6 +6,9 @@ import com.isalvama.fresh_keep.modules.account.application.command.RegisterUserA
 import com.isalvama.fresh_keep.modules.account.application.port.in.LoginUseCase;
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterAdminAccountUseCase;
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterUserAccountUseCase;
+import com.isalvama.fresh_keep.modules.account.application.port.in.dto.response.AuthJwtResult;
+import com.isalvama.fresh_keep.modules.account.application.port.in.dto.response.AuthRegisterResult;
+import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.mapper.AuthResponseMapper;
 import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.AuthRequest;
 import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthJwtResponse;
 import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthRegisterResponse;
@@ -32,12 +35,14 @@ public class AuthController {
 
     @PostMapping("/register/user")
     public ResponseEntity<AuthRegisterResponse> registerUser(@Valid @RequestBody AuthRequest request) {
-        AuthRegisterResponse response = registerUserAccountUseCase.execute(
+        AuthRegisterResult result = registerUserAccountUseCase.execute(
                 RegisterUserAccountCommand.builder()
                         .email(request.email())
                         .rawPassword(request.password())
                         .build()
         );
+
+        AuthRegisterResponse response = AuthResponseMapper.toResponse(result);
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentContextPath()
@@ -51,12 +56,14 @@ public class AuthController {
     @PostMapping("/register/admin")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AuthRegisterResponse> registerAdmin(@Valid @RequestBody AuthRequest request) {
-        AuthRegisterResponse response = registerAdminAccountUseCase.execute(
+        AuthRegisterResult result = registerAdminAccountUseCase.execute(
                 RegisterAdminAccountCommand.builder()
                         .email(request.email())
                         .rawPassword(request.password())
                         .build()
         );
+
+        AuthRegisterResponse response = AuthResponseMapper.toResponse(result);
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentContextPath()
@@ -69,14 +76,14 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthJwtResponse> login(@Valid @RequestBody AuthRequest request) {
-        AuthJwtResponse response = loginUseCase.execute(
+        AuthJwtResult result = loginUseCase.execute(
                 LoginCommand.builder()
                         .email(request.email())
                         .rawPassword(request.password())
                         .build()
         );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(AuthResponseMapper.toResponse(result));
     }
 
 }
