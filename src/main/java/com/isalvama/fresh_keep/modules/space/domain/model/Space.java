@@ -1,6 +1,7 @@
 package com.isalvama.fresh_keep.modules.space.domain.model;
 
 import com.isalvama.fresh_keep.modules.space.domain.exception.InvalidSpaceException;
+import com.isalvama.fresh_keep.modules.space.domain.model.value_object.Emoji;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceName;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
@@ -18,32 +19,36 @@ import java.util.stream.Collectors;
 public class Space {
     private final SpaceId id;
     private SpaceName name;
+    private Emoji emoji;
     private Set<StorageSpot> storageSpots;
     private final UserId creatorId;
     private Set<UserId> participantIds;
 
-    private Space(SpaceId spaceId, SpaceName spaceName, Set<StorageSpot> storageSpots, UserId creatorId, Set<UserId> participantIds) {
+    private Space(SpaceId spaceId, SpaceName spaceName, Emoji emoji, Set<StorageSpot> storageSpots, UserId creatorId, Set<UserId> participantIds) {
         this.id = validateNotNull(spaceId, "spaceId");
         this.name = validateNotNull(spaceName, "spaceName");
-        this.storageSpots = validateNonDuplicateStorageSpots(storageSpots);
+        this.emoji = validateNotNull(emoji, "emoji");
+        this.storageSpots = validateNotNullNotEmptyNotDuplicateStorageSpots(storageSpots);
         this.creatorId = validateNotNull(creatorId, "creatorId");
         this.participantIds = validateNotNullAndNotEmpty(participantIds, "participantIds");
     }
 
-    public static Space create(SpaceName name, Set<StorageSpot> storageSpots, UserId creatorId){
+    public static Space create(SpaceName name, Emoji emoji, Set<StorageSpot> storageSpots, UserId creatorId){
         return new Space(
                 SpaceId.create(),
                 name,
+                emoji,
                 storageSpots,
                 creatorId,
                 Set.of(creatorId)
         );
     }
 
-    public static Space reconstitute(SpaceId id, SpaceName name, Set<StorageSpot> storageSpots, UserId creatorId, Set<UserId> participantIds){
+    public static Space reconstitute(SpaceId id, SpaceName name, Emoji emoji, Set<StorageSpot> storageSpots, UserId creatorId, Set<UserId> participantIds){
         return new Space(
                 id,
                 name,
+                emoji,
                 storageSpots,
                 creatorId,
                 participantIds
@@ -64,7 +69,7 @@ public class Space {
         return fieldValue;
     }
 
-    private static Set<StorageSpot> validateNonDuplicateStorageSpots(Set<StorageSpot> storageSpots) {
+    private static Set<StorageSpot> validateNotNullNotEmptyNotDuplicateStorageSpots(Set<StorageSpot> storageSpots) {
         validateNotNullAndNotEmpty(storageSpots, "storageSpots");
 
         Set<String> seen = new HashSet<>();

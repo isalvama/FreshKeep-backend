@@ -1,6 +1,7 @@
 package com.isalvama.fresh_keep.modules.space.domain.model;
 
 import com.isalvama.fresh_keep.modules.space.domain.exception.InvalidSpaceException;
+import com.isalvama.fresh_keep.modules.space.domain.model.value_object.Emoji;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceName;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotName;
@@ -13,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class SpaceTest {
     private static final String NAME = "Space Name";
+    private static final Emoji EMOJI = Emoji.from("🏠");
     private static final SpaceId SPACE_ID = SpaceId.create();
     private static final UserId CREATOR_ID = UserId.create();
 
@@ -21,11 +23,12 @@ class SpaceTest {
     void create_generatesSpaceWithGeneratedIdAndCreatorIdAsParticipant(){
         StorageSpot storageSpot = StorageSpot.create(StorageSpotName.from("Storage Spot"), StorageSpotType.FREEZER);
         UserId creatorId = UserId.create();
-        Space space = Space.create(SpaceName.from(NAME), Set.of(storageSpot), creatorId);
+        Space space = Space.create(SpaceName.from(NAME), EMOJI, Set.of(storageSpot), creatorId);
 
         assertNotNull(space);
         assertNotNull(space.getId());
         assertEquals(NAME, space.getName().value());
+        assertEquals(EMOJI, space.getEmoji());
         assertEquals(1, space.getStorageSpots().size());
         assertTrue(space.getStorageSpots().contains(storageSpot));
         assertEquals(creatorId.value().toString(), space.getCreatorId().toString());
@@ -41,7 +44,7 @@ class SpaceTest {
         Set<StorageSpot> spots = Set.of(spot1, spot2);
 
         InvalidSpaceException ex = assertThrows(InvalidSpaceException.class,
-                () -> Space.create(SpaceName.from(NAME), spots, CREATOR_ID));
+                () -> Space.create(SpaceName.from(NAME), EMOJI, spots, CREATOR_ID));
 
         assertTrue(ex.getMessage().contains("cannot share the same name and type"));
     }
@@ -51,7 +54,7 @@ class SpaceTest {
         StorageSpot spot1 = StorageSpot.create(StorageSpotName.from("Main"), StorageSpotType.FREEZER);
         StorageSpot spot2 = StorageSpot.create(StorageSpotName.from("Main"), StorageSpotType.FRIDGE);
 
-        assertDoesNotThrow(() -> Space.create(SpaceName.from(NAME), Set.of(spot1, spot2), CREATOR_ID));
+        assertDoesNotThrow(() -> Space.create(SpaceName.from(NAME), EMOJI, Set.of(spot1, spot2), CREATOR_ID));
     }
 
     @Test
@@ -59,7 +62,7 @@ class SpaceTest {
         StorageSpot spot1 = StorageSpot.create(StorageSpotName.from("Fridge 1"), StorageSpotType.FRIDGE);
         StorageSpot spot2 = StorageSpot.create(StorageSpotName.from("Fridge 2"), StorageSpotType.FRIDGE);
 
-        assertDoesNotThrow(() -> Space.create(SpaceName.from(NAME), Set.of(spot1, spot2), CREATOR_ID));
+        assertDoesNotThrow(() -> Space.create(SpaceName.from(NAME), EMOJI, Set.of(spot1, spot2), CREATOR_ID));
     }
 
     @Test
@@ -67,7 +70,15 @@ class SpaceTest {
         Set<StorageSpot> spots = Set.of(StorageSpot.create(StorageSpotName.from("Spot"), StorageSpotType.FRIDGE));
 
         assertThrows(InvalidSpaceException.class,
-                () -> Space.create(null, spots, CREATOR_ID));
+                () -> Space.create(null, EMOJI, spots, CREATOR_ID));
+    }
+
+    @Test
+    void create_throwsException_whenEmojiIsNull() {
+        Set<StorageSpot> spots = Set.of(StorageSpot.create(StorageSpotName.from("Spot"), StorageSpotType.FRIDGE));
+
+        assertThrows(InvalidSpaceException.class,
+                () -> Space.create(SpaceName.from(NAME), null, spots, CREATOR_ID));
     }
 
     @Test
@@ -75,7 +86,7 @@ class SpaceTest {
         Set<StorageSpot> emptySpots = Set.of();
 
         InvalidSpaceException ex = assertThrows(InvalidSpaceException.class,
-                () -> Space.create(SpaceName.from(NAME), emptySpots, CREATOR_ID));
+                () -> Space.create(SpaceName.from(NAME), EMOJI, emptySpots, CREATOR_ID));
 
         assertTrue(ex.getMessage().contains("storageSpots cannot be empty"));
     }
@@ -86,9 +97,10 @@ class SpaceTest {
         Set<StorageSpot> spots = Set.of(StorageSpot.create(StorageSpotName.from("Spot"), StorageSpotType.FREEZER));
         Set<UserId> participants = Set.of(CREATOR_ID, UserId.create());
 
-        Space space = Space.reconstitute(existingId, SpaceName.from(NAME), spots, CREATOR_ID, participants);
+        Space space = Space.reconstitute(existingId, SpaceName.from(NAME), EMOJI, spots, CREATOR_ID, participants);
 
         assertEquals(existingId, space.getId());
+        assertEquals(EMOJI, space.getEmoji());
         assertEquals(2, space.getParticipantIds().size());
         assertTrue(space.getParticipantIds().contains(CREATOR_ID));
     }
@@ -101,7 +113,7 @@ class SpaceTest {
         Set<StorageSpot> spots = Set.of(spot1, spot2);
 
         InvalidSpaceException ex = assertThrows(InvalidSpaceException.class,
-                () -> Space.reconstitute(SPACE_ID, SpaceName.from(NAME), spots, CREATOR_ID, Set.of(CREATOR_ID)));
+                () -> Space.reconstitute(SPACE_ID, SpaceName.from(NAME), EMOJI, spots, CREATOR_ID, Set.of(CREATOR_ID)));
 
         assertTrue(ex.getMessage().contains("cannot share the same name and type"));
     }
@@ -111,7 +123,7 @@ class SpaceTest {
         StorageSpot spot1 = StorageSpot.create(StorageSpotName.from("Main"), StorageSpotType.FREEZER);
         StorageSpot spot2 = StorageSpot.create(StorageSpotName.from("Main"), StorageSpotType.FRIDGE);
 
-        assertDoesNotThrow(() -> Space.reconstitute(SPACE_ID, SpaceName.from(NAME), Set.of(spot1, spot2), CREATOR_ID, Set.of(CREATOR_ID)));
+        assertDoesNotThrow(() -> Space.reconstitute(SPACE_ID, SpaceName.from(NAME), EMOJI, Set.of(spot1, spot2), CREATOR_ID, Set.of(CREATOR_ID)));
     }
 
     @Test
@@ -119,7 +131,7 @@ class SpaceTest {
         StorageSpot spot1 = StorageSpot.create(StorageSpotName.from("Fridge 1"), StorageSpotType.FRIDGE);
         StorageSpot spot2 = StorageSpot.create(StorageSpotName.from("Fridge 2"), StorageSpotType.FRIDGE);
 
-        assertDoesNotThrow(() -> Space.reconstitute(SPACE_ID, SpaceName.from(NAME), Set.of(spot1, spot2), CREATOR_ID, Set.of(CREATOR_ID)));
+        assertDoesNotThrow(() -> Space.reconstitute(SPACE_ID, SpaceName.from(NAME), EMOJI, Set.of(spot1, spot2), CREATOR_ID, Set.of(CREATOR_ID)));
     }
 
     @Test
@@ -128,7 +140,7 @@ class SpaceTest {
         Set<UserId> emptyParticipants = Set.of();
 
         InvalidSpaceException ex = assertThrows(InvalidSpaceException.class,
-                () -> Space.reconstitute(SPACE_ID, SpaceName.from(NAME), spots, CREATOR_ID, emptyParticipants));
+                () -> Space.reconstitute(SPACE_ID, SpaceName.from(NAME), EMOJI, spots, CREATOR_ID, emptyParticipants));
 
         assertTrue(ex.getMessage().contains("participantIds cannot be empty"));
     }

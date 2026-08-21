@@ -9,4 +9,15 @@ public record SpaceResult(
         String creatorId,
         List<String> participantIds
 ) {
+
+    public static SpaceResult constitute (String id, String name, List<StorageSpotResult> storageSpotResponses, String creatorId, List<String> participantIds
+    ){
+        return new SpaceResult(
+                id,
+                name,
+                storageSpotResponses,
+                creatorId,
+                participantIds
+        );
+    }
 }
