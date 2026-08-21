@@ -5,6 +5,7 @@ import com.isalvama.fresh_keep.modules.space.application.port.in.command.Storage
 import com.isalvama.fresh_keep.modules.space.application.port.in.dto.SpaceResult;
 import com.isalvama.fresh_keep.modules.space.application.port.out.SpaceRepositoryPort;
 import com.isalvama.fresh_keep.modules.space.domain.exception.InvalidEmojiException;
+import com.isalvama.fresh_keep.modules.space.domain.exception.InvalidSpaceException;
 import com.isalvama.fresh_keep.modules.space.domain.exception.InvalidSpaceNameException;
 import com.isalvama.fresh_keep.modules.space.domain.model.Space;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.exception.SpacePersistenceException;
@@ -17,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -37,8 +39,8 @@ class CreateSpaceServiceTest {
     @InjectMocks
     private CreateSpaceService createSpaceService;
 
-    private static Set<StorageSpotCommand> oneSpot() {
-        return Set.of(new StorageSpotCommand("Main Shelf", "SHELF"));
+    private static List<StorageSpotCommand> oneSpot() {
+        return List.of(new StorageSpotCommand("Main Shelf", "SHELF"));
     }
 
     @Test
@@ -95,10 +97,23 @@ class CreateSpaceServiceTest {
 
     @Test
     void execute_throwsIllegalArgumentExceptionWhenStorageSpotTypeIsUnknown() {
-        Set<StorageSpotCommand> invalidTypeSpot = Set.of(new StorageSpotCommand("Main Shelf", "NOT_A_REAL_TYPE"));
+        List<StorageSpotCommand> invalidTypeSpot = List.of(new StorageSpotCommand("Main Shelf", "NOT_A_REAL_TYPE"));
         CreateSpaceCommand command = new CreateSpaceCommand(CREATOR_ID, SPACE_NAME, invalidTypeSpot, EMOJI);
 
         assertThrows(IllegalArgumentException.class, () -> createSpaceService.execute(command));
+
+        verifyNoInteractions(spaceRepositoryPort);
+    }
+
+    @Test
+    void execute_throwsInvalidSpaceExceptionWhenStorageSpotsAreDuplicated() {
+        List<StorageSpotCommand> duplicateSpots = List.of(
+                new StorageSpotCommand("Main Shelf", "SHELF"),
+                new StorageSpotCommand("Main Shelf", "SHELF")
+        );
+        CreateSpaceCommand command = new CreateSpaceCommand(CREATOR_ID, SPACE_NAME, duplicateSpots, EMOJI);
+
+        assertThrows(InvalidSpaceException.class, () -> createSpaceService.execute(command));
 
         verifyNoInteractions(spaceRepositoryPort);
     }

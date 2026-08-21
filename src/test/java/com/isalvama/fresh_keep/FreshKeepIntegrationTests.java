@@ -559,7 +559,7 @@ public class FreshKeepIntegrationTests {
             @Test
             void shouldReturn400WhenSpaceNameExceedsMaxSize() throws Exception {
                 CreateSpaceRequest request = new CreateSpaceRequest(
-                        "a".repeat(21), "🏠", List.of(new StorageSpotRequest(storageSpotName, storageSpotType)));
+                        "a".repeat(31), "🏠", List.of(new StorageSpotRequest(storageSpotName, storageSpotType)));
 
                 ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
                         .header("Authorization", "Bearer " + userToken)
