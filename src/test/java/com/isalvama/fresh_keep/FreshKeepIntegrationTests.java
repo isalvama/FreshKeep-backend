@@ -11,6 +11,9 @@ import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.JpaAccountRepositoryAdapter;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.CustomUserPrincipal;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.JwtTokenGeneratorAdapter;
+import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.JpaSpaceSpringDataRepository;
+import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.request.CreateSpaceRequest;
+import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.request.StorageSpotRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -32,6 +35,7 @@ import tools.jackson.databind.ObjectMapper;
 import org.testcontainers.utility.DockerImageName;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -52,6 +56,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 public class FreshKeepIntegrationTests {
     private static final String API_AUTH = "/api/v1/auth";
+    private static final String API_SPACES = "/api/v1/spaces";
 
     @Container
     @ServiceConnection
@@ -409,6 +414,284 @@ public class FreshKeepIntegrationTests {
                             .andExpect(jsonPath("$.detail", containsString("Invalid Credentials Error")))
                             .andExpect(jsonPath("$.detail", containsString("Invalid email or password")));
                 }
+            }
+        }
+    }
+
+    @Nested
+    @DisplayName(API_SPACES)
+    class Spaces {
+
+        private static final String EMAIL = "space-owner@email.com";
+        private static final String PASSWORD = "Password1";
+
+        @Autowired
+        private MockMvc mockMvc;
+
+        @Autowired
+        private ObjectMapper objectMapper;
+
+        @Autowired
+        private AccountSpringDataRepository accountSpringDataRepository;
+
+        @Autowired
+        private JpaSpaceSpringDataRepository spaceSpringDataRepository;
+
+        @Autowired
+        private JpaAccountRepositoryAdapter jpaAccountRepositoryAdapter;
+
+        @Autowired
+        private JwtTokenGeneratorAdapter jwtTokenGeneratorAdapter;
+
+        @Nested
+        @DisplayName("POST " + API_SPACES)
+        class CreateSpace {
+
+            private String userToken;
+            private String userId;
+            private String spaceName;
+            private String storageSpotName;
+            private String storageSpotType;
+
+            @BeforeEach
+            void setUp() throws Exception {
+                spaceName = "Kitchen";
+                storageSpotName = "Main Shelf";
+                storageSpotType = "SHELF";
+                spaceSpringDataRepository.deleteAll();
+                accountSpringDataRepository.deleteAll();
+
+                mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new AuthRequest(EMAIL, PASSWORD))))
+                        .andExpect(status().isCreated());
+
+                ResultActions loginResult = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new AuthRequest(EMAIL, PASSWORD))));
+
+                String loginResponse = loginResult.andReturn().getResponse().getContentAsString();
+                userToken = com.jayway.jsonpath.JsonPath.read(loginResponse, "$.jwtString");
+                userId = jwtTokenGeneratorAdapter.extractCustomUserPrincipal(userToken).userId();
+            }
+
+            private CreateSpaceRequest validRequest() {
+                return new CreateSpaceRequest(
+                        spaceName,
+                        "🏠",
+                        List.of(new StorageSpotRequest(storageSpotName, storageSpotType))
+                );
+            }
+
+            @DisplayName("should return 201 with the created space when authenticated as USER")
+            @Test
+            void shouldReturn201AndCreateSpaceSuccessfully() throws Exception {
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validRequest())));
+
+                result.andExpect(status().isCreated())
+                        .andExpect(header().string("Location", containsString(API_SPACES + "/")))
+                        .andExpect(jsonPath("$.id").exists())
+                        .andExpect(jsonPath("$.spaceName").value(spaceName))
+                        .andExpect(jsonPath("$.creatorId").value(userId))
+                        .andExpect(jsonPath("$.participantIds", hasItem(userId)))
+                        .andExpect(jsonPath("$.storageSpots", hasSize(1)))
+                        .andExpect(jsonPath("$.storageSpots[0].storageSpotName").value(storageSpotName))
+                        .andExpect(jsonPath("$.storageSpots[0].storageSpotType").value(storageSpotType));
+
+                assertEquals(1, spaceSpringDataRepository.count());
+            }
+
+            @DisplayName("should return 401 Unauthorized when no token is provided")
+            @Test
+            void shouldReturn401WhenNotAuthenticated() throws Exception {
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validRequest())));
+
+                result.andExpect(status().isUnauthorized())
+                        .andExpect(jsonPath("$.title").value("Unauthorized"))
+                        .andExpect(jsonPath("$.instance").value(API_SPACES));
+
+                assertEquals(0, spaceSpringDataRepository.count());
+            }
+
+            @DisplayName("should return 403 Forbidden when the authenticated account does not have the USER role")
+            @Test
+            void shouldReturn403WhenAccountDoesNotHaveUserRole() throws Exception {
+                Account admin = Account.createAdmin(Email.of("admin-only@email.com"), PASSWORD);
+                jpaAccountRepositoryAdapter.save(admin);
+                String adminToken = jwtTokenGeneratorAdapter
+                        .generateToken(admin, ResolvedEntities.constitute(null, "adminid1234"))
+                        .token();
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validRequest())));
+
+                result.andExpect(status().isForbidden())
+                        .andExpect(jsonPath("$.title").value("Forbidden"))
+                        .andExpect(jsonPath("$.instance").value(API_SPACES));
+
+                assertEquals(0, spaceSpringDataRepository.count());
+            }
+
+            @DisplayName("should return 400 Bad Request when spaceName is blank")
+            @Test
+            void shouldReturn400WhenSpaceNameIsBlank() throws Exception {
+                CreateSpaceRequest request = new CreateSpaceRequest(
+                        "", "🏠", List.of(new StorageSpotRequest(storageSpotName, storageSpotType)));
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)));
+
+                result.andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.title").value("Validation Error In Body Data"))
+                        .andExpect(jsonPath("$.errors.spaceName", containsString("must not be blank")));
+            }
+
+            @DisplayName("should return 400 Bad Request when spaceName exceeds max size")
+            @Test
+            void shouldReturn400WhenSpaceNameExceedsMaxSize() throws Exception {
+                CreateSpaceRequest request = new CreateSpaceRequest(
+                        "a".repeat(21), "🏠", List.of(new StorageSpotRequest(storageSpotName, storageSpotType)));
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)));
+
+                result.andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.title").value("Validation Error In Body Data"))
+                        .andExpect(jsonPath("$.errors.spaceName", containsString("size must be between 0 and 20")));
+            }
+
+            @DisplayName("should return 400 Bad Request when emoji is blank")
+            @Test
+            void shouldReturn400WhenEmojiIsBlank() throws Exception {
+                CreateSpaceRequest request = new CreateSpaceRequest(
+                        spaceName, " ", List.of(new StorageSpotRequest(storageSpotName, storageSpotType)));
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)));
+
+                result.andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.title").value("Validation Error In Body Data"))
+                        .andExpect(jsonPath("$.errors.emoji", containsString("must not be blank")));
+            }
+
+            @DisplayName("should return 400 Bad Request when emoji exceeds max size")
+            @Test
+            void shouldReturn400WhenEmojiExceedsMaxSize() throws Exception {
+                CreateSpaceRequest request = new CreateSpaceRequest(
+                        spaceName, "123456789", List.of(new StorageSpotRequest(storageSpotName, storageSpotType)));
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)));
+
+                result.andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.title").value("Validation Error In Body Data"))
+                        .andExpect(jsonPath("$.errors.emoji", containsString("size must be between 1 and 8")));
+            }
+
+            @DisplayName("should return 400 Bad Request when storageSpots is empty")
+            @Test
+            void shouldReturn400WhenStorageSpotsIsEmpty() throws Exception {
+                CreateSpaceRequest request = new CreateSpaceRequest(spaceName, "🏠", List.of());
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)));
+
+                result.andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.title").value("Validation Error In Body Data"))
+                        .andExpect(jsonPath("$.errors.storageSpots").exists());
+            }
+
+            @DisplayName("should return 400 Bad Request when storageSpot name exceeds max size")
+            @Test
+            void shouldReturn400WhenStorageSpotsNameExceedsMaxSize() throws Exception {
+                CreateSpaceRequest request = new CreateSpaceRequest(spaceName, "🏠", List.of(new StorageSpotRequest("s".repeat(31), storageSpotType)));
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)));
+
+                result.andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.title").value("Validation Error In Body Data"))
+                        .andExpect(jsonPath("$.errors['storageSpots[0].name']", containsString("size must be between 0 and 30")));
+            }
+
+            @DisplayName("should return 400 Bad Request when storageSpot name is blank")
+            @Test
+            void shouldReturn400WhenStorageSpotsNameIsBlank() throws Exception {
+                CreateSpaceRequest request = new CreateSpaceRequest(spaceName, "🏠", List.of(new StorageSpotRequest(" ", storageSpotType)));
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)));
+
+                result.andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.title").value("Validation Error In Body Data"))
+                        .andExpect(jsonPath("$.errors['storageSpots[0].name']", containsString("must not be blank")));
+            }
+
+            @DisplayName("should return 400 Bad Request when storageSpot type is blank")
+            @Test
+            void shouldReturn400WhenStorageSpotsTypeIsBlank() throws Exception {
+                CreateSpaceRequest request = new CreateSpaceRequest(spaceName, "🏠", List.of(new StorageSpotRequest(storageSpotName, " ")));
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)));
+
+                result.andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.title").value("Validation Error In Body Data"))
+                        .andExpect(jsonPath("$.errors['storageSpots[0].type']", containsString("must not be blank")));
+            }
+
+            @DisplayName("should return 400 Bad Request when storageSpot type does not match any StorageSpotTypeRequest enum constant name")
+            @Test
+            void shouldReturn400WhenStorageSpotsTypeDoesNotMatchAnyStorageSpotTypeRequestName() throws Exception {
+                CreateSpaceRequest request = new CreateSpaceRequest(spaceName, "🏠", List.of(new StorageSpotRequest(storageSpotName, "INVALID_TYPE")));
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)));
+
+                result.andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.title").value("Validation Error In Body Data"))
+                        .andExpect(jsonPath("$.errors['storageSpots[0].type']", containsString("Invalid value")));
+            }
+
+            @DisplayName("should return 400 Bad Request when the emoji fails domain-level validation")
+            @Test
+            void shouldReturn400WhenEmojiIsInvalidAtDomainLevel() throws Exception {
+                CreateSpaceRequest request = new CreateSpaceRequest(
+                        spaceName, "abc", List.of(new StorageSpotRequest(storageSpotName, storageSpotType)));
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)));
+
+                result.andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.title").value("Business Rule Error"))
+                        .andExpect(jsonPath("$.detail", containsString("not a valid emoji")));
             }
         }
     }
