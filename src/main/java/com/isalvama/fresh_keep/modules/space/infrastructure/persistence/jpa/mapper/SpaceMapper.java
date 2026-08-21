@@ -19,10 +19,10 @@ public class SpaceMapper {
 
     public Space toDomain(JpaSpaceEntity jpaEntity){
         return Space.reconstitute(
-                SpaceId.of(jpaEntity.getCreatorId()),
+                SpaceId.of(jpaEntity.getId()),
                 SpaceName.from(jpaEntity.getName()),
                 jpaEntity.getStorageSpots().stream().map(storageSpotsMapper::toDomain).collect(Collectors.toSet()),
-                UserId.of(jpaEntity.getId()),
+                UserId.of(jpaEntity.getCreatorId()),
                 jpaEntity.getParticipantIds().stream().map(UserId::of).collect(Collectors.toSet())
         );
     }
