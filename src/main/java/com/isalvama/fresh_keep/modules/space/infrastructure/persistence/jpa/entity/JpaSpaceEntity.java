@@ -28,12 +28,14 @@ public class JpaSpaceEntity {
     @Column(name = "name", nullable = false, length = 30)
     private String name;
 
+    @Column(name = "emoji", nullable = false, length = 8)
+    private String emoji;
+
     @Column(name = "creator_id", nullable = false, length = 30)
     @JdbcTypeCode(SqlTypes.UUID)
     private UUID creatorId;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "space_id")
+    @OneToMany(mappedBy = "space", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Set<JpaStorageSpotEntity> storageSpots;
 
     @ElementCollection
