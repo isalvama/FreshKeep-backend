@@ -1,11 +1,11 @@
 package com.isalvama.fresh_keep.modules.space.application.port.in.command;
 
-import java.util.Set;
+import java.util.List;
 
 public record CreateSpaceCommand(
         String creatorId,
         String spaceName,
-        Set<StorageSpotCommand> storageSpots,
+        List<StorageSpotCommand> storageSpots,
         String emoji
 ) {
 }

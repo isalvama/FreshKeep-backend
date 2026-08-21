@@ -12,7 +12,7 @@ public class CreateSpaceCommandMapper {
         return new CreateSpaceCommand(
                         userId,
                         request.spaceName(),
-                        request.storageSpots().stream().map(StorageSpotCommandMapper::toCommand).collect(Collectors.toSet()),
+                        request.storageSpots().stream().map(StorageSpotCommandMapper::toCommand).toList(),
                         request.emoji()
                 );
     }

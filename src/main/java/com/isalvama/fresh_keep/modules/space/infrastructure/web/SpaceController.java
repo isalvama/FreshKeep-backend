@@ -30,7 +30,6 @@ public class SpaceController {
 
     private final SpaceResponseMapper mapper;
     private final CreateSpaceUseCase createSpaceUseCase;
-    private final SpaceResponseMapper spaceResponseMapper;
 
     @PostMapping
     @PreAuthorize("hasRole('USER')")
