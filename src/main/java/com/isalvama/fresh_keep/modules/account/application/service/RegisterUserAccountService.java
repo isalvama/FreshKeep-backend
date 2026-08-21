@@ -2,16 +2,13 @@ package com.isalvama.fresh_keep.modules.account.application.service;
 
 import com.isalvama.fresh_keep.modules.account.application.command.RegisterUserAccountCommand;
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterUserAccountUseCase;
+import com.isalvama.fresh_keep.modules.account.application.port.in.dto.response.AuthRegisterResult;
 import com.isalvama.fresh_keep.modules.account.application.port.out.*;
-import com.isalvama.fresh_keep.modules.account.application.port.out.dto.ResolvedEntities;
 import com.isalvama.fresh_keep.modules.account.domain.event.UserAccountRegisteredEvent;
 import com.isalvama.fresh_keep.modules.account.domain.event.UserAccountRegisteredEventPublisher;
-import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthJwtResponse;
 import com.isalvama.fresh_keep.modules.account.domain.exception.AccountAlreadyExistsException;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
-import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthRegisterResponse;
 import com.isalvama.fresh_keep.shared.domain.value_object.Email;
-import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.AuthToken;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,7 +22,7 @@ public class RegisterUserAccountService implements RegisterUserAccountUseCase {
 
     @Override
     @Transactional
-    public AuthRegisterResponse execute(RegisterUserAccountCommand command) {
+    public AuthRegisterResult execute(RegisterUserAccountCommand command) {
 
         if (accountRepositoryPort.findByEmail(command.email()).isPresent()){
             throw new AccountAlreadyExistsException("An account with the email address " + command.email() + " already exists.");
@@ -42,7 +39,7 @@ public class RegisterUserAccountService implements RegisterUserAccountUseCase {
 
         accountEventPublisher.publish(UserAccountRegisteredEvent.from(savedAccount));
 
-        return AuthRegisterResponse.constitute(
+        return AuthRegisterResult.constitute(
                 savedAccount.getId().toString(),
                 savedAccount.getEmail().toString()
         );

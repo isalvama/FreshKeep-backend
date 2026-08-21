@@ -7,8 +7,8 @@ import com.isalvama.fresh_keep.modules.account.domain.event.UserAccountRegistere
 import com.isalvama.fresh_keep.modules.account.domain.exception.AccountAlreadyExistsException;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
+import com.isalvama.fresh_keep.modules.account.application.port.in.dto.response.AuthRegisterResult;
 import com.isalvama.fresh_keep.modules.account.infrastructure.event.UserAccountEventPublisherAdapter;
-import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthRegisterResponse;
 import com.isalvama.fresh_keep.shared.domain.Role;
 import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import org.junit.jupiter.api.Test;
@@ -53,7 +53,7 @@ class RegisterUserAccountServiceTest {
         when(passwordHasherPort.hash(password)).thenReturn(password + " hashed");
         when(accountRepositoryPort.save(any(Account.class))).thenAnswer(AdditionalAnswers.returnsFirstArg());
 
-        AuthRegisterResponse response = registerUserAccountService.execute(command);
+        AuthRegisterResult response = registerUserAccountService.execute(command);
 
         assertNotNull(response);
         assertNotNull(response.accountId());

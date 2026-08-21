@@ -10,8 +10,8 @@ import com.isalvama.fresh_keep.modules.account.domain.exception.InvalidCredentia
 import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
 import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.AuthToken;
+import com.isalvama.fresh_keep.modules.account.application.port.in.dto.response.AuthJwtResult;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
-import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthJwtResponse;
 import com.isalvama.fresh_keep.shared.domain.Role;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -63,7 +63,7 @@ class LoginServiceTest {
         when(jwtTokenGeneratorPort.generateToken(account, ResolvedEntities.constitute("userid", "adminid"))).thenReturn(token);
 
         // When
-        AuthJwtResponse response = loginService.execute(command);
+        AuthJwtResult response = loginService.execute(command);
 
         // Then
         assertNotNull(response);

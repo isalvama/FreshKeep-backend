@@ -2,16 +2,12 @@ package com.isalvama.fresh_keep.modules.account.application.service;
 
 import com.isalvama.fresh_keep.modules.account.application.command.RegisterAdminAccountCommand;
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterAdminAccountUseCase;
-import com.isalvama.fresh_keep.modules.account.application.port.out.dto.ResolvedEntities;
-import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthJwtResponse;
+import com.isalvama.fresh_keep.modules.account.application.port.in.dto.response.AuthRegisterResult;
 import com.isalvama.fresh_keep.modules.account.application.port.out.AccountRepositoryPort;
-import com.isalvama.fresh_keep.modules.account.application.port.out.JwtTokenGeneratorPort;
 import com.isalvama.fresh_keep.modules.account.application.port.out.PasswordHasherPort;
 import com.isalvama.fresh_keep.modules.account.domain.exception.AccountAlreadyExistsException;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
-import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.response.AuthRegisterResponse;
 import com.isalvama.fresh_keep.shared.domain.value_object.Email;
-import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.AuthToken;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,7 +20,7 @@ public class RegisterAdminAccountService implements RegisterAdminAccountUseCase 
 
     @Override
     @Transactional
-    public AuthRegisterResponse execute(RegisterAdminAccountCommand command) {
+    public AuthRegisterResult execute(RegisterAdminAccountCommand command) {
 
         if (accountRepositoryPort.findByEmail(command.email()).isPresent()){
             throw new AccountAlreadyExistsException("An account with the email address " + command.email() + " already exists.");
@@ -39,7 +35,7 @@ public class RegisterAdminAccountService implements RegisterAdminAccountUseCase 
 
         Account savedAccount = accountRepositoryPort.save(account);
 
-        return AuthRegisterResponse.constitute(
+        return AuthRegisterResult.constitute(
                 savedAccount.getId().toString(),
                 savedAccount.getEmail().toString()
         );
