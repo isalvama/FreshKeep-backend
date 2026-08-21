@@ -7,14 +7,16 @@ import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.mapper.Creat
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.mapper.SpaceResponseMapper;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.request.CreateSpaceRequest;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.response.SpaceResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -23,18 +25,19 @@ import java.net.URI;
 @RestController
 @RequestMapping("/api/v1/spaces")
 @RequiredArgsConstructor
+@Tag(name = "Spaces", description = "Spaces endpoints")
 public class SpaceController {
 
     private final SpaceResponseMapper mapper;
     private final CreateSpaceUseCase createSpaceUseCase;
+    private final SpaceResponseMapper spaceResponseMapper;
 
-    // ── POST /api/v1/spaces ──────────────────────────────────────────────────
     @PostMapping
     @PreAuthorize("hasRole('USER')")
+    @Operation(summary = "Create a new Space")
     public ResponseEntity<SpaceResponse> create(
-            @RequestPart("data") @Valid CreateSpaceRequest request,
-            @AuthenticationPrincipal(expression = "userId") String userId
-    ) {
+            @Valid @RequestBody CreateSpaceRequest request,
+            @AuthenticationPrincipal(expression = "userId") String userId) {
 
         CreateSpaceCommand command = CreateSpaceCommandMapper.toCommand(request, userId);
 

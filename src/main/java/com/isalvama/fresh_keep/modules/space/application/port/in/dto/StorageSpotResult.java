@@ -5,4 +5,12 @@ public record StorageSpotResult (
         String name,
         String type
 ) {
+
+    public static StorageSpotResult constitute (String id, String name, String type) {
+        return new StorageSpotResult(
+                id,
+                name,
+                type
+        );
+    }
 }

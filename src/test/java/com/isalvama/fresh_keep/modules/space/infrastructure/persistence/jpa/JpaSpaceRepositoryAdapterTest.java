@@ -4,6 +4,7 @@ import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
 import com.isalvama.fresh_keep.modules.space.domain.model.Space;
 import com.isalvama.fresh_keep.modules.space.domain.model.StorageSpot;
 import com.isalvama.fresh_keep.modules.space.domain.model.StorageSpotType;
+import com.isalvama.fresh_keep.modules.space.domain.model.value_object.Emoji;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceName;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotName;
@@ -93,6 +94,7 @@ class JpaSpaceRepositoryAdapterTest {
         Space space = Space.reconstitute(
                 spaceId,
                 SpaceName.from("My House"),
+                Emoji.from("🏠"),
                 Set.of(spot),
                 creatorUserId,
                 Set.of(creatorUserId, participantUserId)
@@ -106,6 +108,7 @@ class JpaSpaceRepositoryAdapterTest {
 
         assertEquals(spaceId.value(), saved.getId());
         assertEquals("My House", saved.getName());
+        assertEquals("🏠", saved.getEmoji());
         assertEquals(creatorUserId.value(), saved.getCreatorId());
 
         assertEquals(1, saved.getStorageSpots().size());
