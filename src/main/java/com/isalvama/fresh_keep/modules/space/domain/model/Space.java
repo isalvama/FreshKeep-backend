@@ -5,6 +5,7 @@ import com.isalvama.fresh_keep.modules.space.domain.model.value_object.Emoji;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceName;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 
 @Setter
 @Getter
+@EqualsAndHashCode(of = "id")
 public class Space {
     private final SpaceId id;
     private SpaceName name;
