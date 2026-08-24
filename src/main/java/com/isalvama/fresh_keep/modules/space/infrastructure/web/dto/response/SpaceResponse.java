@@ -5,6 +5,7 @@ import java.util.List;
 public record SpaceResponse(
         String id,
         String spaceName,
+        String emoji,
         List<StorageSpotResponse> storageSpots,
         String creatorId,
         List<String> participantIds

@@ -37,18 +37,6 @@ public class CreateSpaceService implements CreateSpaceUseCase {
 
         spaceRepositoryPort.save(space);
 
-        return SpaceResult.constitute(
-                space.getId().toString(),
-                space.getName().value(),
-                space.getStorageSpots().stream().map(s ->
-                        StorageSpotResult.constitute(
-                                s.getId().toString(),
-                                s.getName().value(),
-                                s.getType().toString()
-                        )
-                ).toList(),
-                space.getCreatorId().toString(),
-                space.getParticipantIds().stream().map(UserId::toString).toList()
-        );
+        return SpaceResult.fromDomain(space);
     }
 }
