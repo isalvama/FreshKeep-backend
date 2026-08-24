@@ -424,6 +424,11 @@ public class FreshKeepIntegrationTests {
 
         private static final String EMAIL = "space-owner@email.com";
         private static final String PASSWORD = "Password1";
+        private String userToken;
+        private String userId;
+        private String space1Name;
+        private String storageSpotName;
+        private String storageSpotType;
 
         @Autowired
         private MockMvc mockMvc;
@@ -443,45 +448,39 @@ public class FreshKeepIntegrationTests {
         @Autowired
         private JwtTokenGeneratorAdapter jwtTokenGeneratorAdapter;
 
+        @BeforeEach
+        void setUp() throws Exception {
+            space1Name = "Kitchen";
+            storageSpotName = "Main Shelf";
+            storageSpotType = "SHELF";
+            spaceSpringDataRepository.deleteAll();
+            accountSpringDataRepository.deleteAll();
+
+            mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new AuthRequest(EMAIL, PASSWORD))))
+                    .andExpect(status().isCreated());
+
+            ResultActions loginResult = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new AuthRequest(EMAIL, PASSWORD))));
+
+            String loginResponse = loginResult.andReturn().getResponse().getContentAsString();
+            userToken = com.jayway.jsonpath.JsonPath.read(loginResponse, "$.jwtString");
+            userId = jwtTokenGeneratorAdapter.extractCustomUserPrincipal(userToken).userId();
+        }
+
+        private CreateSpaceRequest validRequest() {
+            return new CreateSpaceRequest(
+                    space1Name,
+                    "🏠",
+                    List.of(new StorageSpotRequest(storageSpotName, storageSpotType))
+            );
+        }
+
         @Nested
         @DisplayName("POST " + API_SPACES)
         class CreateSpace {
-
-            private String userToken;
-            private String userId;
-            private String spaceName;
-            private String storageSpotName;
-            private String storageSpotType;
-
-            @BeforeEach
-            void setUp() throws Exception {
-                spaceName = "Kitchen";
-                storageSpotName = "Main Shelf";
-                storageSpotType = "SHELF";
-                spaceSpringDataRepository.deleteAll();
-                accountSpringDataRepository.deleteAll();
-
-                mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(new AuthRequest(EMAIL, PASSWORD))))
-                        .andExpect(status().isCreated());
-
-                ResultActions loginResult = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new AuthRequest(EMAIL, PASSWORD))));
-
-                String loginResponse = loginResult.andReturn().getResponse().getContentAsString();
-                userToken = com.jayway.jsonpath.JsonPath.read(loginResponse, "$.jwtString");
-                userId = jwtTokenGeneratorAdapter.extractCustomUserPrincipal(userToken).userId();
-            }
-
-            private CreateSpaceRequest validRequest() {
-                return new CreateSpaceRequest(
-                        spaceName,
-                        "🏠",
-                        List.of(new StorageSpotRequest(storageSpotName, storageSpotType))
-                );
-            }
 
             @DisplayName("should return 201 with the created space when authenticated as USER")
             @Test
@@ -494,7 +493,7 @@ public class FreshKeepIntegrationTests {
                 result.andExpect(status().isCreated())
                         .andExpect(header().string("Location", containsString(API_SPACES + "/")))
                         .andExpect(jsonPath("$.id").exists())
-                        .andExpect(jsonPath("$.spaceName").value(spaceName))
+                        .andExpect(jsonPath("$.spaceName").value(space1Name))
                         .andExpect(jsonPath("$.creatorId").value(userId))
                         .andExpect(jsonPath("$.participantIds", hasItem(userId)))
                         .andExpect(jsonPath("$.storageSpots", hasSize(1)))
@@ -575,7 +574,7 @@ public class FreshKeepIntegrationTests {
             @Test
             void shouldReturn400WhenEmojiIsBlank() throws Exception {
                 CreateSpaceRequest request = new CreateSpaceRequest(
-                        spaceName, " ", List.of(new StorageSpotRequest(storageSpotName, storageSpotType)));
+                        space1Name, " ", List.of(new StorageSpotRequest(storageSpotName, storageSpotType)));
 
                 ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
                         .header("Authorization", "Bearer " + userToken)
@@ -591,7 +590,7 @@ public class FreshKeepIntegrationTests {
             @Test
             void shouldReturn400WhenEmojiExceedsMaxSize() throws Exception {
                 CreateSpaceRequest request = new CreateSpaceRequest(
-                        spaceName, "123456789", List.of(new StorageSpotRequest(storageSpotName, storageSpotType)));
+                        space1Name, "123456789", List.of(new StorageSpotRequest(storageSpotName, storageSpotType)));
 
                 ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
                         .header("Authorization", "Bearer " + userToken)
@@ -606,7 +605,7 @@ public class FreshKeepIntegrationTests {
             @DisplayName("should return 400 Bad Request when storageSpots is empty")
             @Test
             void shouldReturn400WhenStorageSpotsIsEmpty() throws Exception {
-                CreateSpaceRequest request = new CreateSpaceRequest(spaceName, "🏠", List.of());
+                CreateSpaceRequest request = new CreateSpaceRequest(space1Name, "🏠", List.of());
 
                 ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
                         .header("Authorization", "Bearer " + userToken)
@@ -621,7 +620,7 @@ public class FreshKeepIntegrationTests {
             @DisplayName("should return 400 Bad Request when storageSpot name exceeds max size")
             @Test
             void shouldReturn400WhenStorageSpotsNameExceedsMaxSize() throws Exception {
-                CreateSpaceRequest request = new CreateSpaceRequest(spaceName, "🏠", List.of(new StorageSpotRequest("s".repeat(31), storageSpotType)));
+                CreateSpaceRequest request = new CreateSpaceRequest(space1Name, "🏠", List.of(new StorageSpotRequest("s".repeat(31), storageSpotType)));
 
                 ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
                         .header("Authorization", "Bearer " + userToken)
@@ -636,7 +635,7 @@ public class FreshKeepIntegrationTests {
             @DisplayName("should return 400 Bad Request when storageSpot name is blank")
             @Test
             void shouldReturn400WhenStorageSpotsNameIsBlank() throws Exception {
-                CreateSpaceRequest request = new CreateSpaceRequest(spaceName, "🏠", List.of(new StorageSpotRequest(" ", storageSpotType)));
+                CreateSpaceRequest request = new CreateSpaceRequest(space1Name, "🏠", List.of(new StorageSpotRequest(" ", storageSpotType)));
 
                 ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
                         .header("Authorization", "Bearer " + userToken)
@@ -651,7 +650,7 @@ public class FreshKeepIntegrationTests {
             @DisplayName("should return 400 Bad Request when storageSpot type is blank")
             @Test
             void shouldReturn400WhenStorageSpotsTypeIsBlank() throws Exception {
-                CreateSpaceRequest request = new CreateSpaceRequest(spaceName, "🏠", List.of(new StorageSpotRequest(storageSpotName, " ")));
+                CreateSpaceRequest request = new CreateSpaceRequest(space1Name, "🏠", List.of(new StorageSpotRequest(storageSpotName, " ")));
 
                 ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
                         .header("Authorization", "Bearer " + userToken)
@@ -666,7 +665,7 @@ public class FreshKeepIntegrationTests {
             @DisplayName("should return 400 Bad Request when storageSpot type does not match any StorageSpotTypeRequest enum constant name")
             @Test
             void shouldReturn400WhenStorageSpotsTypeDoesNotMatchAnyStorageSpotTypeRequestName() throws Exception {
-                CreateSpaceRequest request = new CreateSpaceRequest(spaceName, "🏠", List.of(new StorageSpotRequest(storageSpotName, "INVALID_TYPE")));
+                CreateSpaceRequest request = new CreateSpaceRequest(space1Name, "🏠", List.of(new StorageSpotRequest(storageSpotName, "INVALID_TYPE")));
 
                 ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
                         .header("Authorization", "Bearer " + userToken)
@@ -682,7 +681,7 @@ public class FreshKeepIntegrationTests {
             @Test
             void shouldReturn400WhenEmojiIsInvalidAtDomainLevel() throws Exception {
                 CreateSpaceRequest request = new CreateSpaceRequest(
-                        spaceName, "abc", List.of(new StorageSpotRequest(storageSpotName, storageSpotType)));
+                        space1Name, "abc", List.of(new StorageSpotRequest(storageSpotName, storageSpotType)));
 
                 ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
                         .header("Authorization", "Bearer " + userToken)
@@ -692,6 +691,172 @@ public class FreshKeepIntegrationTests {
                 result.andExpect(status().isBadRequest())
                         .andExpect(jsonPath("$.title").value("Business Rule Error"))
                         .andExpect(jsonPath("$.detail", containsString("not a valid emoji")));
+            }
+        }
+
+        @Nested
+        class GetSpacesByParticipantId {
+
+            private String user2Token;
+            private String user2Id;
+            private String space2Name;
+
+
+            @BeforeEach
+            void setUp() throws Exception {
+                space1Name = "City House";
+                space2Name = "Beach House";
+                storageSpotName = "Freezer";
+                storageSpotType = "FREEZER";
+
+                    spaceSpringDataRepository.deleteAll();
+                    accountSpringDataRepository.deleteAll();
+
+                // Creation of an account and user1
+                    mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(objectMapper.writeValueAsString(new AuthRequest(EMAIL, PASSWORD))))
+                            .andExpect(status().isCreated());
+
+
+                // Creation of another account and user2
+                mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new AuthRequest("emailuser2@mail.com", "password123"))))
+                        .andExpect(status().isCreated());
+
+
+                // Login of the new users
+
+                ResultActions loginResult1 = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new AuthRequest(EMAIL, PASSWORD))));
+
+                String loginResponse1 = loginResult1.andReturn().getResponse().getContentAsString();
+                userToken = com.jayway.jsonpath.JsonPath.read(loginResponse1, "$.jwtString");
+                userId = jwtTokenGeneratorAdapter.extractCustomUserPrincipal(userToken).userId();
+
+                ResultActions loginResult2 = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new AuthRequest("emailuser2@mail.com", "password123"))));
+
+                String loginResponse2 = loginResult2.andReturn().getResponse().getContentAsString();
+                user2Token = com.jayway.jsonpath.JsonPath.read(loginResponse2, "$.jwtString");
+                user2Id = jwtTokenGeneratorAdapter.extractCustomUserPrincipal(user2Token).userId();
+            }
+
+            private CreateSpaceRequest createSpaceRequest(String spaceName, String emoji, List<StorageSpotRequest> storageSpotRequests) {
+                return new CreateSpaceRequest(
+                        spaceName,
+                        "🏠",
+                        storageSpotRequests
+                );
+            }
+
+            @DisplayName("should return 200 OK with the spaces data a user is a participant in")
+            @Test
+            void shouldReturn200WithDataOfSpaceUser1IsParticipant() throws Exception {
+
+                // Creation of space 1 with user 1 as creator
+                ResultActions creationOfSpace1 = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createSpaceRequest(space1Name, "🏠", List.of(new StorageSpotRequest(storageSpotName, storageSpotType))))));
+
+                String creationOfSpace1Result = creationOfSpace1.andReturn().getResponse().getContentAsString();
+                String space1Id = com.jayway.jsonpath.JsonPath.read(creationOfSpace1Result, "$.id");
+
+                ResultActions result1 = mockMvc.perform(MockMvcRequestBuilders.get(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON));
+
+                result1.andExpect(status().isOk())
+                        .andExpect(jsonPath("$[0].id").value(space1Id))
+                        .andExpect(jsonPath("$[0].spaceName").value(space1Name))
+                        .andExpect(jsonPath("$[0].creatorId").value(userId))
+                        .andExpect(jsonPath("$[0].participantIds", hasItem(userId)))
+                        .andExpect(jsonPath("$[0].storageSpots", hasSize(1)))
+                        .andExpect(jsonPath("$[0].storageSpots[0].storageSpotName").value(storageSpotName))
+                        .andExpect(jsonPath("$[0].storageSpots[0].storageSpotType").value(storageSpotType));
+
+                // Creation of space 2 with user 2 as creator
+                ResultActions creationOfSpace2 = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + user2Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createSpaceRequest(space2Name, "🏠", List.of(new StorageSpotRequest(storageSpotName, storageSpotType))))));
+
+                String creationOfSpace2Result = creationOfSpace2.andReturn().getResponse().getContentAsString();
+                String space2Id = com.jayway.jsonpath.JsonPath.read(creationOfSpace2Result, "$.id");
+
+                ResultActions result2 = mockMvc.perform(MockMvcRequestBuilders.get(API_SPACES)
+                        .header("Authorization", "Bearer " + user2Token)
+                        .contentType(MediaType.APPLICATION_JSON));
+
+                result2.andExpect(status().isOk())
+                        .andExpect(jsonPath("$", hasSize(1)))
+                        .andExpect(jsonPath("$[0].id").value(space2Id))
+                        .andExpect(jsonPath("$[0].spaceName").value(space2Name))
+                        .andExpect(jsonPath("$[0].creatorId").value(user2Id))
+                        .andExpect(jsonPath("$[0].participantIds", hasItem(user2Id)))
+                        .andExpect(jsonPath("$[0].storageSpots", hasSize(1)));
+
+                assertEquals(2, spaceSpringDataRepository.count());
+            }
+
+            @DisplayName("should return 200 with an empty list when retrieving list of spaces of a new user")
+            @Test
+            void shouldReturn200OkWithEmptyList() throws Exception {
+
+                // Creation of an account and a user
+                mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new AuthRequest("emailuser3@mail.com", "password12"))))
+                        .andExpect(status().isCreated());
+
+                // Login of the new users
+                ResultActions loginResult = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new AuthRequest("emailuser3@mail.com", "password12"))));
+
+                String loginResponse = loginResult.andReturn().getResponse().getContentAsString();
+                userToken = com.jayway.jsonpath.JsonPath.read(loginResponse, "$.jwtString");
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON));
+
+                result.andExpect(status().isOk())
+                        .andExpect(jsonPath("$", hasSize(0)));
+            }
+
+            @DisplayName("should return 401 Unauthorized when an invalid token is sent as param")
+            @Test
+            void shouldReturn401UnauthorizedWhenAnInvalidTokenIsSent() throws Exception {
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get(API_SPACES)
+                        .header("Authorization", "Bearer " + "invalid-user-token")
+                        .contentType(MediaType.APPLICATION_JSON));
+
+                result.andExpect(status().isUnauthorized())
+                        .andExpect(jsonPath("$.title").value("Unauthorized"))
+                        .andExpect(jsonPath("$.detail", containsString("Must be authenticated to access this resource")));
+            }
+
+            @DisplayName("should return 403 Forbidden when an admin token is sent as param")
+            @Test
+            void shouldReturn403ForbiddenWhenAnAdminTokenIsSent() throws Exception {
+
+                Account admin = Account.createAdmin(Email.of("admin@mail.com"), PASSWORD);
+                jpaAccountRepositoryAdapter.save(admin);
+                String adminToken = jwtTokenGeneratorAdapter.generateToken(admin, ResolvedEntities.constitute(null, "adminid1234")).token();
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get(API_SPACES)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON));
+
+                result.andExpect(status().isForbidden())
+                        .andExpect(jsonPath("$.title").value("Forbidden"))
+                        .andExpect(jsonPath("$.detail", containsString("Access Denied")));
             }
         }
     }
