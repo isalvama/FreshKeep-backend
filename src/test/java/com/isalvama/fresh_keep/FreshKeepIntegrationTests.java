@@ -748,7 +748,7 @@ public class FreshKeepIntegrationTests {
             private CreateSpaceRequest createSpaceRequest(String spaceName, String emoji, List<StorageSpotRequest> storageSpotRequests) {
                 return new CreateSpaceRequest(
                         spaceName,
-                        "🏠",
+                        emoji,
                         storageSpotRequests
                 );
             }
