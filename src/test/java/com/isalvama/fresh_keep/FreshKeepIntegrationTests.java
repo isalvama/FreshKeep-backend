@@ -568,7 +568,7 @@ public class FreshKeepIntegrationTests {
 
                 result.andExpect(status().isBadRequest())
                         .andExpect(jsonPath("$.title").value("Validation Error In Body Data"))
-                        .andExpect(jsonPath("$.errors.spaceName", containsString("size must be between 0 and 20")));
+                        .andExpect(jsonPath("$.errors.spaceName", containsString("size must be between 0 and 30")));
             }
 
             @DisplayName("should return 400 Bad Request when emoji is blank")
