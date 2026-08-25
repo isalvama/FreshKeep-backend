@@ -14,6 +14,7 @@ public class SpaceResponseMapper {
         return new SpaceResponse(
                 spaceResult.id(),
                 spaceResult.name(),
+                spaceResult.emoji(),
                 spaceResult.storageSpotResponses().stream().map(storageSpotResponseMapper::toResponse).toList(),
                 spaceResult.creatorId(),
                 spaceResult.participantIds()

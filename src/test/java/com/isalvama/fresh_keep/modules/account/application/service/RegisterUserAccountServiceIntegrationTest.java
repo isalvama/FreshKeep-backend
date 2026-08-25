@@ -75,19 +75,19 @@ import static org.mockito.Mockito.when;
 
     @Test
         void shouldRollbackDatabaseIfEventPublishingFails() {
-            String email = "transactional@test.com";
+            String email = "test@email.com";
             when(passwordHasherPort.hash(any())).thenReturn("hashed_password");
             doThrow(new RuntimeException("Messaging system down"))
                     .when(accountEventPublisherAdapter).publish(any());
             RegisterUserAccountCommand command = new RegisterUserAccountCommand(
-                    "test@email.com", "password123"
+                    email, "password123"
             );
 
             assertThrows(RuntimeException.class, () -> {
                 registerUserAccountService.execute(command);
             });
 
-            Optional<Account> savedAccount = accountRepositoryPort.findByEmail("test@email.com");
+            Optional<Account> savedAccount = accountRepositoryPort.findByEmail(email);
             assertTrue(savedAccount.isEmpty(), "The user account should have not been persisted due to the rollback");
         }
 
