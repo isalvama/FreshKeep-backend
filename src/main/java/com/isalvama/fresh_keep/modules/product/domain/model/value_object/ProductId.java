@@ -32,6 +32,10 @@ public record ProductId(UUID value) {
         }
     }
 
+    public static ProductId create(){
+        return new ProductId(UUID.randomUUID());
+    }
+
     @Override
     public String toString() {
         return value.toString();

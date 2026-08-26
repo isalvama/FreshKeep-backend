@@ -32,6 +32,10 @@ public record ShoppingReceiptId(UUID value) {
         }
     }
 
+    public static ShoppingReceiptId create (){
+        return new ShoppingReceiptId(UUID.randomUUID());
+    }
+
     @Override
     public String toString() {
         return value.toString();
