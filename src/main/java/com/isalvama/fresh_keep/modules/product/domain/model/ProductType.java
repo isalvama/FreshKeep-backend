@@ -1,5 +1,7 @@
 package com.isalvama.fresh_keep.modules.product.domain.model;
 
+import com.isalvama.fresh_keep.modules.product.domain.exception.InvalidProductTypeException;
+
 public enum ProductType {
     FRUITS,
     VEGETABLES,
@@ -18,4 +20,14 @@ public enum ProductType {
     INTERNATIONAL,
     SAUCES,
     OTHER;
+
+    public static ProductType getValueOf(String productTypeName) {
+        try {
+            return ProductType.valueOf(productTypeName);
+        } catch (IllegalArgumentException e){
+            throw new InvalidProductTypeException(productTypeName + "does not match any ProductType constant name.");
+        }
+    }
 }
+
+
