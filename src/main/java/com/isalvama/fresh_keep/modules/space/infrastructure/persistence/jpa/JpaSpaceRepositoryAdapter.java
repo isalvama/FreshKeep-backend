@@ -2,6 +2,7 @@ package com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa;
 
 import com.isalvama.fresh_keep.modules.space.application.port.out.SpaceRepositoryPort;
 import com.isalvama.fresh_keep.modules.space.domain.model.Space;
+import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaSpaceEntity;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.exception.SpacePersistenceException;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.mapper.SpaceMapper;
@@ -11,6 +12,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
@@ -40,5 +42,10 @@ public class JpaSpaceRepositoryAdapter implements SpaceRepositoryPort {
             throw new SpacePersistenceException(
                     "Failed to retrieve data of spaces where user with id " + id + " is participant in: " + e.getMessage());
         }
+    }
+
+    @Override
+    public Optional<Space> getById(SpaceId spaceId) {
+        return spaceSpringDataRepository.findById(spaceId.value()).map(spaceMapper::toDomain);
     }
 }
