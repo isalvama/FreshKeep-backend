@@ -8,6 +8,7 @@ import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Set;
@@ -18,33 +19,34 @@ public class ShoppingReceipt {
     private final ShoppingReceiptId id;
     private final UserId creatorId;
     private final SpaceId spaceId;
-    private final ReceiptImage receipt;
+    private ReceiptImage receipt;
     private LocalDate purchaseDate;
     private String storeName;
     private Set<ProductId> productIds;
 
-    private ShoppingReceipt(ShoppingReceiptId id, UserId creatorId, SpaceId spaceId, ReceiptImage receiptImage, LocalDate purchaseDate, String storeName) {
+    private ShoppingReceipt(ShoppingReceiptId id, UserId creatorId, SpaceId spaceId, LocalDate purchaseDate, String storeName) {
         this.id = validateNotNull(id, "id");
         this.creatorId = validateNotNull(creatorId, "creatorId");
         this.spaceId = validateNotNull(spaceId, "spaceId");
-        this.receipt = validateNotNull(receiptImage, "receiptImage");
         this.purchaseDate = validateNotNull(purchaseDate, "purchaseDate");
         this.storeName = storeName;
     }
 
     public static ShoppingReceipt create (
-            UserId creatorId, SpaceId spaceId, ReceiptImage receiptImage, LocalDate purchaseDate, String storeName
+            UserId creatorId, SpaceId spaceId, LocalDate purchaseDate, String storeName, Clock clock
     ){
+        if (purchaseDate.isAfter(LocalDate.now(clock))) {
+            throw new InvalidShoppingReceiptException("The purchase date cannot be later than the current date");
+        }
         return new ShoppingReceipt(
                 ShoppingReceiptId.create(),
                 creatorId,
                 spaceId,
-                receiptImage,
                 purchaseDate,
                 storeName
         );
     }
-    public void addProducts(Set<ProductId> productIds){
+    public void addProductIds(Set<ProductId> productIds){
         this.productIds = validateNotNullAndNotEmpty(productIds, "productIds");
     }
 
