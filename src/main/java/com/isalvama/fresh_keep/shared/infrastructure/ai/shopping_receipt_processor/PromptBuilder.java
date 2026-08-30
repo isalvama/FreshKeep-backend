@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.shared.infrastructure.ai;
+package com.isalvama.fresh_keep.shared.infrastructure.ai.shopping_receipt_processor;
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProcessNewShoppingReceiptDto;
 import org.springframework.ai.chat.prompt.PromptTemplate;
