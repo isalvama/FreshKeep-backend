@@ -6,17 +6,17 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.AiR
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.AiShoppingReceiptProcessorPort;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.ProductCategoriesLookUpPort;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.SpaceLookUpPort;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.CategoriesDto;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.GetStorageSpotsDto;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProcessNewShoppingReceiptDto;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.StorageSpotDto;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ShoppingReceipt;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 import com.isalvama.fresh_keep.shared.domain.exception.DomainException;
 import com.isalvama.fresh_keep.shared.infrastructure.ai.dto.ProductExtraction;
+import com.isalvama.fresh_keep.shared.infrastructure.ai.dto.ProductReviewFlag;
 import com.isalvama.fresh_keep.shared.infrastructure.ai.dto.ReceiptExtraction;
+import com.isalvama.fresh_keep.shared.infrastructure.exception.AiRetryableException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProcessNewShoppingReceiptService implements ProcessNewShoppingReceiptUseCase {
@@ -52,13 +53,13 @@ public class ProcessNewShoppingReceiptService implements ProcessNewShoppingRecei
                         categories.moneyCurrencies()
                 ));
 
-        Set<String> storageSpotIds = storageSpotDtos.stream().map(StorageSpotDto::id).collect(Collectors.toSet());
-
         LocalDate purchaseDate = extraction.purchaseDate().isAfter(LocalDate.now(clock))
                 ? LocalDate.now(clock)
                 : extraction.purchaseDate();
         long purchaseDateCorrectionDays = ChronoUnit.DAYS.between(extraction.purchaseDate(), purchaseDate);
 
+
+        Set<String> storageSpotIds = storageSpotDtos.stream().map(StorageSpotDto::id).collect(Collectors.toSet());
         List<ProductExtraction> products = extraction.productExtractions().stream()
                 .map(p -> storageSpotIds.contains(p.suggestedStorageSpotId())
                         ? p
@@ -69,11 +70,14 @@ public class ProcessNewShoppingReceiptService implements ProcessNewShoppingRecei
 
         ShoppingReceipt shoppingReceipt = ShoppingReceipt.create(UserId.from(command.creatorId()), SpaceId.from(command.spaceId()), purchaseDate, extraction.storeName(), clock);
 
-        // TODO review by Ollama
-
-        List<ProductExtraction> reviewedProducts = extractionReviewerPort.review(products);
-
-        List<ProductExtraction> productsToReview;
+        List<ProductReviewFlag> productsToReview;
+        try {
+            productsToReview = extractionReviewerPort.review(
+                    new ReviewNewShoppingReceiptDto(storageSpotDtos, products, purchaseDate));
+        } catch (Exception e){
+            productsToReview = List.of();
+            log.error("The AiReceiptExtractionReviewerPort.execute() threw an exception with the following message: " + e.getMessage() + ". productsToReview is initialized as an empty list.");
+        }
 
         // Upload shopping receipt image by Cloudinary
     }
@@ -88,8 +92,10 @@ public class ProcessNewShoppingReceiptService implements ProcessNewShoppingRecei
                     .findFirst()
                     .map(StorageSpotDto::id)
                     .orElse(null);
-        } catch (DomainException e) {}
-        return new ProductExtraction(p.expirationDate(), p.productName(), fallbackStorageSpotId, p.productType(), p.priceAmount(), p.money());
+        } catch (DomainException e) {
+            log.error("ProcessNewShoppingReceiptService.withoutStorageSpotSuggestion() method threw a DomainException with the following message: " + e.getMessage() + ". Flow continues.");
+        }
+        return new ProductExtraction(p.expirationDate(), p.productName(), fallbackStorageSpotId, p.productType(), p.priceAmount(), p.currency());
     }
 
     private ProductExtraction withCorrectedExpirationDate(ProductExtraction p, long purchaseDateCorrectionDays) {
@@ -102,7 +108,7 @@ public class ProcessNewShoppingReceiptService implements ProcessNewShoppingRecei
                 p.suggestedStorageSpotId(),
                 p.productType(),
                 p.priceAmount(),
-                p.money()
+                p.currency()
         );
     }
 }
