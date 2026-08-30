@@ -8,6 +8,6 @@ public record ProductExtraction(
         String suggestedStorageSpotId,
         String productType,
         Double priceAmount,
-        String money
+        String currency
 ) {
 }
