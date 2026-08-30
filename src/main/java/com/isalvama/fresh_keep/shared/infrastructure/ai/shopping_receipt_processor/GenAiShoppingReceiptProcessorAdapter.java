@@ -33,21 +33,23 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
         - The purchase date shown on the receipt.
         - The store name.
 
-        Then extract the list of food products on the receipt. For each product:
-        1. Clean up its name (e.g. turn "YOG.NAT.X4" into "Plain yogurt").
-        2. Classify it into one of the following product categories: {productTypes}
-        3. Estimate its typical shelf life in days, based on the nature of the product.
-        4. Calculate its approximate expiration date by adding that shelf life to the receipt's purchase date.
-        5. Extract its price and currency, if shown on the receipt. The currency must be exactly one of the following currency codes (leave it empty if none of them apply): {moneyCurrencies}
-        6. Suggest the most suitable storage spot for it, choosing only from the following list of the user's available storage spots, responding with its id (leave it empty if none of them fit):
-        {storageSpots}
-        
-        If the image is illegible or doesn't appear to be a shopping receipt, set errorReason to a short description of the problem, leave the other receipt-level fields empty, and return an empty product list. 
-        If the shopping receipt image does not display the purchase date, use today's date instead: {today}.
-        
-        {format}
-        
-        """;
+        Then extract the list of food products on the receipt. If the receipt shows several separate units of the same product purchased individually (e.g. a quantity of "6" next to a single milk bottle, or two identical lines for the same chocolate bar), return one product entry per unit, each with identical details. If instead a product is itself sold as a single multi-unit pack (e.g. a six-pack of beer, a 4-pack of yogurt cups sold together), treat that pack as one single product - do not split it into separate units. Use the receipt's own quantity information to tell these two cases apart: a purchase quantity applied to an otherwise singular item should be exploded into repeated entries, while an item whose own name or packaging already describes it as a pack/multipack should stay a single entry.
+
+    For each product entry:
+    1. Clean up its name (e.g. turn "YOG.NAT.X4" into "Plain yogurt").
+    2. Classify it into one of the following product categories: {productTypes}
+    3. Estimate its typical shelf life in days, based on the nature of the product.
+    4. Calculate its approximate expiration date by adding that shelf life to the receipt's purchase date.
+    5. Extract its price and currency, if shown on the receipt - if a quantity was exploded into several entries, each entry's price must be the price for that single unit, not the total for the line. The currency must be exactly one of the following currency codes (leave it empty if none of them apply): {moneyCurrencies}
+    6. Suggest the most suitable storage spot for it, choosing only from the following list of the user's available storage spots, responding with its id (leave it empty if none of them fit):
+    {storageSpots}
+
+    If the image is illegible or doesn't appear to be a shopping receipt, set errorReason to a short description of the problem, leave the other receipt-level fields empty, and return an empty product list.
+    If the shopping receipt image does not display the purchase date, use today's date instead: {today}.
+
+    {format}
+
+    """;
 
     @Override
     @Retryable(retryFor = AiRetryableException.class, maxAttempts = 2, backoff = @Backoff(delay = 1000))
@@ -78,5 +80,4 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
 
         return parser.parseAndValidate(response, converter);
     }
-
 }
