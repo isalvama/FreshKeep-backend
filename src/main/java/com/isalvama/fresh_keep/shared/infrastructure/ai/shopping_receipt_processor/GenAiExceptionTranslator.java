@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.shared.infrastructure.ai;
+package com.isalvama.fresh_keep.shared.infrastructure.ai.shopping_receipt_processor;
 
 import com.google.genai.errors.ClientException;
 import com.google.genai.errors.GenAiIOException;
