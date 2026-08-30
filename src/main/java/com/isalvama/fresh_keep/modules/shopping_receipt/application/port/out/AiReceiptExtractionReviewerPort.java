@@ -1,9 +1,10 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out;
 
-import com.isalvama.fresh_keep.shared.infrastructure.ai.dto.ProductExtraction;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReviewNewShoppingReceiptDto;
+import com.isalvama.fresh_keep.shared.infrastructure.ai.dto.ProductReviewFlag;
 
 import java.util.List;
 
 public interface AiReceiptExtractionReviewerPort {
-    List<ProductExtraction> review (List<ProductExtraction> products);
+    List<ProductReviewFlag> review(ReviewNewShoppingReceiptDto dto);
 }
