@@ -2,7 +2,7 @@ package com.isalvama.fresh_keep.shared.infrastructure.ai.shopping_receipt_proces
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.AiShoppingReceiptProcessorPort;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProcessNewShoppingReceiptDto;
-import com.isalvama.fresh_keep.shared.infrastructure.ai.dto.ReceiptExtraction;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.AiRetryableException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.messages.UserMessage;

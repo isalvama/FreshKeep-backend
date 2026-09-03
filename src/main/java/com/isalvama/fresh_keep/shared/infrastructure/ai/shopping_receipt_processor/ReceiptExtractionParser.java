@@ -1,6 +1,6 @@
 package com.isalvama.fresh_keep.shared.infrastructure.ai.shopping_receipt_processor;
 
-import com.isalvama.fresh_keep.shared.infrastructure.ai.dto.ReceiptExtraction;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.AiRetryableException;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.AiUnprocessableInputException;
 import org.springframework.ai.chat.model.ChatResponse;

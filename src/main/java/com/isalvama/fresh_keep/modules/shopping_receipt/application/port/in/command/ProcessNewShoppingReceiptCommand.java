@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.shopping_receipt.application.command;
+package com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command;
 
 import org.springframework.web.multipart.MultipartFile;
 

@@ -1,10 +1,12 @@
-package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa;
+package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -21,11 +23,11 @@ public class JpaReceiptImageEntity {
     @JdbcTypeCode(SqlTypes.UUID)
     private UUID id;
 
-    @Column(name = "image_url", nullable = false, length = 252)
-    private String imageUrl;
+    @Column(name = "assetId", nullable = false, length = 252)
+    private String assetId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "shopping_receipt_id", nullable = true)
-    private JpaShoppingReceiptEntity shoppingReceipt;
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
 }
 

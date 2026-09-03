@@ -1,6 +1,7 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.domain.model;
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.exception.InvalidShoppingReceiptException;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ReceiptImageId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.product.domain.model.value_object.ProductId;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ShoppingReceiptId;
@@ -19,7 +20,7 @@ public class ShoppingReceipt {
     private final ShoppingReceiptId id;
     private final UserId creatorId;
     private final SpaceId spaceId;
-    private ReceiptImage receipt;
+    private ReceiptImageId receiptImageId;
     private LocalDate purchaseDate;
     private String storeName;
     private Set<ProductId> productIds;
