@@ -4,7 +4,7 @@ import com.isalvama.fresh_keep.modules.space.application.port.out.SpaceRepositor
 import com.isalvama.fresh_keep.modules.space.domain.model.Space;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaSpaceEntity;
-import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.exception.SpacePersistenceException;
+import com.isalvama.fresh_keep.modules.space.infrastructure.exception.SpacePersistenceException;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.mapper.SpaceMapper;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 import lombok.RequiredArgsConstructor;

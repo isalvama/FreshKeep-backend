@@ -18,7 +18,7 @@ CREATE INDEX idx_users_email ON users(email);
 CREATE TABLE receipt_images
 (
     id         UUID PRIMARY KEY,
-    image_url  VARCHAR(512) UNIQUE NOT NULL,
+    asset_id   VARCHAR(252) UNIQUE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

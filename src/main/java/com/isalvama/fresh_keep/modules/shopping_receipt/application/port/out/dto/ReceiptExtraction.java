@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.shared.infrastructure.ai.dto;
+package com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto;
 
 import java.time.LocalDate;
 import java.util.List;

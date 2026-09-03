@@ -1,7 +1,5 @@
-package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa;
+package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity;
 
-import com.isalvama.fresh_keep.modules.product.domain.model.value_object.ProductId;
-import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ReceiptImage;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -35,8 +33,9 @@ public class JpaShoppingReceiptEntity {
     @JdbcTypeCode(SqlTypes.UUID)
     private UUID spaceId;
 
-    @OneToMany(mappedBy = "shoppingReceipt", orphanRemoval = false, fetch = FetchType.LAZY)
-    private ReceiptImage receipt;
+    @Column(name = "receipt_image_id", nullable = false)
+    @JdbcTypeCode(SqlTypes.UUID)
+    private UUID receiptImageId;
 
     @Column(name = "purchase_date", updatable = false, nullable = false)
     private Instant purchaseDate;

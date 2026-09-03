@@ -1,6 +1,6 @@
 package com.isalvama.fresh_keep.modules.user.infrastructure.persistence.jpa;
 
-import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.exception.SpacePersistenceException;
+import com.isalvama.fresh_keep.modules.space.infrastructure.exception.SpacePersistenceException;
 import com.isalvama.fresh_keep.modules.user.application.port.out.UserRepositoryPort;
 import com.isalvama.fresh_keep.modules.user.domain.model.User;
 import com.isalvama.fresh_keep.modules.user.infrastructure.persistence.jpa.mapper.UserMapper;

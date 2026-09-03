@@ -18,6 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SpaceLookUpAdapter implements SpaceLookUpPort {
     private final SpaceRepositoryPort spaceRepositoryPort;
+
     @Override
     public List<StorageSpotDto> getStorageSpotsBySpaceIdAndParticipantId(GetStorageSpotsDto dto) {
         Space space = spaceRepositoryPort.getById(SpaceId.from(dto.spaceId()))
@@ -29,10 +30,8 @@ public class SpaceLookUpAdapter implements SpaceLookUpPort {
             throw new SpaceNotAvailableForParticipantException("User with id " + dto.creatorId() + " is not a participant of the Space with id " + dto.spaceId());
         }
 
-        List<StorageSpotDto> storageSpotDtos = space.getStorageSpots().stream()
+        return space.getStorageSpots().stream()
                 .map(s -> StorageSpotDto.create(s.getId().toString(), s.getName().value(), s.getType().name()))
                 .toList();
-
-        return storageSpotDtos;
     }
 }
