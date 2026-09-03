@@ -4,8 +4,9 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record ProcessNewShoppingReceiptResult(
+        String receiptImageId,
         LocalDate purchaseShoppingDate,
         String storeName,
-        List<ProductResult> productExtractions
-) {
-}
+        List<ProductResult> productExtractions,
+        List<ProductResult> flaggedProducts
+) { }

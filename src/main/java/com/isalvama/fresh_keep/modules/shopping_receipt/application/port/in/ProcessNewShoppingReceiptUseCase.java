@@ -1,7 +1,8 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in;
 
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.command.ProcessNewShoppingReceiptCommand;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ProcessNewShoppingReceiptCommand;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.ProcessNewShoppingReceiptResult;
 
 public interface ProcessNewShoppingReceiptUseCase {
-    void execute (ProcessNewShoppingReceiptCommand command);
+    ProcessNewShoppingReceiptResult execute (ProcessNewShoppingReceiptCommand command);
 }
