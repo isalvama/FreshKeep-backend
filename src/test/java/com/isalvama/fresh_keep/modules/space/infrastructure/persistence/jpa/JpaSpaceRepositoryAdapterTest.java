@@ -29,6 +29,7 @@ import org.testcontainers.utility.DockerImageName;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -124,16 +125,27 @@ class JpaSpaceRepositoryAdapterTest {
     }
 
     @Nested
-    class GetSpacesByParticipantId {
+    class GetSpaces {
 
         private Space space1;
         private Space space2;
         private Space space3;
         private Space space4;
 
+        private SpaceId spaceId1;
+        private SpaceId spaceId2;
+        private SpaceId spaceId3;
+        private SpaceId spaceId4;
+
+
 
         @BeforeEach
         void setUp(){
+
+            spaceId1 = SpaceId.create();
+            spaceId2 = SpaceId.create();
+            spaceId3 = SpaceId.create();
+            spaceId4 = SpaceId.create();
 
             StorageSpot spot1 = StorageSpot.create(
                     StorageSpotName.from("Freezer"),
@@ -146,7 +158,7 @@ class JpaSpaceRepositoryAdapterTest {
             );
 
             space1 = Space.reconstitute(
-                    SpaceId.create(),
+                    spaceId1,
                     SpaceName.from("My House 1"),
                     Emoji.from("🏠"),
                     Set.of(spot1),
@@ -155,7 +167,7 @@ class JpaSpaceRepositoryAdapterTest {
             );
 
             space2 = Space.reconstitute(
-                    SpaceId.create(),
+                    spaceId2,
                     SpaceName.from("My House 2"),
                     Emoji.from("🏠"),
                     Set.of(spot1, spot2),
@@ -164,7 +176,7 @@ class JpaSpaceRepositoryAdapterTest {
             );
 
             space3 = Space.reconstitute(
-                    SpaceId.create(),
+                    spaceId3,
                     SpaceName.from("My House 3"),
                     Emoji.from("🏠"),
                     Set.of(spot2),
@@ -173,7 +185,7 @@ class JpaSpaceRepositoryAdapterTest {
             );
 
             space4 = Space.reconstitute(
-                    SpaceId.create(),
+                    spaceId4,
                     SpaceName.from("My House 4"),
                     Emoji.from("🏠"),
                     Set.of(spot1, spot2),
@@ -214,6 +226,31 @@ class JpaSpaceRepositoryAdapterTest {
         @Test
         void getByParticipantId_ShouldReturnEmptyListWhenParticipantIdIsNotParticipant(){
             List<Space> result = adapter.getByParticipantId(UserId.create());
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        void getById_ShouldSpaceWithAMatchingId(){
+            Optional<Space> result1 = adapter.getById(spaceId1);
+            assertFalse(result1.isEmpty());
+            assertEquals(result1.get(), space1);
+
+            Optional<Space> result2 = adapter.getById(spaceId2);
+            assertFalse(result2.isEmpty());
+            assertEquals(result2.get(), space2);
+
+            Optional<Space> result3 = adapter.getById(spaceId3);
+            assertFalse(result3.isEmpty());
+            assertEquals(result3.get(), space3);
+
+            Optional<Space> result4 = adapter.getById(spaceId4);
+            assertFalse(result4.isEmpty());
+            assertEquals(result4.get(), space4);
+        }
+
+        @Test
+        void getById_ShouldReturnEmptyListWhenASpaceWithAMatchingIdDoesNotExist(){
+            Optional<Space> result = adapter.getById(SpaceId.create());
             assertTrue(result.isEmpty());
         }
     }
