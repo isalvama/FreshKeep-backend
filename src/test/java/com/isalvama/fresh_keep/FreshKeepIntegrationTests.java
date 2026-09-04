@@ -5,6 +5,7 @@ import com.isalvama.fresh_keep.modules.account.application.service.RegisterUserA
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.AccountSpringDataRepository;
 import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.AuthRequest;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
+import com.isalvama.fresh_keep.modules.product.domain.model.ProductType;
 import com.isalvama.fresh_keep.modules.user.domain.model.User;
 import com.isalvama.fresh_keep.modules.user.infrastructure.persistence.jpa.JpaUserRepositoryAdapter;
 import com.isalvama.fresh_keep.shared.domain.value_object.Email;
@@ -14,15 +15,18 @@ import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.Jwt
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.JpaSpaceSpringDataRepository;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.request.CreateSpaceRequest;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.request.StorageSpotRequest;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -34,10 +38,22 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import tools.jackson.databind.ObjectMapper;
 import org.testcontainers.utility.DockerImageName;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -51,7 +67,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.datasource.hikari.connection-timeout=2000",
         "spring.datasource.hikari.leak-detection-threshold=2000",
         "jwt.secret=55676267733273357638792F423F4528482B4D6251655468576D5A7134743777",
-        "jwt.expiration=3600000"
+        "jwt.expiration=3600000",
+        "cloudinary.cloud_name=test-cloud",
+        "cloudinary.api_key=test-api-key",
+        "cloudinary.api_secret=test-api-secret"
 })
 @AutoConfigureMockMvc
 public class FreshKeepIntegrationTests {
@@ -857,6 +876,175 @@ public class FreshKeepIntegrationTests {
                 result.andExpect(status().isForbidden())
                         .andExpect(jsonPath("$.title").value("Forbidden"))
                         .andExpect(jsonPath("$.detail", containsString("Access Denied")));
+            }
+        }
+    }
+
+    /**
+     * Exercises the real end-to-end flow with real receipt photos: real Gemini extraction, real Ollama
+     * review, real Cloudinary upload, real Postgres persistence - nothing mocked. Not part of the default
+     * `mvn test` run (see the "llm-eval" surefire exclusion in pom.xml).
+     * <p>
+     * To run it: drop one or more .jpg/.jpeg/.png receipt photos into src/test/resources/receipts
+     * (gitignored - never commit real receipt photos), have a local Ollama daemon running with the
+     * configured model pulled, and run with real credentials, e.g.:
+     * {@code SPRING_AI_GOOGLE_GENAI_API_KEY=... CLOUDINARY_CLOUD_NAME=... CLOUDINARY_API_KEY=... CLOUDINARY_API_SECRET=... mvn test -Dtest=FreshKeepIntegrationTests$ProcessNewShoppingReceipt}
+     * <p>
+     * Any missing prerequisite (credentials, Ollama, image files) makes this skip cleanly rather than fail.
+     */
+    @Nested
+    @Tag("llm-eval")
+    @DisplayName(API_SPACES + "/{spaceId}/receipt-images")
+    @TestPropertySource(properties = {
+            "spring.ai.google.genai.api-key=${SPRING_AI_GOOGLE_GENAI_API_KEY:dummy-key-for-context-boot}",
+            "cloudinary.cloud_name=${CLOUDINARY_CLOUD_NAME:}",
+            "cloudinary.api_key=${CLOUDINARY_API_KEY:}",
+            "cloudinary.api_secret=${CLOUDINARY_API_SECRET:}"
+    })
+    class ProcessNewShoppingReceipt {
+
+        private static final String EMAIL = "receipt-tester@email.com";
+        private static final String PASSWORD = "Password1";
+        private static final Path RECEIPTS_DIR = Path.of("src/test/resources/receipts");
+
+        @Autowired
+        private MockMvc mockMvc;
+
+        @Autowired
+        private ObjectMapper objectMapper;
+
+        @Autowired
+        private AccountSpringDataRepository accountSpringDataRepository;
+
+        @Autowired
+        private JpaSpaceSpringDataRepository spaceSpringDataRepository;
+
+        private String userToken;
+        private String spaceId;
+        private List<Path> receiptImages;
+
+        @BeforeEach
+        void setUp() throws Exception {
+            Assumptions.assumeTrue(isPresent("SPRING_AI_GOOGLE_GENAI_API_KEY"),
+                    "SPRING_AI_GOOGLE_GENAI_API_KEY is not set - skipping");
+            Assumptions.assumeTrue(isPresent("CLOUDINARY_CLOUD_NAME") && isPresent("CLOUDINARY_API_KEY") && isPresent("CLOUDINARY_API_SECRET"),
+                    "Cloudinary credentials are not set - skipping");
+            Assumptions.assumeTrue(isOllamaReachable(),
+                    "Ollama is not reachable on localhost:11434 - skipping");
+
+            receiptImages = findReceiptImages();
+            Assumptions.assumeTrue(!receiptImages.isEmpty(),
+                    "No receipt images found in src/test/resources/receipts - drop some .jpg/.jpeg/.png files there to run this test");
+
+            spaceSpringDataRepository.deleteAll();
+            accountSpringDataRepository.deleteAll();
+
+            mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new AuthRequest(EMAIL, PASSWORD))))
+                    .andExpect(status().isCreated());
+
+            ResultActions loginResult = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new AuthRequest(EMAIL, PASSWORD))));
+            userToken = com.jayway.jsonpath.JsonPath.read(loginResult.andReturn().getResponse().getContentAsString(), "$.jwtString");
+
+            CreateSpaceRequest spaceRequest = new CreateSpaceRequest(
+                    "Kitchen", "🏠",
+                    List.of(
+                            new StorageSpotRequest("Fridge", "FRIDGE"),
+                            new StorageSpotRequest("Pantry", "PANTRY"),
+                            new StorageSpotRequest("Freezer", "FREEZER")
+                    )
+            );
+            ResultActions spaceResult = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                    .header("Authorization", "Bearer " + userToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(spaceRequest)));
+            spaceId = com.jayway.jsonpath.JsonPath.read(spaceResult.andReturn().getResponse().getContentAsString(), "$.id");
+        }
+
+        private boolean isPresent(String envVar) {
+            String value = System.getenv(envVar);
+            return value != null && !value.isBlank();
+        }
+
+        private boolean isOllamaReachable() {
+            try {
+                HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
+                HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:11434/api/tags"))
+                        .timeout(Duration.ofSeconds(2)).GET().build();
+                return client.send(request, HttpResponse.BodyHandlers.discarding()).statusCode() < 500;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        private List<Path> findReceiptImages() throws Exception {
+            if (!Files.isDirectory(RECEIPTS_DIR)) {
+                return List.of();
+            }
+            try (Stream<Path> stream = Files.list(RECEIPTS_DIR)) {
+                return stream
+                        .filter(Files::isRegularFile)
+                        .filter(p -> {
+                            String name = p.getFileName().toString().toLowerCase();
+                            return name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png");
+                        })
+                        .toList();
+            }
+        }
+
+        @DisplayName("should extract plausible data from real shopping receipt photos")
+        @Test
+        void shouldProcessRealReceiptPhotosEndToEnd() throws Exception {
+            Set<String> validProductTypes = Arrays.stream(ProductType.values()).map(Enum::name).collect(Collectors.toSet());
+
+            for (Path imagePath : receiptImages) {
+                byte[] content = Files.readAllBytes(imagePath);
+                String contentType = imagePath.getFileName().toString().toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+                MockMultipartFile file = new MockMultipartFile("file", imagePath.getFileName().toString(), contentType, content);
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.multipart(API_SPACES + "/" + spaceId + "/receipt-images")
+                        .file(file)
+                        .header("Authorization", "Bearer " + userToken));
+
+                String responseBody = result.andReturn().getResponse().getContentAsString();
+                int status = result.andReturn().getResponse().getStatus();
+                assertEquals(201, status, () -> "unexpected status for " + imagePath.getFileName() + ": " + responseBody);
+
+                String receiptImageId = com.jayway.jsonpath.JsonPath.read(responseBody, "$.receiptImageId");
+                assertNotNull(receiptImageId, () -> imagePath.getFileName() + ": receiptImageId should not be null");
+                assertFalse(receiptImageId.isBlank(), () -> imagePath.getFileName() + ": receiptImageId should not be blank");
+
+                String purchaseShoppingDate = com.jayway.jsonpath.JsonPath.read(responseBody, "$.purchaseShoppingDate");
+                assertNotNull(purchaseShoppingDate, () -> imagePath.getFileName() + ": purchaseShoppingDate should not be null");
+
+                String storeName = com.jayway.jsonpath.JsonPath.read(responseBody, "$.storeName");
+                assertNotNull(storeName, () -> imagePath.getFileName() + ": storeName should not be null");
+                assertFalse(storeName.isBlank(), () -> imagePath.getFileName() + ": storeName should not be blank");
+
+                List<Map<String, Object>> products = com.jayway.jsonpath.JsonPath.read(responseBody, "$.productExtractions");
+                assertFalse(products.isEmpty(), () -> imagePath.getFileName() + ": should extract at least one product");
+
+                for (Map<String, Object> product : products) {
+                    String productName = (String) product.get("productName");
+                    assertNotNull(productName, () -> imagePath.getFileName() + ": productName should not be null");
+                    assertFalse(productName.isBlank(), () -> imagePath.getFileName() + ": productName should not be blank");
+
+                    String productType = (String) product.get("productType");
+                    assertTrue(validProductTypes.contains(productType),
+                            () -> imagePath.getFileName() + ": unexpected productType " + productType + " for " + productName);
+
+                    assertNotNull(product.get("expirationDate"),
+                            () -> imagePath.getFileName() + ": expirationDate should not be null for " + productName);
+                }
+
+                // flaggedProducts' *content* can't be asserted deterministically - whether anything gets
+                // flagged depends on this specific real receipt and the real reviewer model's judgment.
+                // Its structural presence as a valid (possibly empty) list is what's actually checkable here.
+                List<Map<String, Object>> flaggedProducts = com.jayway.jsonpath.JsonPath.read(responseBody, "$.flaggedProducts");
+                assertNotNull(flaggedProducts, () -> imagePath.getFileName() + ": flaggedProducts should not be null");
             }
         }
     }
