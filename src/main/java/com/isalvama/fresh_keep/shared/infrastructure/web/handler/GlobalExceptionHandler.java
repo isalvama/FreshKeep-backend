@@ -4,7 +4,7 @@ import com.isalvama.fresh_keep.modules.account.domain.exception.ForbiddenExcepti
 import com.isalvama.fresh_keep.modules.account.domain.exception.UnauthorizedException;
 import com.isalvama.fresh_keep.shared.domain.exception.ConflictException;
 import com.isalvama.fresh_keep.shared.domain.exception.DomainException;
-import com.isalvama.fresh_keep.shared.infrastructure.exception.InfrastructureException;
+import com.isalvama.fresh_keep.shared.infrastructure.exception.*;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -63,6 +63,42 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleDomainException(DomainException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problemDetail.setTitle("Business Rule Error");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    @ResponseBody
+    @ExceptionHandler(AiUnprocessableInputException.class)
+    public ProblemDetail handleAiUnprocessableInputException(AiUnprocessableInputException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.UNPROCESSABLE_CONTENT);
+        problemDetail.setTitle("Unprocessable Ticket Data Error");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    @ResponseBody
+    @ExceptionHandler(AiRateLimitedException.class)
+    public ProblemDetail handleAiRateLimitedException(AiRateLimitedException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.TOO_MANY_REQUESTS);
+        problemDetail.setTitle("AI Rate Limit Exceedance");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    @ResponseBody
+    @ExceptionHandler(TicketProcessingException.class)
+    public ProblemDetail handleTicketProcessingException(TicketProcessingException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+        problemDetail.setTitle("Internal AI Server Error");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    @ResponseBody
+    @ExceptionHandler(AiRetryableException.class)
+    public ProblemDetail handleAiRetryableException(AiRetryableException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problemDetail.setTitle("AI Server Error");
         problemDetail.setDetail(ex.getMessage());
         return problemDetail;
     }

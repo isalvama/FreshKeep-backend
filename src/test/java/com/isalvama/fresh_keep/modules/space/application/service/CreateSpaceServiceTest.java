@@ -8,7 +8,7 @@ import com.isalvama.fresh_keep.modules.space.domain.exception.InvalidEmojiExcept
 import com.isalvama.fresh_keep.modules.space.domain.exception.InvalidSpaceException;
 import com.isalvama.fresh_keep.modules.space.domain.exception.InvalidSpaceNameException;
 import com.isalvama.fresh_keep.modules.space.domain.model.Space;
-import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.exception.SpacePersistenceException;
+import com.isalvama.fresh_keep.modules.space.infrastructure.exception.SpacePersistenceException;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 import com.isalvama.fresh_keep.shared.domain.exception.InvalidIdException;
 import org.junit.jupiter.api.Test;

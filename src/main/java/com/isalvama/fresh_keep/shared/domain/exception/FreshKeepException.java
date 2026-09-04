@@ -4,4 +4,8 @@ public class FreshKeepException extends RuntimeException {
     public FreshKeepException(String message) {
         super(message);
     }
+
+    public FreshKeepException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

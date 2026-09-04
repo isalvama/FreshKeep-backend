@@ -5,7 +5,7 @@ import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.entity.JpaAccountEntity;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.mapper.AccountMapper;
-import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.exception.SpacePersistenceException;
+import com.isalvama.fresh_keep.modules.space.infrastructure.exception.SpacePersistenceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Repository;
@@ -48,5 +48,5 @@ public class JpaAccountRepositoryAdapter implements AccountRepositoryPort {
             throw new SpacePersistenceException(
                     "Failed to persist space with id " + id + ": " + e.getMessage());
         }
-}
+    }
 }
