@@ -2,6 +2,7 @@ package com.isalvama.fresh_keep.modules.shopping_receipt.application.service;
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.ProductCategoriesLookUpPort;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.StorageSpotDto;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.RectifyExtractionDto;
 import com.isalvama.fresh_keep.shared.domain.exception.DomainException;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProductExtraction;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;

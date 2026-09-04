@@ -4,6 +4,7 @@ import com.isalvama.fresh_keep.modules.product.infrastructure.product_categories
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProductExtraction;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.StorageSpotDto;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.RectifyExtractionDto;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
