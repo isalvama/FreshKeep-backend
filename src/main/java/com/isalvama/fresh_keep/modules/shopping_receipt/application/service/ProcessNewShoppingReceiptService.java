@@ -4,6 +4,7 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.comm
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ProcessNewShoppingReceiptUseCase;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.ProcessNewShoppingReceiptResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.ProductResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.SuggestedStorageSpotResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ReceiptImage;
@@ -11,6 +12,7 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.exception.I
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.AssetId;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProductReviewFlag;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;
+import com.isalvama.fresh_keep.modules.space.application.port.in.dto.StorageSpotResult;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.InfrastructureException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -71,6 +73,7 @@ public class ProcessNewShoppingReceiptService implements ProcessNewShoppingRecei
 
         return new ProcessNewShoppingReceiptResult(
                 receiptImage.getId().toString(),
+                storageSpotDtos.stream().map(SuggestedStorageSpotResult::fromStorageSpotDto).toList(),
                 rectifiedExtraction.purchaseDate(),
                 rectifiedExtraction.storeName(),
                 rectifiedExtraction.productExtractions() == null || rectifiedExtraction.productExtractions().isEmpty()

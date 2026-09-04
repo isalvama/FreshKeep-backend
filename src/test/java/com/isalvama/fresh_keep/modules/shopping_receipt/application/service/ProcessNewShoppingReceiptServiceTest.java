@@ -24,7 +24,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -118,6 +117,11 @@ class ProcessNewShoppingReceiptServiceTest {
         assertEquals(expectedReceiptImageId, result.receiptImageId());
         assertEquals(rectifiedExtraction.purchaseDate(), result.purchaseShoppingDate());
         assertEquals(rectifiedExtraction.storeName(), result.storeName());
+
+        assertEquals(1, result.storageSpotResult().size());
+        assertEquals("fridge-id", result.storageSpotResult().getFirst().id());
+        assertEquals("Fridge", result.storageSpotResult().getFirst().name());
+        assertEquals("FRIDGE", result.storageSpotResult().getFirst().type());
 
         assertEquals(1, result.productExtractions().size());
         assertEquals("Milk", result.productExtractions().getFirst().productName());

@@ -5,6 +5,7 @@ import java.util.List;
 
 public record ProcessNewShoppingReceiptResponse(
         String receiptImageId,
+        List<SuggestedStorageSpotResponse> suggestedStorageSpots,
         LocalDate purchaseShoppingDate,
         String storeName,
         List<ProductResponse> productExtractions,

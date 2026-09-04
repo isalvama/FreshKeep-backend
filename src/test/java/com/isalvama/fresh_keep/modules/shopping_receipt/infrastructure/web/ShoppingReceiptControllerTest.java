@@ -5,8 +5,10 @@ import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.Jwt
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ProcessNewShoppingReceiptUseCase;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ProcessNewShoppingReceiptCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.ProcessNewShoppingReceiptResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.SuggestedStorageSpotResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.mapper.ShoppingReceiptResponseMapper;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ProcessNewShoppingReceiptResponse;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.SuggestedStorageSpotResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -93,11 +95,13 @@ class ShoppingReceiptControllerTest {
     @Test
     void processNewShoppingReceipt_returns201WithLocationAndMappedBodyOnSuccess() throws Exception {
         ProcessNewShoppingReceiptResult result = new ProcessNewShoppingReceiptResult(
-                "receipt-image-id", LocalDate.of(2026, 9, 1), "SuperMart", List.of(), List.of());
+                "receipt-image-id", List.of(new SuggestedStorageSpotResult("fridge-id", "Fridge", "FRIDGE")),
+                LocalDate.of(2026, 9, 1), "SuperMart", List.of(), List.of());
         when(processNewShoppingReceiptUseCase.execute(any())).thenReturn(result);
 
         ProcessNewShoppingReceiptResponse response = new ProcessNewShoppingReceiptResponse(
-                "receipt-image-id", LocalDate.of(2026, 9, 1), "SuperMart", List.of(), List.of());
+                "receipt-image-id", List.of(new SuggestedStorageSpotResponse("fridge-id", "Fridge", "FRIDGE")),
+                LocalDate.of(2026, 9, 1), "SuperMart", List.of(), List.of());
         when(mapper.toResponse(result)).thenReturn(response);
 
         mockMvc.perform(multipart(BASE_URL.formatted(SPACE_ID))
@@ -105,16 +109,19 @@ class ShoppingReceiptControllerTest {
                         .with(asUser()))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", containsString(BASE_URL.formatted(SPACE_ID) + "/receipt-image-id")))
-                .andExpect(jsonPath("$.storeName").value("SuperMart"));
+                .andExpect(jsonPath("$.storeName").value("SuperMart"))
+                .andExpect(jsonPath("$.suggestedStorageSpots[0].storageSpotId").value("fridge-id"))
+                .andExpect(jsonPath("$.suggestedStorageSpots[0].storageSpotName").value("Fridge"))
+                .andExpect(jsonPath("$.suggestedStorageSpots[0].storageSpotType").value("FRIDGE"));
     }
 
     @Test
     void processNewShoppingReceipt_passesTheSpaceIdFromThePathAndUserIdFromThePrincipalToTheUseCase() throws Exception {
         ProcessNewShoppingReceiptResult result = new ProcessNewShoppingReceiptResult(
-                "receipt-image-id", LocalDate.now(), "SuperMart", List.of(), List.of());
+                "receipt-image-id", List.of(), LocalDate.now(), "SuperMart", List.of(), List.of());
         when(processNewShoppingReceiptUseCase.execute(any())).thenReturn(result);
         when(mapper.toResponse(any())).thenReturn(
-                new ProcessNewShoppingReceiptResponse("receipt-image-id", LocalDate.now(), "SuperMart", List.of(), List.of()));
+                new ProcessNewShoppingReceiptResponse("receipt-image-id", List.of(), LocalDate.now(), "SuperMart", List.of(), List.of()));
 
         mockMvc.perform(multipart(BASE_URL.formatted(SPACE_ID))
                         .file(validFile())
