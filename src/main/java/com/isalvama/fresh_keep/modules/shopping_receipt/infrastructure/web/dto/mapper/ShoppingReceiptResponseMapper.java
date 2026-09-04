@@ -2,8 +2,10 @@ package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.ProcessNewShoppingReceiptResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.ProductResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.SuggestedStorageSpotResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ProcessNewShoppingReceiptResponse;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ProductResponse;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.SuggestedStorageSpotResponse;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -14,6 +16,7 @@ public class ShoppingReceiptResponseMapper {
     public ProcessNewShoppingReceiptResponse toResponse (ProcessNewShoppingReceiptResult result){
         return new ProcessNewShoppingReceiptResponse(
                 result.receiptImageId(),
+                result.storageSpotResult().stream().map(this::toSuggestedStorageSpotResponse).toList(),
                 result.purchaseShoppingDate(),
                 result.storeName(),
                 result.productExtractions().stream().map(this::toProductResponse).toList(),
@@ -29,6 +32,14 @@ public class ShoppingReceiptResponseMapper {
                 p.productType(),
                 p.priceAmount(),
                 p.currency()
+        );
+    }
+
+    private SuggestedStorageSpotResponse toSuggestedStorageSpotResponse(SuggestedStorageSpotResult ss){
+        return new SuggestedStorageSpotResponse(
+                ss.id(),
+                ss.name(),
+                ss.type()
         );
     }
 }
