@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.exception;
+package com.isalvama.fresh_keep.modules.space.infrastructure.exception;
 
 import com.isalvama.fresh_keep.shared.infrastructure.exception.InfrastructureException;
 

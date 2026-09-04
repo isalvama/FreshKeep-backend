@@ -31,7 +31,7 @@ public class JpaSpaceEntity {
     @Column(name = "emoji", nullable = false, length = 8)
     private String emoji;
 
-    @Column(name = "creator_id", nullable = false, length = 30)
+    @Column(name = "creator_id", nullable = false)
     @JdbcTypeCode(SqlTypes.UUID)
     private UUID creatorId;
 
