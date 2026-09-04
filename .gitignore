@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local test fixtures (personal receipt photos - never commit these) ###
+src/test/resources/receipts/*
+!src/test/resources/receipts/.gitkeep
