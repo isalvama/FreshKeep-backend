@@ -119,10 +119,10 @@ class ProcessNewShoppingReceiptServiceTest {
         assertEquals(rectifiedExtraction.purchaseDate(), result.purchaseShoppingDate());
         assertEquals(rectifiedExtraction.storeName(), result.storeName());
 
-        assertEquals(1, result.storageSpotResult().size());
-        assertEquals("fridge-id", result.storageSpotResult().getFirst().id());
-        assertEquals("Fridge", result.storageSpotResult().getFirst().name());
-        assertEquals("FRIDGE", result.storageSpotResult().getFirst().type());
+        assertEquals(1, result.storageSpotResults().size());
+        assertEquals("fridge-id", result.storageSpotResults().getFirst().id());
+        assertEquals("Fridge", result.storageSpotResults().getFirst().name());
+        assertEquals("FRIDGE", result.storageSpotResults().getFirst().type());
 
         assertEquals(1, result.productExtractions().size());
         assertEquals("Milk", result.productExtractions().getFirst().productName());
