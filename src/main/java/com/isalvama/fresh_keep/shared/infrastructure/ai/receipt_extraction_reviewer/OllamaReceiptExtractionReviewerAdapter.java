@@ -83,7 +83,6 @@ public class OllamaReceiptExtractionReviewerAdapter implements AiReceiptExtracti
         }
 
         ReceiptExtractionToReview receiptExtractionToReview;
-
         try {
              receiptExtractionToReview = converter.convert(jsonText);
         } catch (Exception e) {
