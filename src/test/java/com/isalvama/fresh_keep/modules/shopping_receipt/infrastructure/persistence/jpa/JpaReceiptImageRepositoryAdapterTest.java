@@ -56,7 +56,7 @@ class JpaReceiptImageRepositoryAdapterTest {
 
         ReceiptImageId receiptImageId = ReceiptImageId.create();
 
-        ReceiptImage receiptImage = ReceiptImage.reconstitute(receiptImageId, AssetId.of("asset-id"));
+        ReceiptImage receiptImage = ReceiptImage.reconstitute(receiptImageId, AssetId.of("asset-id"), "image/jpeg");
 
         adapter.save(receiptImage);
         jpaSpringDataReceiptImageRepository.flush();
@@ -66,6 +66,7 @@ class JpaReceiptImageRepositoryAdapterTest {
 
         assertEquals(receiptImageId.value(), saved.getId());
         assertEquals("asset-id", saved.getAssetId());
+        assertEquals("image/jpeg", saved.getMimeType());
         assertNotNull(saved.getCreatedAt());
         assertTrue(saved.getCreatedAt().isBefore(Instant.now().plus(1, ChronoUnit.MINUTES)));
         assertTrue(saved.getCreatedAt().isAfter(Instant.now().minus(1, ChronoUnit.MINUTES)));

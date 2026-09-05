@@ -19,6 +19,7 @@ CREATE TABLE receipt_images
 (
     id         UUID PRIMARY KEY,
     asset_id   VARCHAR(252) UNIQUE NOT NULL,
+    mime_type  VARCHAR(100) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

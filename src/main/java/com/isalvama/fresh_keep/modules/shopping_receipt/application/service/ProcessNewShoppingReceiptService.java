@@ -67,7 +67,7 @@ public class ProcessNewShoppingReceiptService implements ProcessNewShoppingRecei
 
         String avatarAssetId = imageStoragePort.upload(command.file(), "shopping_receipts/receipts");
 
-        ReceiptImage receiptImage = ReceiptImage.create(AssetId.of(avatarAssetId));
+        ReceiptImage receiptImage = ReceiptImage.create(AssetId.of(avatarAssetId), command.file().getContentType());
 
         receiptImageRepositoryPort.save(receiptImage);
 
