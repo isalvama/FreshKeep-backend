@@ -1,28 +1,3 @@
-CREATE TABLE users
-(
-    id              UUID PRIMARY KEY,
-    account_id      UUID UNIQUE NOT NULL,
-    email           VARCHAR(40) UNIQUE NOT NULL,
-    username        VARCHAR(20) UNIQUE,
-    created_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_account_user
-        FOREIGN KEY (account_id)
-            REFERENCES accounts (id)
-            ON DELETE CASCADE
-);
-
-CREATE INDEX idx_users_email ON users(email);
-
-CREATE TABLE receipt_images
-(
-    id         UUID PRIMARY KEY,
-    asset_id   VARCHAR(252) UNIQUE NOT NULL,
-    mime_type  VARCHAR(100) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE TABLE spaces
 (
     id              UUID PRIMARY KEY,
@@ -36,6 +11,9 @@ CREATE TABLE spaces
             REFERENCES users (id)
             ON DELETE SET NULL
 );
+
+CREATE INDEX idx_spaces_creator_id ON spaces(creator_id);
+
 
 CREATE TABLE storage_spots
 (
@@ -53,10 +31,12 @@ CREATE TABLE storage_spots
     CONSTRAINT uq_space_spot_name UNIQUE (space_id, name)
 );
 
+
 CREATE TABLE spaces_participants
 (
     participant_id UUID,
     space_id       UUID NOT NULL,
+    PRIMARY KEY (participant_id, space_id),
     CONSTRAINT fk_spaces_participants_participant
         FOREIGN KEY (participant_id)
             REFERENCES users (id)
@@ -66,3 +46,5 @@ CREATE TABLE spaces_participants
             REFERENCES spaces (id)
             ON DELETE CASCADE
 );
+
+CREATE INDEX idx_spaces_participants_space_id ON spaces_participants(space_id);
