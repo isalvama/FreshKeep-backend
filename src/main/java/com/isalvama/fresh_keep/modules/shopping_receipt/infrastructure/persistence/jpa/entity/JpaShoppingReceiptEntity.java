@@ -43,15 +43,6 @@ public class JpaShoppingReceiptEntity {
     @Column(name = "store_name", updatable = false)
     private String storeName;
 
-    @ElementCollection
-    @CollectionTable(
-            name = "products",
-            joinColumns = @JoinColumn(name = "shopping_receipt_id")
-    )
-    @Column(name = "id")
-    @JdbcTypeCode(SqlTypes.UUID)
-    private Set<UUID> productIds;
-
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
