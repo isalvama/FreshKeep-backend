@@ -1,6 +1,7 @@
-package com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto;
+package com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result;
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.StorageSpotDto;
+import com.isalvama.fresh_keep.modules.space.application.port.in.dto.StorageSpotResult;
 
 public record SuggestedStorageSpotResult(
         String id,
