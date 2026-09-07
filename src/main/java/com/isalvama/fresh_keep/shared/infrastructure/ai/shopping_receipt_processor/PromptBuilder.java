@@ -28,6 +28,7 @@ public class PromptBuilder {
 
         map.put("productExtractions", dto.productExtractions());
         map.put("flaggedProductExtractions", dto.flaggedProductExtractions());
+        map.put("purchaseDate", dto.purchaseDate().toString());
 
         PromptTemplate promptTemplate = new PromptTemplate(promptTextTemplate);
         return promptTemplate.render(map);

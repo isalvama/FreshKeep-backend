@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto;
+package com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result;
 
 import java.time.LocalDate;
 import java.util.List;

@@ -1,5 +1,6 @@
 package com.isalvama.fresh_keep.modules.product.application.port.in.command;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record ProductsCommand(
@@ -8,7 +9,7 @@ public record ProductsCommand(
         String suggestedStorageSpotId,
         String productType,
         String shoppingReceiptId,
-        Double priceAmount,
+        BigDecimal priceAmount,
         String currency
 ) {
 }

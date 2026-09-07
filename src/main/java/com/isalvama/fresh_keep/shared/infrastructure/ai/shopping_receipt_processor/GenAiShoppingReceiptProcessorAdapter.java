@@ -58,23 +58,29 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
     You already produced an initial extraction for this receipt:
     - Purchase date: {purchaseDate}
     - Store name: {storeName}
-    - Previously extracted products, in order (do not change any of these values unless the product also appears under "Products to re-examine" below):
-    {allProducts}
+    - Previously extracted products, in order (do not change any of their values unless:
+         a) The product appears under "Products to re-examine" below, OR
+         b) Its "suggestedStorageSpotId" is not present in the available storageSpots list (listed below). In this case, update its "suggestedStorageSpotId" to the most suitable valid spot and recalculate its shelf life and expiration date accordingly):
+                List of storage spots:
+                {storageSpots}
+                List of all products:
+                {allProducts}
 
-    The following products were flagged as suspicious during review and must be re-examined carefully against the image, specifically addressing the reason each one was flagged for:
+    The following products were flagged as suspicious during review and must be re-examined carefully against the image, specifically addressing the reason each one was flagged for.
+    
+    Products to re-examine:
     {productsToReview}
 
     For each flagged product only, re-derive its data directly from the image following these rules:
     1. Clean up its name (e.g. turn "YOG.NAT.X4" into "Plain yogurt").
     2. Classify it into one of the following product categories: {productTypes}
-    3. Estimate its typical shelf life in days, based on the nature of the product.
-    4. Calculate its approximate expiration date by adding that shelf life to the receipt's purchase date.
-    5. Extract its price and currency, if shown on the receipt. The currency must be exactly one of the following currency codes (leave it empty if none of them apply): {moneyCurrencies}
-    6. Suggest the most suitable storage spot for it, choosing only from the following list of the user's available storage spots, responding with its id (leave it empty if none of them fit):
+    3. Suggest the most suitable storage spot for it, choosing only from the user's available storage spots listed below and based on the storage spot and product type, responding with its id (leave it empty if none of them fit):
     {storageSpots}
+    4. Estimate its typical shelf life in days, based on the nature of the product.
+    5. Calculate its approximate expiration date based on the product type and the type of storage spot where it is stored, by adding that corresponding shelf life to the receipt's purchase date.
+    6. Extract its price and currency, if shown on the receipt. The currency must be exactly one of the following currency codes (leave it empty if none of them apply): {moneyCurrencies}
     
-    Return the complete list of products for this receipt, in the same order as the previous extraction: unflagged products with their values copied over exactly unchanged, and flagged products replaced with their corrected values. Do not add, remove, duplicate or reorder products - the only fields you may change belong to the flagged products listed above.
-    If the shopping receipt image does not display the purchase date, use today's date instead: {today}.
+    Return the complete list of products for this receipt, in the same order as the previous extraction: unflagged products copied over unchanged (updating only "suggestedStorageSpotId" and expiration date if the spot ID was invalid/missing in {storageSpots}), and flagged products replaced with their corrected values. Do not add, remove, duplicate or reorder products.
     {format}
     """;
 
