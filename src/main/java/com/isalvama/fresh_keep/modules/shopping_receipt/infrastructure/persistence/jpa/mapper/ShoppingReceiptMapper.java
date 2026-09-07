@@ -15,7 +15,6 @@ import java.time.ZoneOffset;
 @Component
 @RequiredArgsConstructor
 public class ShoppingReceiptMapper {
-
     private final Clock clock;
 
     public JpaShoppingReceiptEntity toEntity(ShoppingReceipt shoppingReceipt) {
@@ -34,10 +33,9 @@ public class ShoppingReceiptMapper {
                 ShoppingReceiptId.of(entity.getId()),
                 UserId.of(entity.getCreatorId()),
                 SpaceId.of(entity.getSpaceId()),
-                ReceiptImageId.of(entity.getId()),
+                ReceiptImageId.of(entity.getReceiptImageId()),
                 entity.getPurchaseDate().atZone(ZoneOffset.UTC).toLocalDate(),
-                entity.getStoreName(),
-                clock
+                entity.getStoreName()
         );
     }
 }
