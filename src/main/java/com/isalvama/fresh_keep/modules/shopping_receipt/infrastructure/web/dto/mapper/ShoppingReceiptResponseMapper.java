@@ -1,14 +1,12 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.mapper;
 
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.ProcessNewShoppingReceiptResult;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.ProductResult;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.SuggestedStorageSpotResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ProcessNewShoppingReceiptResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ProductResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.SuggestedStorageSpotResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ProcessNewShoppingReceiptResponse;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ProductResponse;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.SuggestedStorageSpotResponse;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Component
 public class ShoppingReceiptResponseMapper {
