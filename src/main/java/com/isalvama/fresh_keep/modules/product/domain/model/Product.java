@@ -17,8 +17,8 @@ public class Product {
     private final ProductId id;
     private final ProductName name;
     private LocalDate expirationDate;
-    private StorageSpotId storageSpotId;
     private StorageSpotId suggestedStorageSpotId;
+    private StorageSpotId actualStorageSpotId;
     private ProductType productType;
     private final ShoppingReceiptId shoppingReceiptId;
     private final Money price;
