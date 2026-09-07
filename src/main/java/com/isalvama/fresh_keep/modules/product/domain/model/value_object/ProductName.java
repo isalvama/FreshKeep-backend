@@ -27,7 +27,7 @@ public record ProductName(String value) {
                 .collect(Collectors.joining(" "));
     }
 
-    public static StorageSpotName from (String value){
-        return new StorageSpotName(value);
+    public static ProductName from (String value){
+        return new ProductName(value);
     }
 }

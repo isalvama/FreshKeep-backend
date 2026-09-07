@@ -25,6 +25,7 @@ public class ShoppingReceipt {
         this.id = validateNotNull(id, "id");
         this.creatorId = validateNotNull(creatorId, "creatorId");
         this.spaceId = validateNotNull(spaceId, "spaceId");
+        this.receiptImageId = validateNotNull(receiptImageId, "receiptImageId");
         this.purchaseDate = validateNotNull(purchaseDate, "purchaseDate");
         this.storeName = storeName;
     }
@@ -46,11 +47,8 @@ public class ShoppingReceipt {
     }
 
     public static ShoppingReceipt reconstitute (
-            ShoppingReceiptId id, UserId creatorId, SpaceId spaceId, ReceiptImageId receiptImageId, LocalDate purchaseDate, String storeName, Clock clock
+            ShoppingReceiptId id, UserId creatorId, SpaceId spaceId, ReceiptImageId receiptImageId, LocalDate purchaseDate, String storeName
     ) {
-        if (purchaseDate.isAfter(LocalDate.now(clock))) {
-            throw new InvalidShoppingReceiptException("The purchase date cannot be later than the current date");
-        }
         return new ShoppingReceipt(
                 id,
                 creatorId,

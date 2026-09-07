@@ -2,6 +2,8 @@ package com.isalvama.fresh_keep.modules.product.domain.model.value_object;
 
 import com.isalvama.fresh_keep.modules.product.domain.exception.InvalidMoneyException;
 
+import java.math.BigDecimal;
+
 public record Money (Amount amount, Currency currency){
     public Money {
         validateNotNull(amount, "amount");
@@ -22,7 +24,7 @@ public record Money (Amount amount, Currency currency){
         return this.currency.getSymbol();
     }
 
-    public Money from (Double amount, String currencyConstName){
+    public static Money from (BigDecimal amount, String currencyConstName){
         return new Money(Amount.of(amount), Currency.valueOf(currencyConstName));
     }
 }
