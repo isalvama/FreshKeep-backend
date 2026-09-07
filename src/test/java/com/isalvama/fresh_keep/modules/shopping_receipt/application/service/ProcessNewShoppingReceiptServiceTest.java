@@ -1,7 +1,7 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.application.service;
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ProcessNewShoppingReceiptCommand;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.ProcessNewShoppingReceiptResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ProcessNewShoppingReceiptResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.RectifyExtractionDto;
@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -59,12 +60,12 @@ class ProcessNewShoppingReceiptServiceTest {
 
     private final ReceiptExtraction rawExtraction = new ReceiptExtraction(
             LocalDate.of(2026, 9, 2), "SuperMart", null,
-            List.of(new ProductExtraction(LocalDate.of(2026, 9, 10), "Milk", "fridge-id", "DAIRY", 2.5, "USD"))
+            List.of(new ProductExtraction(LocalDate.of(2026, 9, 10), "Milk", "fridge-id", "DAIRY", BigDecimal.valueOf(2.5), "USD"))
     );
 
     private final ReceiptExtraction rectifiedExtraction = new ReceiptExtraction(
             LocalDate.of(2026, 9, 1), "SuperMart", null,
-            List.of(new ProductExtraction(LocalDate.of(2026, 9, 9), "Milk", "fridge-id", "DAIRY", 2.5, "USD"))
+            List.of(new ProductExtraction(LocalDate.of(2026, 9, 9), "Milk", "fridge-id", "DAIRY", BigDecimal.valueOf(2.5), "USD"))
     );
 
     @BeforeEach

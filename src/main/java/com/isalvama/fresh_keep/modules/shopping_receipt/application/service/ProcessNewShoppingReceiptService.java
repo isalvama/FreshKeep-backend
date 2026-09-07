@@ -2,9 +2,9 @@ package com.isalvama.fresh_keep.modules.shopping_receipt.application.service;
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ProcessNewShoppingReceiptCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ProcessNewShoppingReceiptUseCase;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.ProcessNewShoppingReceiptResult;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.ProductResult;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.SuggestedStorageSpotResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ProcessNewShoppingReceiptResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ProductResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.SuggestedStorageSpotResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.RectifyExtractionDto;

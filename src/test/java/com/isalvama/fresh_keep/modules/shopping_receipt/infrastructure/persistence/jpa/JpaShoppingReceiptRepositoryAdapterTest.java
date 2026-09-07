@@ -7,6 +7,8 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persisten
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.mapper.ShoppingReceiptMapper;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
+import com.isalvama.fresh_keep.shared.config.AppConfig;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +16,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -33,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({JpaShoppingReceiptRepositoryAdapter.class, ShoppingReceiptMapper.class})
+@Import({JpaShoppingReceiptRepositoryAdapter.class, ShoppingReceiptMapper.class, AppConfig.class})
 class JpaShoppingReceiptRepositoryAdapterTest {
 
     @Container
@@ -49,6 +52,9 @@ class JpaShoppingReceiptRepositoryAdapterTest {
     @Autowired
     private Clock clock;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     private final String id = ShoppingReceiptId.create().toString();
     private final String creatorId = UserId.create().toString();
     private final String spaceId = SpaceId.create().toString();
@@ -56,13 +62,49 @@ class JpaShoppingReceiptRepositoryAdapterTest {
     private final LocalDate purchaseDate = LocalDate.of(2026, 9, 6);
     private final String storeName = "Store Name";
 
+    @BeforeEach
+    void setUp() {
+        UUID accountId = UUID.randomUUID();
+        insertAccount(accountId, "creator@email.com", "password-hash");
+        insertUser(UUID.fromString(creatorId), accountId, "creator@email.com", "creatorUserName");
+        insertSpace(UUID.fromString(spaceId), "Kitchen", "🏠", UUID.fromString(creatorId));
+        insertReceiptImage(UUID.fromString(receiptImageId), "asset-id", "image/jpeg");
+    }
+
+    private void insertAccount(UUID id, String email, String passwordHash) {
+        jdbcTemplate.update(
+                "INSERT INTO accounts (id, email, password_hash) VALUES (?, ?, ?)",
+                id, email, passwordHash
+        );
+    }
+
+    private void insertUser(UUID id, UUID accountId, String email, String username) {
+        jdbcTemplate.update(
+                "INSERT INTO users (id, account_id, email, username) VALUES (?, ?, ?, ?)",
+                id, accountId, email, username
+        );
+    }
+
+    private void insertSpace(UUID id, String name, String emoji, UUID creatorId) {
+        jdbcTemplate.update(
+                "INSERT INTO spaces (id, name, emoji, creator_id) VALUES (?, ?, ?, ?)",
+                id, name, emoji, creatorId
+        );
+    }
+
+    private void insertReceiptImage(UUID id, String assetId, String mimeType) {
+        jdbcTemplate.update(
+                "INSERT INTO receipt_images (id, asset_id, mime_type) VALUES (?, ?, ?)",
+                id, assetId, mimeType
+        );
+    }
 
     @Nested
     class Save{
 
         @Test
         void shouldSaveShoppingReceiptSuccessfullyAndUpdateCreatedAt(){
-            adapter.save(ShoppingReceipt.reconstitute(ShoppingReceiptId.from(id), UserId.from(creatorId), SpaceId.from(spaceId), ReceiptImageId.from(receiptImageId), purchaseDate, storeName, clock));
+            adapter.save(ShoppingReceipt.reconstitute(ShoppingReceiptId.from(id), UserId.from(creatorId), SpaceId.from(spaceId), ReceiptImageId.from(receiptImageId), purchaseDate, storeName));
 
             Optional<JpaShoppingReceiptEntity> result = jpaRepository.findById(UUID.fromString(id));
             jpaRepository.flush();

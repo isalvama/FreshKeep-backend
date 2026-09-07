@@ -65,7 +65,7 @@ public enum Currency {
     public String getDisplayName() { return displayName; }
     public String getSymbol() { return symbol; }
 
-    public Currency from(String value){
+    public Currency getValueOf(String value){
         try {
             return Currency.valueOf(value);
         } catch (IllegalArgumentException e) {
