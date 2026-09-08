@@ -2,10 +2,12 @@ package com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa.m
 
 import com.isalvama.fresh_keep.modules.product.domain.model.Product;
 import com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa.entity.JpaProductStorageSpotHistoryEntity;
+import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Component
 public class ProductStorageSpotHistoryMapper {
 
     public JpaProductStorageSpotHistoryEntity toEntity(Product product, UUID creatorId){
