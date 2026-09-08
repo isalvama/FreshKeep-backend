@@ -57,7 +57,7 @@ CREATE TABLE products
                                                  'DELI', 'BAKERY', 'PANTRY', 'SNACKS', 'SWEETS',
                                                  'FROZEN_FOODS',
                                                  'ICE_CREAM_AND_DESSERTS', 'BEVERAGES', 'INTERNATIONAL', 'SAUCES',
-                                                 'OTHER'))
+                                                 'OTHER')),
 
         CONSTRAINT chk_products_currency CHECK (currency IN (
         'USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD',
@@ -73,7 +73,7 @@ CREATE INDEX idx_products_actual_storage_spot_id ON products(actual_storage_spot
 CREATE INDEX idx_products_shopping_receipt_id ON products(shopping_receipt_id);
 
 
-CREATE SEQUENCE product_storage_spot_history_seq START WITH 1 INCREMENT BY 30
+CREATE SEQUENCE product_storage_spot_history_seq START WITH 1 INCREMENT BY 30;
 
 CREATE TABLE product_storage_spot_history
 (

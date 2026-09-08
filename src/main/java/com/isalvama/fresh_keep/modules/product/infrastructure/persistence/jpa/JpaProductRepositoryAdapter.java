@@ -21,7 +21,7 @@ public class JpaProductRepositoryAdapter implements ProductRepositoryPort {
     public void saveAll(List<Product> products) {
         try {
             List<JpaProductEntity> productEntities = products.stream().map(mapper::toEntity).toList();
-            jpaProductRepository.saveAll(productEntities);
+            jpaProductRepository.saveAllAndFlush(productEntities);
         } catch (DataAccessException e){
             List<String> productsIds = products.stream().map(p -> p.getId().toString()).toList();
             throw new ProductPersistenceException("Failed to save products with ids " + String.join(", ", productsIds) + e.getMessage());
