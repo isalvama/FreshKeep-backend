@@ -115,6 +115,7 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
     }
 
     @Override
+    @Retryable(retryFor = AiRetryableException.class, maxAttempts = 2, backoff = @Backoff(delay = 1000))
     public ReceiptExtraction reprocess(ReprocessShoppingReceiptWithFlaggedProducts processShoppingReceiptFlaggedProdsDto) {
 
         var converter = new BeanOutputConverter<>(ReceiptExtraction.class);
