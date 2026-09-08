@@ -33,10 +33,7 @@ public class ShoppingReceipt {
     public static ShoppingReceipt create (
             UserId creatorId, SpaceId spaceId, ReceiptImageId receiptImageId, LocalDate purchaseDate, String storeName, Clock clock
     ) {
-        if (purchaseDate.isAfter(LocalDate.now(clock))) {
-            throw new InvalidShoppingReceiptException("The purchase date cannot be later than the current date");
-        }
-        return new ShoppingReceipt(
+        ShoppingReceipt shoppingReceipt = new ShoppingReceipt(
                 ShoppingReceiptId.create(),
                 creatorId,
                 spaceId,
@@ -44,6 +41,10 @@ public class ShoppingReceipt {
                 purchaseDate,
                 storeName
         );
+        if (shoppingReceipt.purchaseDate.isAfter(LocalDate.now(clock))) {
+            throw new InvalidShoppingReceiptException("The purchase date cannot be later than the current date");
+        }
+        return shoppingReceipt;
     }
 
     public static ShoppingReceipt reconstitute (
