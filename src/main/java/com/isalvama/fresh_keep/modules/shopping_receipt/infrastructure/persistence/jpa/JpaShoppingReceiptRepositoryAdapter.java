@@ -17,7 +17,7 @@ public class JpaShoppingReceiptRepositoryAdapter implements ShoppingReceiptRepos
     @Override
     public void save(ShoppingReceipt shoppingReceipt) {
         try {
-            jpaRepository.save(shoppingReceiptMapper.toEntity(shoppingReceipt));
+            jpaRepository.saveAndFlush(shoppingReceiptMapper.toEntity(shoppingReceipt));
         } catch (DataAccessException e) {
             throw new ShoppingReceiptPersistenceException("Failed to persist Shopping Receipt with id " + shoppingReceipt.getId().toString() + ": " + e.getMessage());
         }

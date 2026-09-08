@@ -3,6 +3,7 @@ package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persiste
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ShoppingReceipt;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ReceiptImageId;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ShoppingReceiptId;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.exception.ShoppingReceiptPersistenceException;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaShoppingReceiptEntity;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.mapper.ShoppingReceiptMapper;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
@@ -107,7 +108,6 @@ class JpaShoppingReceiptRepositoryAdapterTest {
             adapter.save(ShoppingReceipt.reconstitute(ShoppingReceiptId.from(id), UserId.from(creatorId), SpaceId.from(spaceId), ReceiptImageId.from(receiptImageId), purchaseDate, storeName));
 
             Optional<JpaShoppingReceiptEntity> result = jpaRepository.findById(UUID.fromString(id));
-            jpaRepository.flush();
 
             assertTrue(result.isPresent());
             JpaShoppingReceiptEntity resultingEntity = result.orElseThrow(RuntimeException::new);
@@ -119,6 +119,22 @@ class JpaShoppingReceiptRepositoryAdapterTest {
             assertEquals(resultingEntity.getStoreName(), storeName);
             assertTrue(resultingEntity.getCreatedAt().isBefore(Instant.now().plus(1, ChronoUnit.MINUTES)));
             assertTrue(resultingEntity.getCreatedAt().isAfter(Instant.now().minus(1, ChronoUnit.MINUTES)));
+        }
+
+        @Test
+        void shouldThrowShoppingReceiptPersistenceExceptionWhenForeignKeyIsInvalid() {
+            ShoppingReceipt invalidReceipt = ShoppingReceipt.reconstitute(
+                    ShoppingReceiptId.create(),
+                    UserId.from(creatorId),
+                    SpaceId.from(spaceId),
+                    ReceiptImageId.create(),
+                    purchaseDate,
+                    storeName
+            );
+
+            Exception exception = assertThrows(ShoppingReceiptPersistenceException.class, () -> adapter.save(invalidReceipt));
+
+            assertTrue(exception.getMessage().contains(invalidReceipt.getId().toString()));
         }
     }
 }
