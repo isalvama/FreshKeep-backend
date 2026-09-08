@@ -100,6 +100,7 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
                 .build();
 
         GoogleGenAiChatOptions chatOptions = GoogleGenAiChatOptions.builder()
+                .model(chatModel.getOptions().getModel())
                 .responseMimeType("application/json")
                 .responseSchema(converter.getJsonSchema())
                 .build();
@@ -128,6 +129,7 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
                 .build();
 
         GoogleGenAiChatOptions chatOptions = GoogleGenAiChatOptions.builder()
+                .model(chatModel.getOptions().getModel())
                 .responseMimeType("application/json")
                 .responseSchema(converter.getJsonSchema())
                 .build();
