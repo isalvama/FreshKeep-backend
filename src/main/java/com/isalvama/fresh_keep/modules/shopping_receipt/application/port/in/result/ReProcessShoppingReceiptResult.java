@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record ReProcessShoppingReceiptResult(
-        String id,
+        String shoppingReceiptId,
         LocalDate shoppingDate,
         String storeName,
         List<ReProcessShoppingReceiptProductResult> products,

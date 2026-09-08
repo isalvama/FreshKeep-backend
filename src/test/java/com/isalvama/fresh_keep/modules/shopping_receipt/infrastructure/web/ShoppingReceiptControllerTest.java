@@ -120,7 +120,7 @@ class ShoppingReceiptControllerTest {
         ProcessNewShoppingReceiptResult result = new ProcessNewShoppingReceiptResult(
                 "receipt-image-id", List.of(), LocalDate.now(), "SuperMart", List.of(), List.of());
         when(processNewShoppingReceiptUseCase.execute(any())).thenReturn(result);
-        when(mapper.toResponse(any())).thenReturn(
+        when(mapper.toResponse((ProcessNewShoppingReceiptResult) any())).thenReturn(
                 new ProcessNewShoppingReceiptResponse("receipt-image-id", List.of(), LocalDate.now(), "SuperMart", List.of(), List.of()));
 
         mockMvc.perform(multipart(BASE_URL.formatted(SPACE_ID))

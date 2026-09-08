@@ -11,6 +11,7 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.m
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.request.ProcessNewShoppingReceiptRequest;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.request.ReProcessShoppingReceiptRequest;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ProcessNewShoppingReceiptResponse;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ReprocessShoppingReceiptResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -61,7 +62,7 @@ public class ShoppingReceiptController {
     @PostMapping(value = "/shopping-receipt")
     @PreAuthorize("hasRole('USER')")
     @Operation(summary = "Reprocess the products flagged by the user with the Shopping Receipt Image and persist the Shopping Receipt and the Products")
-    public ResponseEntity<ProcessNewShoppingReceiptResponse> reProcessShoppingReceiptWithFlaggedProducts(
+    public ResponseEntity<ReprocessShoppingReceiptResponse> reProcessShoppingReceiptWithFlaggedProducts(
             @PathVariable(name = "spaceId") @UUID String spaceId,
             @Valid @ModelAttribute ReProcessShoppingReceiptRequest request,
             @AuthenticationPrincipal(expression = "userId") String userId) {
@@ -73,10 +74,9 @@ public class ShoppingReceiptController {
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")
-                .buildAndExpand(result.id())
+                .buildAndExpand(result.shoppingReceiptId())
                 .toUri();
 
-        return null;
-        // TODO return ResponseEntity.created(location).body(responseMapper.toResponse(result));
+        return ResponseEntity.created(location).body(responseMapper.toResponse(result));
     }
 }
