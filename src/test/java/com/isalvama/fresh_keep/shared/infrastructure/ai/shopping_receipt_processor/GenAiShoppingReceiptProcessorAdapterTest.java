@@ -5,6 +5,7 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReprocessShoppingReceiptWithFlaggedProducts;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.AiUnprocessableInputException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -49,6 +50,11 @@ class GenAiShoppingReceiptProcessorAdapterTest {
 
     @InjectMocks
     private GenAiShoppingReceiptProcessorAdapter adapter;
+
+    @BeforeEach
+    void setUp() {
+        when(chatModel.getOptions()).thenReturn(GoogleGenAiChatOptions.builder().model("gemini-3.7-flash").build());
+    }
 
     private final MultipartFile file = new MockMultipartFile("file", "receipt.jpg", "image/jpeg", "fake-image-content".getBytes());
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-01T10:00:00Z"), ZoneOffset.UTC);
