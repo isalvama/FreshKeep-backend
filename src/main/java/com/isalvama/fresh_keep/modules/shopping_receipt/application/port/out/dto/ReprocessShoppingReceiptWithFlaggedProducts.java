@@ -8,6 +8,7 @@ public record ReprocessShoppingReceiptWithFlaggedProducts(
         byte[] imageBytes,
         String mimeType,
         LocalDate purchaseDate,
+        String storeName,
         List<ProductExtraction> productExtractions,
         List<ProductExtraction> flaggedProductExtractions,
         List<StorageSpotDto> storageSpots,
