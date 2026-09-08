@@ -5,10 +5,10 @@ import com.cloudinary.Uploader;
 import com.cloudinary.Url;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.ImageRetrievalException;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.ImageStorageException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpRequest;
@@ -40,6 +40,9 @@ class CloudinaryImageStorageAdapterTest {
     private Url url;
 
     @Mock
+    private RestClient.Builder restClientBuilder;
+
+    @Mock
     private RestClient restClient;
 
     @Mock
@@ -51,10 +54,15 @@ class CloudinaryImageStorageAdapterTest {
     @Mock
     private RestClient.ResponseSpec responseSpec;
 
-    @InjectMocks
     private CloudinaryImageStorageAdapter adapter;
 
     private final MultipartFile file = new MockMultipartFile("file", "receipt.jpg", "image/jpeg", "fake-image-content".getBytes());
+
+    @BeforeEach
+    void setUp() {
+        when(restClientBuilder.build()).thenReturn(restClient);
+        adapter = new CloudinaryImageStorageAdapter(restClientBuilder, cloudinary);
+    }
 
     @Test
     void upload_throwsImageStorageExceptionWhenFileIsEmpty() {

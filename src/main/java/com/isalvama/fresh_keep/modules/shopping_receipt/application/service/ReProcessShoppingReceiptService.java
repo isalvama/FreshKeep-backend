@@ -76,7 +76,7 @@ public class ReProcessShoppingReceiptService {
         shoppingReceiptRepositoryPort.save(shoppingReceipt);
 
         List<RegisteredProductDto> registeredProducts = productRegistrationPort.registerProducts(
-                extraction.productExtractions().stream().map(pe ->
+                rectifiedExtraction.productExtractions().stream().map(pe ->
                         new RegisterProductDto(
                                 pe.productName(),
                                 pe.expirationDate(),
