@@ -52,6 +52,7 @@ public class ReProcessShoppingReceiptService {
                         imageBytes,
                         receiptImage.getMimeType(),
                         command.shoppingDate(),
+                        command.storeName(),
                         command.allProducts().stream().map(this::toProductExtraction).toList(),
                         command.flaggedProducts().stream().map(this::toProductExtraction).toList(),
                         storageSpotDtos,
