@@ -51,7 +51,8 @@ public class JpaProductEntity implements Persistable<UUID> {
     @Column(name = "price", updatable = false)
     private BigDecimal price;
 
-    @Column(name = "currency", updatable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "currency", updatable = false, length = 20)
     private Currency currency;
 
     @Version
