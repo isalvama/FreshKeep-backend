@@ -3,6 +3,7 @@ package com.isalvama.fresh_keep.shared.infrastructure.ai.shopping_receipt_proces
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProcessNewShoppingReceiptDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReprocessShoppingReceiptWithFlaggedProducts;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.StorageSpotDto;
+import com.isalvama.fresh_keep.shared.infrastructure.ai.ProductExtractionsPromptFormatter;
 import com.isalvama.fresh_keep.shared.infrastructure.ai.StorageSpotsPromptFormatter;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.converter.BeanOutputConverter;
@@ -26,9 +27,10 @@ public class PromptBuilder {
     public String build (String promptTextTemplate, ReprocessShoppingReceiptWithFlaggedProducts dto, BeanOutputConverter<?> converter) {
         Map<String, Object> map = buildBaseMap(new CommonPlaceholders(dto.storageSpots(), dto.clock(), dto.productTypes(), dto.moneyCurrencies()), converter);
 
-        map.put("productExtractions", dto.productExtractions());
-        map.put("flaggedProductExtractions", dto.flaggedProductExtractions());
         map.put("purchaseDate", dto.purchaseDate().toString());
+        map.put("storeName", dto.storeName());
+        map.put("allProducts", ProductExtractionsPromptFormatter.format(dto.productExtractions()));
+        map.put("productsToReview", ProductExtractionsPromptFormatter.format(dto.flaggedProductExtractions()));
 
         PromptTemplate promptTemplate = new PromptTemplate(promptTextTemplate);
         return promptTemplate.render(map);
