@@ -22,7 +22,7 @@ public class JpaProductStorageSpotHistoryRepositoryAdapter implements ProductSto
     public void saveAll(List<Product> products, UUID creatorId) {
         try {
             List<JpaProductStorageSpotHistoryEntity> jpaProductStorageSpotHistoryEntities = products.stream().map(p -> mapper.toEntity(p, creatorId)).toList();
-            jpaProductStorageSpotHistoryRepository.saveAll(jpaProductStorageSpotHistoryEntities);
+            jpaProductStorageSpotHistoryRepository.saveAllAndFlush(jpaProductStorageSpotHistoryEntities);
         } catch (DataAccessException e) {
             List<String> productsIds = products.stream().map(p -> p.getId().toString()).toList();
             throw new ProductStorageSpotHistoryPersistenceException(
