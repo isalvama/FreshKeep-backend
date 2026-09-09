@@ -43,12 +43,19 @@ public class ReceiptExtractionParser {
     }
 
     private void validateContent(ReceiptExtraction receiptExtraction){
-        if (receiptExtraction.errorReason() != null) {
-            throw new AiUnprocessableInputException(receiptExtraction.errorReason());
+        boolean hasProducts = receiptExtraction.productExtractions() != null && !receiptExtraction.productExtractions().isEmpty();
+        if (hasProducts) {
+            return;
         }
 
-        if (receiptExtraction.productExtractions() == null || receiptExtraction.productExtractions().isEmpty()) {
-            throw new AiUnprocessableInputException("Unable to extract food products from the image.");
-        }
+        // Per the prompt's own contract, a genuine error always comes with an empty product list - errorReason
+        // is required and non-nullable in the response schema, so the model represents "no error" with all
+        // sorts of placeholder values ("", "none", ...) rather than reliably using JSON null. Since an empty
+        // product list is itself the authoritative signal of a real error, errorReason is only used here to
+        // explain why (when it looks like a real explanation), never to detect whether there was an error.
+        String reason = receiptExtraction.errorReason();
+        throw new AiUnprocessableInputException(reason != null && !reason.isBlank()
+                ? reason
+                : "Unable to extract food products from the image.");
     }
 }
