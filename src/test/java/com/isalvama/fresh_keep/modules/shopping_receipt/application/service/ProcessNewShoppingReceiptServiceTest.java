@@ -6,7 +6,7 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.RectifyExtractionDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ReceiptImage;
-import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.exception.InvalidReceiptImageException;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.InvalidReceiptImageException;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.InfrastructureException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +45,8 @@ class ProcessNewShoppingReceiptServiceTest {
     private ReceiptImageRepositoryPort receiptImageRepositoryPort;
     @Mock
     private ExtractionDataRectifier extractionDataRectifier;
+    @Mock
+    private StorageSpotSuggestionResolver spotSuggestionResolver;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-01T10:00:00Z"), ZoneOffset.UTC);
 
@@ -60,12 +62,16 @@ class ProcessNewShoppingReceiptServiceTest {
 
     private final ReceiptExtraction rawExtraction = new ReceiptExtraction(
             LocalDate.of(2026, 9, 2), "SuperMart", null,
-            List.of(new ProductExtraction(LocalDate.of(2026, 9, 10), "Milk", "fridge-id", "DAIRY", BigDecimal.valueOf(2.5), "USD"))
+            List.of(new ProductExtraction(LocalDate.of(2026, 9, 10), "Milk-Raw", "fridge-id", "DAIRY", BigDecimal.valueOf(2.5), "USD"))
     );
 
-    private final ReceiptExtraction rectifiedExtraction = new ReceiptExtraction(
+    private final ReceiptExtraction dateRectifiedExtraction = new ReceiptExtraction(
             LocalDate.of(2026, 9, 1), "SuperMart", null,
-            List.of(new ProductExtraction(LocalDate.of(2026, 9, 9), "Milk", "fridge-id", "DAIRY", BigDecimal.valueOf(2.5), "USD"))
+            List.of(new ProductExtraction(LocalDate.of(2026, 9, 9), "Milk-DateRectified", "fridge-id", "DAIRY", BigDecimal.valueOf(2.5), "USD"))
+    );
+
+    private final List<ProductExtraction> resolvedProductExtractions = List.of(
+            new ProductExtraction(LocalDate.of(2026, 9, 9), "Milk-Resolved", "fridge-id", "DAIRY", BigDecimal.valueOf(2.5), "USD")
     );
 
     @BeforeEach
@@ -78,6 +84,7 @@ class ProcessNewShoppingReceiptServiceTest {
                 imageStoragePort,
                 receiptImageRepositoryPort,
                 extractionDataRectifier,
+                spotSuggestionResolver,
                 clock
         );
     }
@@ -86,7 +93,8 @@ class ProcessNewShoppingReceiptServiceTest {
         when(spaceLookUpPort.getStorageSpotsBySpaceIdAndParticipantId(any())).thenReturn(storageSpots);
         when(productCategoriesLookUpPort.getProductTypesAndMoneyCurrencyConstNames()).thenReturn(categories);
         when(shoppingReceiptProcessorPort.process(any())).thenReturn(rawExtraction);
-        when(extractionDataRectifier.rectify(any())).thenReturn(rectifiedExtraction);
+        when(extractionDataRectifier.rectifyPurchaseDate(any())).thenReturn(dateRectifiedExtraction);
+        when(spotSuggestionResolver.resolve(any(), any())).thenReturn(resolvedProductExtractions);
         when(extractionReviewerPort.review(any())).thenReturn(List.of());
         when(imageStoragePort.upload(any(), any())).thenReturn("shopping_receipts/receipts/abc123");
     }
@@ -99,14 +107,14 @@ class ProcessNewShoppingReceiptServiceTest {
         assertThrows(InvalidReceiptImageException.class, () -> service.execute(emptyFileCommand));
 
         verifyNoInteractions(spaceLookUpPort, productCategoriesLookUpPort, shoppingReceiptProcessorPort,
-                extractionReviewerPort, imageStoragePort, receiptImageRepositoryPort, extractionDataRectifier);
+                extractionReviewerPort, imageStoragePort, receiptImageRepositoryPort, extractionDataRectifier, spotSuggestionResolver);
     }
 
     @Test
     void execute_returnsResultAssembledFromEachCollaborator() {
         stubHappyPath();
 
-        ProductReviewFlag flag = new ProductReviewFlag(rectifiedExtraction.productExtractions().getFirst(), "expiration date looks off");
+        ProductReviewFlag flag = new ProductReviewFlag(resolvedProductExtractions.getFirst(), "expiration date looks off");
         when(extractionReviewerPort.review(any())).thenReturn(List.of(flag));
 
         ArgumentCaptor<ReceiptImage> receiptImageCaptor = ArgumentCaptor.forClass(ReceiptImage.class);
@@ -117,8 +125,8 @@ class ProcessNewShoppingReceiptServiceTest {
         String expectedReceiptImageId = receiptImageCaptor.getValue().getId().toString();
 
         assertEquals(expectedReceiptImageId, result.receiptImageId());
-        assertEquals(rectifiedExtraction.purchaseDate(), result.purchaseShoppingDate());
-        assertEquals(rectifiedExtraction.storeName(), result.storeName());
+        assertEquals(dateRectifiedExtraction.purchaseDate(), result.purchaseShoppingDate());
+        assertEquals(dateRectifiedExtraction.storeName(), result.storeName());
 
         assertEquals(1, result.storageSpotResults().size());
         assertEquals("fridge-id", result.storageSpotResults().getFirst().id());
@@ -126,10 +134,10 @@ class ProcessNewShoppingReceiptServiceTest {
         assertEquals("FRIDGE", result.storageSpotResults().getFirst().type());
 
         assertEquals(1, result.productExtractions().size());
-        assertEquals("Milk", result.productExtractions().getFirst().productName());
+        assertEquals("Milk-Resolved", result.productExtractions().getFirst().productName());
 
         assertEquals(1, result.flaggedProducts().size());
-        assertEquals("Milk", result.flaggedProducts().getFirst().productName());
+        assertEquals("Milk-Resolved", result.flaggedProducts().getFirst().productName());
     }
 
     @Test
@@ -149,16 +157,18 @@ class ProcessNewShoppingReceiptServiceTest {
         assertEquals(categories.moneyCurrencies(), processDtoCaptor.getValue().moneyCurrencies());
 
         ArgumentCaptor<RectifyExtractionDto> rectifyDtoCaptor = ArgumentCaptor.forClass(RectifyExtractionDto.class);
-        verify(extractionDataRectifier).rectify(rectifyDtoCaptor.capture());
+        verify(extractionDataRectifier).rectifyPurchaseDate(rectifyDtoCaptor.capture());
         assertSame(rawExtraction, rectifyDtoCaptor.getValue().extraction());
         assertEquals(storageSpots, rectifyDtoCaptor.getValue().storageSpots());
         assertSame(clock, rectifyDtoCaptor.getValue().clock());
 
+        verify(spotSuggestionResolver).resolve(dateRectifiedExtraction.productExtractions(), storageSpots);
+
         ArgumentCaptor<ReviewNewShoppingReceiptDto> reviewDtoCaptor = ArgumentCaptor.forClass(ReviewNewShoppingReceiptDto.class);
         verify(extractionReviewerPort).review(reviewDtoCaptor.capture());
         assertEquals(storageSpots, reviewDtoCaptor.getValue().storageSpots());
-        assertEquals(rectifiedExtraction.productExtractions(), reviewDtoCaptor.getValue().productExtractions());
-        assertEquals(rectifiedExtraction.purchaseDate(), reviewDtoCaptor.getValue().shoppingDate());
+        assertEquals(resolvedProductExtractions, reviewDtoCaptor.getValue().productExtractions());
+        assertEquals(dateRectifiedExtraction.purchaseDate(), reviewDtoCaptor.getValue().shoppingDate());
 
         verify(imageStoragePort).upload(file, "shopping_receipts/receipts");
     }

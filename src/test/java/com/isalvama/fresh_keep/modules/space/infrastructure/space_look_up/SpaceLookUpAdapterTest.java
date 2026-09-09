@@ -2,8 +2,8 @@ package com.isalvama.fresh_keep.modules.space.infrastructure.space_look_up;
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.GetStorageSpotsDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.StorageSpotDto;
-import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.exception.InvalidSpaceReferenceException;
-import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.exception.SpaceNotAccessibleException;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.InvalidSpaceReferenceException;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.SpaceNotAccessibleException;
 import com.isalvama.fresh_keep.modules.space.application.port.out.SpaceRepositoryPort;
 import com.isalvama.fresh_keep.modules.space.domain.model.Space;
 import com.isalvama.fresh_keep.modules.space.domain.model.StorageSpot;
