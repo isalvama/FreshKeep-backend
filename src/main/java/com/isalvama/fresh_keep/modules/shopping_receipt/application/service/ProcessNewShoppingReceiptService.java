@@ -3,7 +3,7 @@ package com.isalvama.fresh_keep.modules.shopping_receipt.application.service;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ProcessNewShoppingReceiptCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ProcessNewShoppingReceiptUseCase;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ProcessNewShoppingReceiptResult;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ProductResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ProcessProductResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.SuggestedStorageSpotResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.*;
@@ -32,6 +32,7 @@ public class ProcessNewShoppingReceiptService implements ProcessNewShoppingRecei
     private final ImageStoragePort imageStoragePort;
     private final ReceiptImageRepositoryPort receiptImageRepositoryPort;
     private final ExtractionDataRectifier extractionDataRectifier;
+    private final StorageSpotSuggestionResolver spotSuggestionResolver;
     private final Clock clock;
 
     @Override
@@ -54,12 +55,13 @@ public class ProcessNewShoppingReceiptService implements ProcessNewShoppingRecei
                         categories.moneyCurrencies()
                 ));
 
-        ReceiptExtraction rectifiedExtraction = extractionDataRectifier.rectify(new RectifyExtractionDto(extraction, storageSpotDtos, clock));
+        ReceiptExtraction rectifiedExtraction = extractionDataRectifier.rectifyPurchaseDate(new RectifyExtractionDto(extraction, storageSpotDtos, clock));
+        List<ProductExtraction> productExtractions = spotSuggestionResolver.resolve(rectifiedExtraction.productExtractions(), storageSpotDtos);
 
         List<ProductReviewFlag> productsToReview;
         try {
             productsToReview = extractionReviewerPort.review(
-                    new ReviewNewShoppingReceiptDto(storageSpotDtos, rectifiedExtraction.productExtractions(), rectifiedExtraction.purchaseDate()));
+                    new ReviewNewShoppingReceiptDto(storageSpotDtos, productExtractions, rectifiedExtraction.purchaseDate()));
         } catch (InfrastructureException e){
             productsToReview = List.of();
             log.warn("The AiReceiptExtractionReviewerPort.execute() threw an exception with the following message: {}. productsToReview is initialized as an empty list.", e.getMessage());
@@ -76,10 +78,10 @@ public class ProcessNewShoppingReceiptService implements ProcessNewShoppingRecei
                 storageSpotDtos.stream().map(SuggestedStorageSpotResult::fromStorageSpotDto).toList(),
                 rectifiedExtraction.purchaseDate(),
                 rectifiedExtraction.storeName(),
-                rectifiedExtraction.productExtractions() == null || rectifiedExtraction.productExtractions().isEmpty()
+                productExtractions == null || productExtractions.isEmpty()
                     ? List.of()
-                    : rectifiedExtraction.productExtractions().stream().map(ProductResult::fromProductExtraction).toList(),
-                productsToReview == null || productsToReview.isEmpty() ? List.of() : productsToReview.stream().map(p -> ProductResult.fromProductExtraction(p.product())).toList()
+                    : productExtractions.stream().map(ProcessProductResult::fromProductExtraction).toList(),
+                productsToReview == null || productsToReview.isEmpty() ? List.of() : productsToReview.stream().map(p -> ProcessProductResult.fromProductExtraction(p.product())).toList()
         );
     }
 

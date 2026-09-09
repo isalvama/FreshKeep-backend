@@ -8,6 +8,6 @@ public record ProcessNewShoppingReceiptResult(
         List<SuggestedStorageSpotResult> storageSpotResults,
         LocalDate purchaseShoppingDate,
         String storeName,
-        List<ProductResult> productExtractions,
-        List<ProductResult> flaggedProducts
+        List<ProcessProductResult> productExtractions,
+        List<ProcessProductResult> flaggedProducts
 ) { }

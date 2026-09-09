@@ -3,8 +3,8 @@ package com.isalvama.fresh_keep.modules.shopping_receipt.application.service;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ReProcessShoppingReceiptUseCase;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ProductCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ReProcessShoppingReceiptCommand;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ReProcessShoppingReceiptProductResult;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ReProcessShoppingReceiptResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ProductResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ShoppingReceiptResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.SuggestedStorageSpotResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.*;
@@ -33,12 +33,13 @@ public class ReProcessShoppingReceiptService implements ReProcessShoppingReceipt
     private final ImageStoragePort imageStoragePort;
     private final AiShoppingReceiptProcessorPort aiShoppingReceiptProcessorPort;
     private final ExtractionDataRectifier extractionDataRectifier;
+    private final StorageSpotSuggestionResolver storageSpotResolver;
     private final ShoppingReceiptRepositoryPort shoppingReceiptRepositoryPort;
     private final ProductRegistrationPort productRegistrationPort;
     private final Clock clock;
 
     @Override
-    public ReProcessShoppingReceiptResult execute (ReProcessShoppingReceiptCommand command) {
+    public ShoppingReceiptResult execute (ReProcessShoppingReceiptCommand command) {
         List<StorageSpotDto> storageSpotDtos = spaceLookUpPort.getStorageSpotsBySpaceIdAndParticipantId(
                 GetStorageSpotsDto.create(command.spaceId(), command.creatorId())
         );
@@ -64,7 +65,8 @@ public class ReProcessShoppingReceiptService implements ReProcessShoppingReceipt
                 )
         );
 
-        ReceiptExtraction rectifiedExtraction = extractionDataRectifier.rectify(new RectifyExtractionDto(extraction, storageSpotDtos, clock));
+        ReceiptExtraction rectifiedExtraction = extractionDataRectifier.rectifyPurchaseDate(new RectifyExtractionDto(extraction, storageSpotDtos, clock));
+        List<ProductExtraction> productExtractions = storageSpotResolver.resolve(rectifiedExtraction.productExtractions(), storageSpotDtos);
 
         ShoppingReceipt shoppingReceipt = ShoppingReceipt.create(
                 UserId.from(command.creatorId()),
@@ -78,7 +80,7 @@ public class ReProcessShoppingReceiptService implements ReProcessShoppingReceipt
         shoppingReceiptRepositoryPort.save(shoppingReceipt);
 
         List<RegisteredProductDto> registeredProducts = productRegistrationPort.registerProducts(
-                rectifiedExtraction.productExtractions().stream().map(pe ->
+                productExtractions.stream().map(pe ->
                         new RegisterProductDto(
                                 pe.productName(),
                                 pe.expirationDate(),
@@ -88,15 +90,14 @@ public class ReProcessShoppingReceiptService implements ReProcessShoppingReceipt
                                 pe.priceAmount(),
                                 pe.currency(),
                                 UUID.fromString(command.creatorId())
-                        )
-                ).toList()
+                        )).toList()
         );
 
-        return new ReProcessShoppingReceiptResult(
+        return new ShoppingReceiptResult(
                 shoppingReceipt.getId().toString(),
                 shoppingReceipt.getPurchaseDate(),
                 shoppingReceipt.getStoreName(),
-                registeredProducts.stream().map(ReProcessShoppingReceiptProductResult::toResult).toList(),
+                registeredProducts.stream().map(ProductResult::toResult).toList(),
                 storageSpotDtos.stream().map(SuggestedStorageSpotResult::fromStorageSpotDto).toList()
                 );
     }

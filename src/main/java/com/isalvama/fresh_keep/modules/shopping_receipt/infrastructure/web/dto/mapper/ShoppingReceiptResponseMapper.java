@@ -18,7 +18,7 @@ public class ShoppingReceiptResponseMapper {
                 );
     }
 
-    private ProductResponse toProductResponse(ProductResult p){
+    private ProductResponse toProductResponse(ProcessProductResult p){
         return new ProductResponse(
                 p.expirationDate(),
                 p.productName(),
@@ -37,8 +37,8 @@ public class ShoppingReceiptResponseMapper {
         );
     }
 
-    public ReprocessShoppingReceiptResponse toResponse (ReProcessShoppingReceiptResult result){
-        return new ReprocessShoppingReceiptResponse(
+    public ShoppingReceiptResponse toResponse (ShoppingReceiptResult result){
+        return new ShoppingReceiptResponse(
                 result.shoppingReceiptId(),
                 result.shoppingDate(),
                 result.storeName(),
@@ -47,8 +47,8 @@ public class ShoppingReceiptResponseMapper {
                 );
     }
 
-    private ReprocessShoppingReceiptProductResponse toProductResponse(ReProcessShoppingReceiptProductResult p){
-        return new ReprocessShoppingReceiptProductResponse(
+    private ShoppingReceiptProductResponse toProductResponse(ProductResult p){
+        return new ShoppingReceiptProductResponse(
                 p.id(),
                 p.productName(),
                 p.expirationDate(),

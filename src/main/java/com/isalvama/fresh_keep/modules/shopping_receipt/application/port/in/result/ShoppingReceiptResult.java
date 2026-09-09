@@ -3,11 +3,11 @@ package com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.res
 import java.time.LocalDate;
 import java.util.List;
 
-public record ReProcessShoppingReceiptResult(
+public record ShoppingReceiptResult(
         String shoppingReceiptId,
         LocalDate shoppingDate,
         String storeName,
-        List<ReProcessShoppingReceiptProductResult> products,
+        List<ProductResult> products,
         List<SuggestedStorageSpotResult> storageSpots
 ) {
 }
