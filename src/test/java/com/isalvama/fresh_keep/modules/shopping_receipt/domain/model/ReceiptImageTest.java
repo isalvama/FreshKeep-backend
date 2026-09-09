@@ -1,6 +1,6 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.domain.model;
 
-import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.exception.InvalidReceiptImageException;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.InvalidReceiptImageException;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.AssetId;
 import org.junit.jupiter.api.Test;
 

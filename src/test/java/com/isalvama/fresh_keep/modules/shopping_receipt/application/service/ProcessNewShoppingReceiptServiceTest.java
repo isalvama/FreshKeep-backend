@@ -6,7 +6,7 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.RectifyExtractionDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ReceiptImage;
-import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.exception.InvalidReceiptImageException;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.InvalidReceiptImageException;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.InfrastructureException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
