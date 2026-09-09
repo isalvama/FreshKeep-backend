@@ -67,7 +67,7 @@ public enum Currency {
 
     public Currency getValueOf(String value){
         try {
-            return Currency.valueOf(value);
+            return Currency.valueOf(value.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new InvalidCurrencyException("Value " + value + " does not match any currency constant name.");
         }
