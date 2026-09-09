@@ -1,8 +1,10 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.mapper;
 
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ConfirmShoppingReceiptCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ProcessNewShoppingReceiptCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ProductCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ReProcessShoppingReceiptCommand;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.request.ConfirmShoppingReceiptRequest;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.request.ProcessNewShoppingReceiptRequest;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.request.ProductRequest;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.request.ReProcessShoppingReceiptRequest;
@@ -30,6 +32,17 @@ public class ShoppingReceiptCommandMapper {
                 toProductCommand(request.flaggedProducts()),
                 toProductCommand(request.allProducts())
                 );
+    }
+
+    public ConfirmShoppingReceiptCommand toConfirmShoppingReceiptCommand (String spaceId, ConfirmShoppingReceiptRequest request, String userId){
+        return new ConfirmShoppingReceiptCommand(
+                request.receiptImageId(),
+                spaceId,
+                userId,
+                request.shoppingDate(),
+                request.storeName(),
+                toProductCommand(request.allProducts())
+        );
     }
 
     public ProductCommand toProductCommand(ProductRequest request){

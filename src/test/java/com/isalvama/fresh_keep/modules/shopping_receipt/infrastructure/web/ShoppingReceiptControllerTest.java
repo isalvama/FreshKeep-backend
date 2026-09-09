@@ -2,19 +2,21 @@ package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web;
 
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.CustomUserPrincipal;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.JwtAuthenticationFilter;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ConfirmShoppingReceiptUseCase;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ProcessNewShoppingReceiptUseCase;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ReProcessShoppingReceiptUseCase;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ConfirmShoppingReceiptCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ProcessNewShoppingReceiptCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ReProcessShoppingReceiptCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ProcessNewShoppingReceiptResult;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ReProcessShoppingReceiptProductResult;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ReProcessShoppingReceiptResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ProductResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ShoppingReceiptResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.SuggestedStorageSpotResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.mapper.ShoppingReceiptCommandMapper;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.mapper.ShoppingReceiptResponseMapper;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ProcessNewShoppingReceiptResponse;
-import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ReprocessShoppingReceiptProductResponse;
-import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ReprocessShoppingReceiptResponse;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ShoppingReceiptProductResponse;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ShoppingReceiptResponse;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.SuggestedStorageSpotResponse;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -78,13 +80,17 @@ class ShoppingReceiptControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private static final String REPROCESS_URL = "/api/v1/spaces/%s/shopping-receipt";
+    private static final String REPROCESS_URL = "/api/v1/spaces/%s/shopping-receipt/reprocess";
+    private static final String CONFIRM_URL = "/api/v1/spaces/%s/shopping-receipt/confirm";
 
     @MockitoBean
     private ProcessNewShoppingReceiptUseCase processNewShoppingReceiptUseCase;
 
     @MockitoBean
     private ReProcessShoppingReceiptUseCase reProcessShoppingReceiptUseCase;
+
+    @MockitoBean
+    private ConfirmShoppingReceiptUseCase confirmShoppingReceiptUseCase;
 
     @MockitoBean
     private ShoppingReceiptResponseMapper mapper;
@@ -114,6 +120,19 @@ class ShoppingReceiptControllerTest {
                 .param("flaggedProducts[0].productType", "DAIRY")
                 .param("flaggedProducts[0].priceAmount", "1.50")
                 .param("flaggedProducts[0].currency", "USD")
+                .param("allProducts[0].expirationDate", "2026-09-10")
+                .param("allProducts[0].productName", "Milk")
+                .param("allProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
+                .param("allProducts[0].productType", "DAIRY")
+                .param("allProducts[0].priceAmount", "1.50")
+                .param("allProducts[0].currency", "USD");
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder validConfirmRequest() {
+        return post(CONFIRM_URL.formatted(SPACE_ID))
+                .param("receiptImageId", UUID.randomUUID().toString())
+                .param("shoppingDate", "2026-09-01")
+                .param("storeName", "SuperMart")
                 .param("allProducts[0].expirationDate", "2026-09-10")
                 .param("allProducts[0].productName", "Milk")
                 .param("allProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
@@ -206,16 +225,16 @@ class ShoppingReceiptControllerTest {
 
     @Test
     void reProcessShoppingReceiptWithFlaggedProducts_returns201WithLocationAndMappedBodyOnSuccess() throws Exception {
-        ReProcessShoppingReceiptResult result = new ReProcessShoppingReceiptResult(
+        ShoppingReceiptResult result = new ShoppingReceiptResult(
                 "shopping-receipt-id", LocalDate.of(2026, 9, 1), "SuperMart",
-                List.of(new ReProcessShoppingReceiptProductResult(
+                List.of(new ProductResult(
                         "product-id", "Milk", LocalDate.of(2026, 9, 10), "fridge-id", "DAIRY", BigDecimal.valueOf(1.5), "USD")),
                 List.of(new SuggestedStorageSpotResult("fridge-id", "Fridge", "FRIDGE")));
         when(reProcessShoppingReceiptUseCase.execute(any())).thenReturn(result);
 
-        ReprocessShoppingReceiptResponse response = new ReprocessShoppingReceiptResponse(
+        ShoppingReceiptResponse response = new ShoppingReceiptResponse(
                 "shopping-receipt-id", LocalDate.of(2026, 9, 1), "SuperMart",
-                List.of(new ReprocessShoppingReceiptProductResponse(
+                List.of(new ShoppingReceiptProductResponse(
                         "product-id", "Milk", LocalDate.of(2026, 9, 10), "fridge-id", "DAIRY", BigDecimal.valueOf(1.5), "USD")),
                 List.of(new SuggestedStorageSpotResponse("fridge-id", "Fridge", "FRIDGE")));
         when(mapper.toResponse(result)).thenReturn(response);
@@ -230,11 +249,11 @@ class ShoppingReceiptControllerTest {
 
     @Test
     void reProcessShoppingReceiptWithFlaggedProducts_passesTheSpaceIdFromThePathAndUserIdFromThePrincipalToTheUseCase() throws Exception {
-        ReProcessShoppingReceiptResult result = new ReProcessShoppingReceiptResult(
+        ShoppingReceiptResult result = new ShoppingReceiptResult(
                 "shopping-receipt-id", LocalDate.now(), "SuperMart", List.of(), List.of());
         when(reProcessShoppingReceiptUseCase.execute(any())).thenReturn(result);
-        when(mapper.toResponse((ReProcessShoppingReceiptResult) any())).thenReturn(
-                new ReprocessShoppingReceiptResponse("shopping-receipt-id", LocalDate.now(), "SuperMart", List.of(), List.of()));
+        when(mapper.toResponse((ShoppingReceiptResult) any())).thenReturn(
+                new ShoppingReceiptResponse("shopping-receipt-id", LocalDate.now(), "SuperMart", List.of(), List.of()));
 
         mockMvc.perform(validReprocessRequest().with(asUser()))
                 .andExpect(status().isCreated());
@@ -326,5 +345,125 @@ class ShoppingReceiptControllerTest {
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(reProcessShoppingReceiptUseCase);
+    }
+
+    @Test
+    void confirmShoppingReceipt_returns201WithLocationAndMappedBodyOnSuccess() throws Exception {
+        ShoppingReceiptResult result = new ShoppingReceiptResult(
+                "shopping-receipt-id", LocalDate.of(2026, 9, 1), "SuperMart",
+                List.of(new ProductResult(
+                        "product-id", "Milk", LocalDate.of(2026, 9, 10), "fridge-id", "DAIRY", BigDecimal.valueOf(1.5), "USD")),
+                List.of(new SuggestedStorageSpotResult("fridge-id", "Fridge", "FRIDGE")));
+        when(confirmShoppingReceiptUseCase.execute(any())).thenReturn(result);
+
+        ShoppingReceiptResponse response = new ShoppingReceiptResponse(
+                "shopping-receipt-id", LocalDate.of(2026, 9, 1), "SuperMart",
+                List.of(new ShoppingReceiptProductResponse(
+                        "product-id", "Milk", LocalDate.of(2026, 9, 10), "fridge-id", "DAIRY", BigDecimal.valueOf(1.5), "USD")),
+                List.of(new SuggestedStorageSpotResponse("fridge-id", "Fridge", "FRIDGE")));
+        when(mapper.toResponse(result)).thenReturn(response);
+
+        mockMvc.perform(validConfirmRequest().with(asUser()))
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Location", containsString(CONFIRM_URL.formatted(SPACE_ID) + "/shopping-receipt-id")))
+                .andExpect(jsonPath("$.storeName").value("SuperMart"))
+                .andExpect(jsonPath("$.products[0].productName").value("Milk"))
+                .andExpect(jsonPath("$.storageSpots[0].storageSpotId").value("fridge-id"));
+    }
+
+    @Test
+    void confirmShoppingReceipt_passesTheSpaceIdFromThePathAndUserIdFromThePrincipalToTheUseCase() throws Exception {
+        ShoppingReceiptResult result = new ShoppingReceiptResult(
+                "shopping-receipt-id", LocalDate.now(), "SuperMart", List.of(), List.of());
+        when(confirmShoppingReceiptUseCase.execute(any())).thenReturn(result);
+        when(mapper.toResponse((ShoppingReceiptResult) any())).thenReturn(
+                new ShoppingReceiptResponse("shopping-receipt-id", LocalDate.now(), "SuperMart", List.of(), List.of()));
+
+        mockMvc.perform(validConfirmRequest().with(asUser()))
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<ConfirmShoppingReceiptCommand> captor = ArgumentCaptor.forClass(ConfirmShoppingReceiptCommand.class);
+        verify(confirmShoppingReceiptUseCase).execute(captor.capture());
+
+        assertEquals(SPACE_ID, captor.getValue().spaceId());
+        assertEquals(USER_ID, captor.getValue().creatorId());
+        assertEquals(1, captor.getValue().products().size());
+        assertEquals("Milk", captor.getValue().products().getFirst().productName());
+    }
+
+    @Test
+    void confirmShoppingReceipt_returns400WhenAllProductsIsEmpty() throws Exception {
+        mockMvc.perform(post(CONFIRM_URL.formatted(SPACE_ID))
+                        .param("receiptImageId", UUID.randomUUID().toString())
+                        .param("shoppingDate", "2026-09-01")
+                        .param("storeName", "SuperMart")
+                        .with(asUser()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(confirmShoppingReceiptUseCase);
+    }
+
+    @Test
+    void confirmShoppingReceipt_returns400WhenReceiptImageIdIsNotAValidUuid() throws Exception {
+        mockMvc.perform(post(CONFIRM_URL.formatted(SPACE_ID))
+                        .param("receiptImageId", "not-a-uuid")
+                        .param("shoppingDate", "2026-09-01")
+                        .param("storeName", "SuperMart")
+                        .param("allProducts[0].expirationDate", "2026-09-10")
+                        .param("allProducts[0].productName", "Milk")
+                        .param("allProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
+                        .param("allProducts[0].productType", "DAIRY")
+                        .with(asUser()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(confirmShoppingReceiptUseCase);
+    }
+
+    @Test
+    void confirmShoppingReceipt_returns400WhenSpaceIdIsNotAValidUuid() throws Exception {
+        mockMvc.perform(post(CONFIRM_URL.formatted("not-a-uuid"))
+                        .param("receiptImageId", UUID.randomUUID().toString())
+                        .param("shoppingDate", "2026-09-01")
+                        .param("storeName", "SuperMart")
+                        .param("allProducts[0].expirationDate", "2026-09-10")
+                        .param("allProducts[0].productName", "Milk")
+                        .param("allProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
+                        .param("allProducts[0].productType", "DAIRY")
+                        .with(asUser()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(confirmShoppingReceiptUseCase);
+    }
+
+    @Test
+    void confirmShoppingReceipt_returns400WhenShoppingDateIsInTheFuture() throws Exception {
+        mockMvc.perform(post(CONFIRM_URL.formatted(SPACE_ID))
+                        .param("receiptImageId", UUID.randomUUID().toString())
+                        .param("shoppingDate", LocalDate.now().plusDays(1).toString())
+                        .param("storeName", "SuperMart")
+                        .param("allProducts[0].expirationDate", "2026-09-10")
+                        .param("allProducts[0].productName", "Milk")
+                        .param("allProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
+                        .param("allProducts[0].productType", "DAIRY")
+                        .with(asUser()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(confirmShoppingReceiptUseCase);
+    }
+
+    @Test
+    void confirmShoppingReceipt_returns401WhenNotAuthenticated() throws Exception {
+        mockMvc.perform(validConfirmRequest())
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(confirmShoppingReceiptUseCase);
+    }
+
+    @Test
+    void confirmShoppingReceipt_returns403WhenAuthenticatedWithoutUserRole() throws Exception {
+        mockMvc.perform(validConfirmRequest().with(asAdmin()))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(confirmShoppingReceiptUseCase);
     }
 }
