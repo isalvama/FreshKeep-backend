@@ -1,5 +1,6 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record ProductExtraction(
@@ -7,7 +8,7 @@ public record ProductExtraction(
         String productName,
         String suggestedStorageSpotId,
         String productType,
-        Double priceAmount,
+        BigDecimal priceAmount,
         String currency
 ) {
 }

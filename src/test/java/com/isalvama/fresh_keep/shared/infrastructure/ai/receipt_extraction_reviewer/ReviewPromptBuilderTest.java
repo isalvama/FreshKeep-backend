@@ -7,6 +7,7 @@ import com.isalvama.fresh_keep.shared.infrastructure.ai.dto.ReceiptExtractionToR
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.converter.BeanOutputConverter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -19,7 +20,7 @@ class ReviewPromptBuilderTest {
     private final BeanOutputConverter<ReceiptExtractionToReview> converter = new BeanOutputConverter<>(ReceiptExtractionToReview.class);
 
     private final List<ProductExtraction> products = List.of(
-            new ProductExtraction(LocalDate.of(2026, 9, 10), "Milk", "fridge-id", "DAIRY", 2.5, "USD")
+            new ProductExtraction(LocalDate.of(2026, 9, 10), "Milk", "fridge-id", "DAIRY", BigDecimal.valueOf(2.5), "USD")
     );
 
     @Test

@@ -9,23 +9,27 @@ import lombok.Getter;
 public class ReceiptImage {
     private final ReceiptImageId id;
     private final AssetId assetId;
+    private final String mimeType;
 
-    private ReceiptImage(ReceiptImageId id, AssetId assetId) {
+    private ReceiptImage(ReceiptImageId id, AssetId assetId, String mimeType) {
         this.id = validateNotNull(id, "id");
         this.assetId = validateNotNull(assetId, "assetId");
+        this.mimeType = validateNotBlank(mimeType, "mimeType");
     }
 
-    public static ReceiptImage create (AssetId assetId){
+    public static ReceiptImage create (AssetId assetId, String mimeType){
         return new ReceiptImage(
                 ReceiptImageId.create(),
-                assetId
+                assetId,
+                mimeType
         );
     }
 
-    public static ReceiptImage reconstitute (ReceiptImageId id, AssetId assetId){
+    public static ReceiptImage reconstitute (ReceiptImageId id, AssetId assetId, String mimeType){
         return new ReceiptImage(
                 id,
-                assetId
+                assetId,
+                mimeType
         );
     }
 
@@ -35,5 +39,10 @@ public class ReceiptImage {
         return fieldValue;
     }
 
+    private static String validateNotBlank(String fieldValue, String fieldName) {
+        if (fieldValue == null || fieldValue.isBlank())
+            throw new InvalidReceiptImageException(fieldName + " of ReceiptImage cannot be null or blank.");
+        return fieldValue;
+    }
 
 }

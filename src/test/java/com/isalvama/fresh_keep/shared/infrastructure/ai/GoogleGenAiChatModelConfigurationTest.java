@@ -15,7 +15,7 @@ class GoogleGenAiChatModelConfigurationTest {
             .withConfiguration(AutoConfigurations.of(ToolCallingAutoConfiguration.class, GoogleGenAiChatAutoConfiguration.class))
             .withPropertyValues(
                     "spring.ai.google.genai.api-key=test-key",
-                    "spring.ai.google.genai.chat.options.model=gemini-3.7-flash",
+                    "spring.ai.google.genai.chat.options.model=gemini-3.6-flash",
                     "spring.ai.google.genai.chat.options.temperature=0.2"
             );
 
@@ -26,7 +26,7 @@ class GoogleGenAiChatModelConfigurationTest {
 
             GoogleGenAiChatModel chatModel = context.getBean(GoogleGenAiChatModel.class);
 
-            assertThat(chatModel.getOptions().getModel()).isEqualTo("gemini-3.7-flash");
+            assertThat(chatModel.getOptions().getModel()).isEqualTo("gemini-3.6-flash");
             assertThat(chatModel.getOptions().getTemperature()).isEqualTo(0.2);
         });
     }

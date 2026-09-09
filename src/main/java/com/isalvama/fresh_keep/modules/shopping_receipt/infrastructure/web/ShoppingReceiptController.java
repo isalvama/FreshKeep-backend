@@ -1,12 +1,17 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web;
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ProcessNewShoppingReceiptUseCase;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ReProcessShoppingReceiptUseCase;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ProcessNewShoppingReceiptCommand;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.ProcessNewShoppingReceiptResult;
-import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.mapper.ProcessNewShoppingReceiptMapper;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ReProcessShoppingReceiptCommand;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ProcessNewShoppingReceiptResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ReProcessShoppingReceiptResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.mapper.ShoppingReceiptCommandMapper;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.mapper.ShoppingReceiptResponseMapper;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.request.ProcessNewShoppingReceiptRequest;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.request.ReProcessShoppingReceiptRequest;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ProcessNewShoppingReceiptResponse;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ReprocessShoppingReceiptResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -29,8 +34,9 @@ import java.net.URI;
 @Tag(name = "ShoppingReceipts", description = "ShoppingReceipts endpoints")
 public class ShoppingReceiptController {
     private final ProcessNewShoppingReceiptUseCase processNewShoppingReceiptUseCase;
-    private final ShoppingReceiptResponseMapper mapper;
-
+    private final ReProcessShoppingReceiptUseCase reProcessShoppingReceiptUseCase;
+    private final ShoppingReceiptResponseMapper responseMapper;
+    private final ShoppingReceiptCommandMapper commandMapper;
 
     @PostMapping(value = "/receipt-images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('USER')")
@@ -40,7 +46,7 @@ public class ShoppingReceiptController {
             @Valid @ModelAttribute ProcessNewShoppingReceiptRequest request,
             @AuthenticationPrincipal(expression = "userId") String userId) {
 
-        ProcessNewShoppingReceiptCommand command = ProcessNewShoppingReceiptMapper.toCommand(spaceId, request, userId);
+        ProcessNewShoppingReceiptCommand command = commandMapper.toProcessNewShoppingReceiptCommand(spaceId, request, userId);
 
         ProcessNewShoppingReceiptResult result = processNewShoppingReceiptUseCase.execute(command);
 
@@ -50,6 +56,27 @@ public class ShoppingReceiptController {
                 .buildAndExpand(result.receiptImageId())
                 .toUri();
 
-        return ResponseEntity.created(location).body(mapper.toResponse(result));
+        return ResponseEntity.created(location).body(responseMapper.toResponse(result));
+    }
+
+    @PostMapping(value = "/shopping-receipt")
+    @PreAuthorize("hasRole('USER')")
+    @Operation(summary = "Reprocess the products flagged by the user with the Shopping Receipt Image and persist the Shopping Receipt and the Products")
+    public ResponseEntity<ReprocessShoppingReceiptResponse> reProcessShoppingReceiptWithFlaggedProducts(
+            @PathVariable(name = "spaceId") @UUID String spaceId,
+            @Valid @ModelAttribute ReProcessShoppingReceiptRequest request,
+            @AuthenticationPrincipal(expression = "userId") String userId) {
+
+        ReProcessShoppingReceiptCommand command = commandMapper.toReProcessShoppingReceiptCommand(spaceId, request, userId);
+
+        ReProcessShoppingReceiptResult result = reProcessShoppingReceiptUseCase.execute(command);
+
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(result.shoppingReceiptId())
+                .toUri();
+
+        return ResponseEntity.created(location).body(responseMapper.toResponse(result));
     }
 }

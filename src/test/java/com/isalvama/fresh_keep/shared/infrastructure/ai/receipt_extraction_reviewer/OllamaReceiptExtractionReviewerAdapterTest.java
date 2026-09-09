@@ -21,6 +21,7 @@ import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -50,7 +51,7 @@ class OllamaReceiptExtractionReviewerAdapterTest {
     private final List<StorageSpotDto> storageSpots = List.of(StorageSpotDto.create("fridge-id", "Fridge", "FRIDGE"));
 
     private final List<ProductExtraction> products = List.of(
-            new ProductExtraction(LocalDate.of(2026, 9, 10), "Milk", "fridge-id", "DAIRY", 2.5, "USD")
+            new ProductExtraction(LocalDate.of(2026, 9, 10), "Milk", "fridge-id", "DAIRY", BigDecimal.valueOf(2.5), "USD")
     );
 
     private final ReviewNewShoppingReceiptDto dto = new ReviewNewShoppingReceiptDto(storageSpots, products, LocalDate.of(2026, 9, 1));

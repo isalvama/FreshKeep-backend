@@ -17,8 +17,8 @@ public class Product {
     private final ProductId id;
     private final ProductName name;
     private LocalDate expirationDate;
-    private StorageSpotId storageSpotId;
     private StorageSpotId suggestedStorageSpotId;
+    private StorageSpotId actualStorageSpotId;
     private ProductType productType;
     private final ShoppingReceiptId shoppingReceiptId;
     private final Money price;
@@ -28,6 +28,7 @@ public class Product {
         this.name = validateNotNull(name, "name");
         this.expirationDate = validateNotNull(expirationDate, "expirationDate");
         this.suggestedStorageSpotId = validateNotNull(suggestedStorageSpotId, "suggestedStorageSpotId");
+        this.actualStorageSpotId = suggestedStorageSpotId;
         this.productType = validateNotNull(productType, "productType");
         this.shoppingReceiptId = validateNotNull(shoppingReceiptId, "shoppingReceiptId");
         this.price = price;
