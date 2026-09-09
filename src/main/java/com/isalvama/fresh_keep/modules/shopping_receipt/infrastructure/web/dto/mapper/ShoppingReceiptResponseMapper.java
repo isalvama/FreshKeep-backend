@@ -1,14 +1,8 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.mapper;
 
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.ProcessNewShoppingReceiptResult;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.ProductResult;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto.SuggestedStorageSpotResult;
-import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ProcessNewShoppingReceiptResponse;
-import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ProductResponse;
-import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.SuggestedStorageSpotResponse;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.*;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.*;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Component
 public class ShoppingReceiptResponseMapper {
@@ -16,7 +10,7 @@ public class ShoppingReceiptResponseMapper {
     public ProcessNewShoppingReceiptResponse toResponse (ProcessNewShoppingReceiptResult result){
         return new ProcessNewShoppingReceiptResponse(
                 result.receiptImageId(),
-                result.storageSpotResult().stream().map(this::toSuggestedStorageSpotResponse).toList(),
+                result.storageSpotResults().stream().map(this::toSuggestedStorageSpotResponse).toList(),
                 result.purchaseShoppingDate(),
                 result.storeName(),
                 result.productExtractions().stream().map(this::toProductResponse).toList(),
@@ -40,6 +34,28 @@ public class ShoppingReceiptResponseMapper {
                 ss.id(),
                 ss.name(),
                 ss.type()
+        );
+    }
+
+    public ReprocessShoppingReceiptResponse toResponse (ReProcessShoppingReceiptResult result){
+        return new ReprocessShoppingReceiptResponse(
+                result.shoppingReceiptId(),
+                result.shoppingDate(),
+                result.storeName(),
+                result.products().stream().map(this::toProductResponse).toList(),
+                result.storageSpots().stream().map(this::toSuggestedStorageSpotResponse).toList()
+                );
+    }
+
+    private ReprocessShoppingReceiptProductResponse toProductResponse(ReProcessShoppingReceiptProductResult p){
+        return new ReprocessShoppingReceiptProductResponse(
+                p.id(),
+                p.productName(),
+                p.expirationDate(),
+                p.storageSpotId(),
+                p.productType(),
+                p.priceAmount(),
+                p.currency()
         );
     }
 }

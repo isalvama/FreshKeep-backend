@@ -1,14 +1,19 @@
 package com.isalvama.fresh_keep.shared.infrastructure.ai.shopping_receipt_processor;
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProcessNewShoppingReceiptDto;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProductExtraction;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReprocessShoppingReceiptWithFlaggedProducts;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.StorageSpotDto;
+import com.isalvama.fresh_keep.shared.infrastructure.ai.ProductExtractionsPromptFormatter;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -47,10 +52,11 @@ class PromptBuilderTest {
 
         String expectedToday = LocalDateTime.now(clock).toString();
         String expected = ("template text: %s, DAIRY, FRUITS, PANTRY, USD, EUR, " +
-                "- id: fridge-id, name: Fridge, type: FRIDGE\n- id: pantry-id, name: Pantry, type: PANTRY, %s")
+                "- id: fridge-id, name: Fridge, type: FRIDGE\n- id: pantry-id, name: Pantry, type: PANTRY\n" +
+                "- id: freezer-id, name: Freezer, type: FREEZER, %s")
                 .formatted(converter.getFormat(), expectedToday);
 
-        assertEquals("", result);
+        assertEquals(expected, result);
     }
 
     @Test
@@ -87,5 +93,87 @@ class PromptBuilderTest {
         assertTrue(result.contains(", DAIRY, "));
         assertTrue(result.contains(", USD, "));
         assertTrue(result.contains(", - id: fridge-id, name: Fridge, type: FRIDGE,"));
+    }
+
+    private static final String REPROCESS_TEMPLATE =
+            "template text: {format}, {productTypes}, {moneyCurrencies}, {storageSpots}, {today}, {purchaseDate}, {storeName}, {allProducts}, {productsToReview}";
+
+    private final ProductExtraction milk = new ProductExtraction(LocalDate.of(2026, 9, 10), "Milk", "fridge-id", "DAIRY", BigDecimal.valueOf(1.5), "USD");
+    private final ProductExtraction yogurt = new ProductExtraction(LocalDate.of(2026, 9, 12), "Yogurt", "fridge-id", "DAIRY", BigDecimal.valueOf(2.0), "USD");
+
+    @Test
+    void build_reprocess_rendersEveryPlaceholderWithTheExactExpectedValue() {
+        ReprocessShoppingReceiptWithFlaggedProducts dto = new ReprocessShoppingReceiptWithFlaggedProducts(
+                "fake-image-content".getBytes(),
+                "image/jpeg",
+                LocalDate.of(2026, 9, 1),
+                "SuperMart",
+                List.of(milk),
+                List.of(yogurt),
+                List.of(StorageSpotDto.create("fridge-id", "Fridge", "FRIDGE")),
+                clock,
+                List.of("DAIRY"),
+                List.of("USD")
+        );
+
+        String result = promptBuilder.build(REPROCESS_TEMPLATE, dto, converter);
+
+        String expectedToday = LocalDateTime.now(clock).toString();
+        String expected = ("template text: %s, DAIRY, USD, - id: fridge-id, name: Fridge, type: FRIDGE, %s, " +
+                "2026-09-01, SuperMart, %s, %s")
+                .formatted(converter.getFormat(), expectedToday,
+                        ProductExtractionsPromptFormatter.format(List.of(milk)),
+                        ProductExtractionsPromptFormatter.format(List.of(yogurt)));
+
+        assertEquals(expected, result);
+    }
+
+    @Test
+    void build_reprocess_leavesNoPlaceholderTokenUnresolved() {
+        ReprocessShoppingReceiptWithFlaggedProducts dto = new ReprocessShoppingReceiptWithFlaggedProducts(
+                "fake-image-content".getBytes(),
+                "image/jpeg",
+                LocalDate.of(2026, 9, 1),
+                "SuperMart",
+                List.of(milk),
+                List.of(yogurt),
+                List.of(StorageSpotDto.create("fridge-id", "Fridge", "FRIDGE")),
+                clock,
+                List.of("DAIRY"),
+                List.of("USD")
+        );
+
+        String result = promptBuilder.build(REPROCESS_TEMPLATE, dto, converter);
+
+        assertFalse(result.contains("{format}"));
+        assertFalse(result.contains("{productTypes}"));
+        assertFalse(result.contains("{moneyCurrencies}"));
+        assertFalse(result.contains("{storageSpots}"));
+        assertFalse(result.contains("{today}"));
+        assertFalse(result.contains("{purchaseDate}"));
+        assertFalse(result.contains("{storeName}"));
+        assertFalse(result.contains("{allProducts}"));
+        assertFalse(result.contains("{productsToReview}"));
+    }
+
+    @Test
+    void build_reprocess_rendersEmptyStringWhenNoProductsToReview() {
+        ReprocessShoppingReceiptWithFlaggedProducts dto = new ReprocessShoppingReceiptWithFlaggedProducts(
+                "fake-image-content".getBytes(),
+                "image/jpeg",
+                LocalDate.of(2026, 9, 1),
+                "SuperMart",
+                List.of(milk),
+                List.of(),
+                List.of(StorageSpotDto.create("fridge-id", "Fridge", "FRIDGE")),
+                clock,
+                List.of("DAIRY"),
+                List.of("USD")
+        );
+
+        String result = promptBuilder.build(REPROCESS_TEMPLATE, dto, converter);
+
+        assertFalse(result.contains("{productsToReview}"));
+        assertTrue(result.endsWith(ProductExtractionsPromptFormatter.format(List.of(milk)) + ", "));
     }
 }

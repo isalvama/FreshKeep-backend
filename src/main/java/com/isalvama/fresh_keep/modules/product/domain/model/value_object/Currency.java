@@ -2,6 +2,9 @@ package com.isalvama.fresh_keep.modules.product.domain.model.value_object;
 
 import com.isalvama.fresh_keep.modules.product.domain.exception.InvalidCurrencyException;
 
+import java.util.Arrays;
+import java.util.List;
+
 public enum Currency {
     USD("United States Dollar", "$"),
     EUR("Euro", "€"),
@@ -62,11 +65,15 @@ public enum Currency {
     public String getDisplayName() { return displayName; }
     public String getSymbol() { return symbol; }
 
-    public Currency from(String value){
+    public Currency getValueOf(String value){
         try {
-            return Currency.valueOf(value);
+            return Currency.valueOf(value.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new InvalidCurrencyException("Value " + value + " does not match any currency constant name.");
         }
+    }
+
+    public static List<String> listValuesNames(){
+        return Arrays.stream(values()).map(Enum::name).toList();
     }
 }

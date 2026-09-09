@@ -6,4 +6,7 @@ public interface ImageStoragePort {
 
     String upload (MultipartFile file, String folder);
 
+    String retrieveUrl(String assetId);
+
+    byte[] fetchImageBytes(String url);
 }

@@ -2,9 +2,11 @@ package com.isalvama.fresh_keep.shared.infrastructure.ai.shopping_receipt_proces
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.AiShoppingReceiptProcessorPort;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProcessNewShoppingReceiptDto;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReprocessShoppingReceiptWithFlaggedProducts;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.AiRetryableException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -20,13 +22,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptProcessorPort {
     private final GoogleGenAiChatModel chatModel;
-    private final GenAiExceptionTranslator genAiExceptionTranslator;
     private final PromptBuilder promptBuilder;
+    private final GenAiExceptionTranslator genAiExceptionTranslator;
     private final ReceiptExtractionParser parser;
 
-    private static final String TEMPLATE_PROMPT_TEXT = """
+    private static final String PROCESS_TEMPLATE_PROMPT_TEXT = """
         Analyze the provided shopping receipt image precisely and extract structured data from it.
 
         Extract the following receipt-level details:
@@ -36,7 +39,7 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
         Then extract the list of food products on the receipt. If the receipt shows several separate units of the same product purchased individually (e.g. a quantity of "6" next to a single milk bottle, or two identical lines for the same chocolate bar), return one product entry per unit, each with identical details. If instead a product is itself sold as a single multi-unit pack (e.g. a six-pack of beer, a 4-pack of yogurt cups sold together), treat that pack as one single product - do not split it into separate units. Use the receipt's own quantity information to tell these two cases apart: a purchase quantity applied to an otherwise singular item should be exploded into repeated entries, while an item whose own name or packaging already describes it as a pack/multipack should stay a single entry.
 
     For each product entry:
-    1. Clean up its name (e.g. turn "YOG.NAT.X4" into "Plain yogurt").
+    1. Clean up its name (e.g. turn "YOG.NAT.X4" into "Plain yogurt"). Constraint: Output must not exceed 30 characters.
     2. Classify it into one of the following product categories: {productTypes}
     3. Estimate its typical shelf life in days, based on the nature of the product.
     4. Calculate its approximate expiration date by adding that shelf life to the receipt's purchase date.
@@ -51,13 +54,46 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
 
     """;
 
+    private static final String REPROCESS_TEMPLATE_PROMPT_TEXT = """
+    Analyze the provided shopping receipt image again to correct a subset of previously extracted products.
+
+    You already produced an initial extraction for this receipt:
+    - Purchase date: {purchaseDate}
+    - Store name: {storeName}
+    - Previously extracted products, in order (do not change any of their values unless:
+         a) The product appears under "Products to re-examine" below, OR
+         b) Its "suggestedStorageSpotId" is not present in the available storageSpots list (listed below). In this case, update its "suggestedStorageSpotId" to the most suitable valid spot and recalculate its shelf life and expiration date accordingly):
+                List of storage spots:
+                {storageSpots}
+                List of all products:
+                {allProducts}
+
+    The following products were flagged as suspicious during review and must be re-examined carefully against the image, specifically addressing the reason each one was flagged for.
+    
+    Products to re-examine:
+    {productsToReview}
+
+    For each flagged product only, re-derive its data directly from the image following these rules:
+    1. Clean up its name (e.g. turn "YOG.NAT.X4" into "Plain yogurt").
+    2. Classify it into one of the following product categories: {productTypes}
+    3. Suggest the most suitable storage spot for it, choosing only from the user's available storage spots listed below and based on the storage spot and product type, responding with its id (leave it empty if none of them fit):
+    {storageSpots}
+    4. Estimate its typical shelf life in days, based on the nature of the product.
+    5. Calculate its approximate expiration date based on the product type and the type of storage spot where it is stored, by adding that corresponding shelf life to the receipt's purchase date.
+    6. Extract its price and currency, if shown on the receipt. The currency must be exactly one of the following currency codes (leave it empty if none of them apply): {moneyCurrencies}
+    
+    Return the complete list of products for this receipt, in the same order as the previous extraction: unflagged products copied over unchanged (updating only "suggestedStorageSpotId" and expiration date if the spot ID was invalid/missing in {storageSpots}), and flagged products replaced with their corrected values. Do not add, remove, duplicate or reorder products.
+    {format}
+    """;
+
     @Override
     @Retryable(retryFor = AiRetryableException.class, maxAttempts = 2, backoff = @Backoff(delay = 1000))
     public ReceiptExtraction process(ProcessNewShoppingReceiptDto processNewShoppingReceiptDto){
 
         var converter = new BeanOutputConverter<>(ReceiptExtraction.class);
 
-        String promptText = promptBuilder.build(TEMPLATE_PROMPT_TEXT, processNewShoppingReceiptDto, converter);
+        String promptText = promptBuilder.build(PROCESS_TEMPLATE_PROMPT_TEXT, processNewShoppingReceiptDto, converter);
+        log.info("GenAiShoppingReceiptProcessorAdapter.process: promptText built by promptBuilder.build: {}", promptText);
 
         MultipartFile file = processNewShoppingReceiptDto.file();
 
@@ -65,19 +101,80 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
                 .text(promptText)
                 .media(new Media(MimeType.valueOf(file.getContentType()), file.getResource()))
                 .build();
+        log.info("GenAiShoppingReceiptProcessorAdapter.process: userMessage built: {}", userMessage);
 
         GoogleGenAiChatOptions chatOptions = GoogleGenAiChatOptions.builder()
+                .model(chatModel.getOptions().getModel())
                 .responseMimeType("application/json")
                 .responseSchema(converter.getJsonSchema())
                 .build();
 
+        log.info("GenAiShoppingReceiptProcessorAdapter.process: chatOptions built: {}", chatOptions);
+
         ChatResponse response;
         try {
             response = chatModel.call(new Prompt(userMessage, chatOptions));
+            log.info("GenAiShoppingReceiptProcessorAdapter.process: chat model call processed");
         } catch (RuntimeException e) {
+            log.info("GenAiShoppingReceiptProcessorAdapter.process: chat model threw an exception: {}", e.getMessage());
             throw genAiExceptionTranslator.translate(e);
         }
 
-        return parser.parseAndValidate(response, converter);
+        try {
+            return parser.parseAndValidate(response, converter);
+        } catch (RuntimeException e) {
+            log.info("GenAiShoppingReceiptProcessorAdapter.process: parser threw an exception: {}: {}", e.getClass().getSimpleName(), e.getMessage());
+            throw e;
+        }
+    }
+
+    @Override
+    @Retryable(retryFor = AiRetryableException.class, maxAttempts = 2, backoff = @Backoff(delay = 1000))
+    public ReceiptExtraction reprocess(ReprocessShoppingReceiptWithFlaggedProducts processShoppingReceiptFlaggedProdsDto) {
+
+        var converter = new BeanOutputConverter<>(ReceiptExtraction.class);
+
+        String promptText = promptBuilder.build(REPROCESS_TEMPLATE_PROMPT_TEXT, processShoppingReceiptFlaggedProdsDto, converter);
+        log.info("GenAiShoppingReceiptProcessorAdapter.reprocess: promptText built by promptBuilder.build: {}", promptText);
+
+        var userMessage = UserMessage.builder()
+                .text(promptText)
+                .media(toMedia(processShoppingReceiptFlaggedProdsDto.imageBytes(), processShoppingReceiptFlaggedProdsDto.mimeType()))
+                .build();
+        log.info("GenAiShoppingReceiptProcessorAdapter.reprocess: userMessage built: {}", userMessage);
+
+
+        GoogleGenAiChatOptions chatOptions = GoogleGenAiChatOptions.builder()
+                .model(chatModel.getOptions().getModel())
+                .responseMimeType("application/json")
+                .responseSchema(converter.getJsonSchema())
+                .build();
+        log.info("GenAiShoppingReceiptProcessorAdapter.reprocess: chatOptions built: {}", chatOptions);
+
+        ChatResponse response;
+        try {
+            response = chatModel.call(new Prompt(userMessage, chatOptions));
+            log.info("GenAiShoppingReceiptProcessorAdapter.reprocess: chat model call processed");
+        } catch (RuntimeException e) {
+            log.info("GenAiShoppingReceiptProcessorAdapter.reprocess: chat model threw an exception: {}", e.getMessage());
+            throw genAiExceptionTranslator.translate(e);
+        }
+
+        log.info("GenAiShoppingReceiptProcessorAdapter.reprocess: raw response text: {}",
+                response.getResult() != null ? response.getResult().getOutput().getText() : null);
+
+        try {
+            return parser.parseAndValidate(response, converter);
+        } catch (RuntimeException e) {
+            log.info("GenAiShoppingReceiptProcessorAdapter.reprocess: parser threw an exception: {}: {}", e.getClass().getSimpleName(), e.getMessage());
+            throw e;
+        }
+    }
+
+    private Media toMedia(byte[] imageBytes, String mimeType) {
+        return Media.builder()
+                .mimeType(MimeType.valueOf(mimeType))
+                .data(imageBytes)
+                .build();
     }
 }

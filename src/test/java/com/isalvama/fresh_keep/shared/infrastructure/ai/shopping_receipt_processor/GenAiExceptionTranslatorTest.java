@@ -91,4 +91,64 @@ class GenAiExceptionTranslatorTest {
         assertTrue(result.getMessage().contains("something odd happened"));
         assertSame(original, result.getCause());
     }
+
+    // Spring AI's GoogleGenAiChatModel wraps every failure from the underlying Google SDK call in a
+    // generic RuntimeException("Failed to generate content", cause) before it ever reaches this translator -
+    // these tests cover that wrapped shape, not just the raw SDK exception types.
+
+    @Test
+    void translate_unwrapsCauseToMapWrappedGenAiIOExceptionToAiRetryableException() {
+        GenAiIOException cause = new GenAiIOException("connection refused", new IOException("boom"));
+        RuntimeException wrapper = new RuntimeException("Failed to generate content", cause);
+
+        RuntimeException result = translator.translate(wrapper);
+
+        assertInstanceOf(AiRetryableException.class, result);
+        assertTrue(result.getMessage().contains("check your internet connection"));
+        assertSame(cause, result.getCause());
+    }
+
+    @Test
+    void translate_unwrapsCauseToMapWrappedServerExceptionToAiRetryableException() {
+        ServerException cause = new ServerException(500, "INTERNAL", "server down");
+        RuntimeException wrapper = new RuntimeException("Failed to generate content", cause);
+
+        RuntimeException result = translator.translate(wrapper);
+
+        assertInstanceOf(AiRetryableException.class, result);
+        assertTrue(result.getMessage().contains("currently unavailable"));
+        assertSame(cause, result.getCause());
+    }
+
+    @Test
+    void translate_unwrapsCauseToMapWrappedClientException429ToAiRateLimitedException() {
+        ClientException cause = new ClientException(429, "RESOURCE_EXHAUSTED", "rate limited");
+        RuntimeException wrapper = new RuntimeException("Failed to generate content", cause);
+
+        RuntimeException result = translator.translate(wrapper);
+
+        assertInstanceOf(AiRateLimitedException.class, result);
+        assertTrue(result.getMessage().contains("exceeded the allowed number of requests per minute"));
+        assertSame(cause, result.getCause());
+    }
+
+    @Test
+    void translate_mapsWrapperWithUnrecognizedCauseToTicketProcessingException() {
+        RuntimeException wrapper = new RuntimeException("Failed to generate content", new IllegalStateException("something odd happened"));
+
+        RuntimeException result = translator.translate(wrapper);
+
+        assertInstanceOf(TicketProcessingException.class, result);
+        assertSame(wrapper, result.getCause());
+    }
+
+    @Test
+    void translate_mapsWrapperWithNoCauseToTicketProcessingException() {
+        RuntimeException wrapper = new RuntimeException("Failed to generate content");
+
+        RuntimeException result = translator.translate(wrapper);
+
+        assertInstanceOf(TicketProcessingException.class, result);
+        assertSame(wrapper, result.getCause());
+    }
 }

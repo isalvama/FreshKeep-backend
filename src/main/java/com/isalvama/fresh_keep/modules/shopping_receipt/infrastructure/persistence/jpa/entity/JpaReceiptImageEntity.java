@@ -26,6 +26,9 @@ public class JpaReceiptImageEntity {
     @Column(name = "assetId", nullable = false, length = 252)
     private String assetId;
 
+    @Column(name = "mime_type", nullable = false, length = 100)
+    private String mimeType;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;

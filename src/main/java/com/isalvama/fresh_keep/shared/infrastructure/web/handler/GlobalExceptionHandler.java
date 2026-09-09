@@ -6,6 +6,7 @@ import com.isalvama.fresh_keep.shared.domain.exception.ConflictException;
 import com.isalvama.fresh_keep.shared.domain.exception.DomainException;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.*;
 import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -70,6 +72,7 @@ public class GlobalExceptionHandler {
     @ResponseBody
     @ExceptionHandler(AiUnprocessableInputException.class)
     public ProblemDetail handleAiUnprocessableInputException(AiUnprocessableInputException ex) {
+        log.warn("AiUnprocessableInputException: message='{}', cause='{}'", ex.getMessage(), ex.getCause() != null ? ex.getCause().getMessage() : null);
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.UNPROCESSABLE_CONTENT);
         problemDetail.setTitle("Unprocessable Ticket Data Error");
         problemDetail.setDetail(ex.getMessage());

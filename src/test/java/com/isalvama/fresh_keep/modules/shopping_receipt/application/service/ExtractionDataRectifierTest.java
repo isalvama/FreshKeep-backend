@@ -4,8 +4,10 @@ import com.isalvama.fresh_keep.modules.product.infrastructure.product_categories
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProductExtraction;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.StorageSpotDto;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.RectifyExtractionDto;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -27,7 +29,7 @@ class ExtractionDataRectifierTest {
     private final LocalDate milkSuggestedExpDate = LocalDate.of(2026, 9, 10);
 
     private final List<ProductExtraction> productExtractionList = List.of(
-            new ProductExtraction(milkSuggestedExpDate, "Milk", fridgeId, "DAIRY", 2.5, "USD")
+            new ProductExtraction(milkSuggestedExpDate, "Milk", fridgeId, "DAIRY", BigDecimal.valueOf(2.5), "USD")
     );
 
     private final List<StorageSpotDto> storageSpotDtos = List.of(StorageSpotDto.create(fridgeId, "Fridge", "FRIDGE"));
@@ -54,7 +56,7 @@ class ExtractionDataRectifierTest {
                         LocalDate.now(clockNow).minusDays(1),
                         storeName,
                         null,
-                        List.of(new ProductExtraction(milkSuggestedExpDate, "Milk", "invalid-id", "DAIRY", 2.5, "USD"))
+                        List.of(new ProductExtraction(milkSuggestedExpDate, "Milk", "invalid-id", "DAIRY", BigDecimal.valueOf(2.5), "USD"))
                 ),
                 storageSpotDtos,
                 clockNow
@@ -87,7 +89,7 @@ class ExtractionDataRectifierTest {
                         tomorrow,
                         storeName,
                         null,
-                        List.of(new ProductExtraction(null, "Milk", fridgeId, "DAIRY", 2.5, "USD"))
+                        List.of(new ProductExtraction(null, "Milk", fridgeId, "DAIRY", BigDecimal.valueOf(2.5), "USD"))
                 ),
                 storageSpotDtos,
                 clockNow
@@ -118,7 +120,7 @@ class ExtractionDataRectifierTest {
                         today,
                         storeName,
                         null,
-                        List.of(new ProductExtraction(milkSuggestedExpDate, "Mystery item", "invalid-id", "NOT_A_REAL_TYPE", 2.5, "USD"))
+                        List.of(new ProductExtraction(milkSuggestedExpDate, "Mystery item", "invalid-id", "NOT_A_REAL_TYPE", BigDecimal.valueOf(2.5), "USD"))
                 ),
                 storageSpotDtos,
                 clockNow
@@ -136,7 +138,7 @@ class ExtractionDataRectifierTest {
                         today,
                         storeName,
                         null,
-                        List.of(new ProductExtraction(LocalDate.of(2027, 1, 1), "Ice pops", "invalid-id", "FROZEN_FOODS", 3.0, "USD"))
+                        List.of(new ProductExtraction(LocalDate.of(2027, 1, 1), "Ice pops", "invalid-id", "FROZEN_FOODS", BigDecimal.valueOf(3.0), "USD"))
                 ),
                 storageSpotDtos, // only a FRIDGE spot, no FREEZER
                 clockNow
@@ -155,8 +157,8 @@ class ExtractionDataRectifierTest {
                         storeName,
                         null,
                         List.of(
-                                new ProductExtraction(milkSuggestedExpDate, "Milk", fridgeId, "DAIRY", 2.5, "USD"),
-                                new ProductExtraction(LocalDate.of(2026, 9, 20), "Bread", "invalid-id", "BAKERY", 1.5, "USD")
+                                new ProductExtraction(milkSuggestedExpDate, "Milk", fridgeId, "DAIRY", BigDecimal.valueOf(2.5), "USD"),
+                                new ProductExtraction(LocalDate.of(2026, 9, 20), "Bread", "invalid-id", "BAKERY", BigDecimal.valueOf(1.5), "USD")
                         )
                 ),
                 storageSpotDtos,

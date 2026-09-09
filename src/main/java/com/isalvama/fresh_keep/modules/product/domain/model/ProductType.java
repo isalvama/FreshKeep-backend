@@ -2,6 +2,9 @@ package com.isalvama.fresh_keep.modules.product.domain.model;
 
 import com.isalvama.fresh_keep.modules.product.domain.exception.InvalidProductTypeException;
 
+import java.util.Arrays;
+import java.util.List;
+
 public enum ProductType {
     FRUITS,
     VEGETABLES,
@@ -28,6 +31,11 @@ public enum ProductType {
             throw new InvalidProductTypeException(productTypeName + "does not match any ProductType constant name.");
         }
     }
+
+    public static List<String> listValuesNames (){
+        return Arrays.stream(values()).map(Enum::name).toList();
+    }
+
 }
 
 

@@ -6,18 +6,14 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.Pro
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.CategoriesDto;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
-
-import static com.isalvama.fresh_keep.modules.product.domain.model.ProductType.*;
-
 @Component
 public class ProductCategoriesLookUpAdapter implements ProductCategoriesLookUpPort {
 
     @Override
     public CategoriesDto getProductTypesAndMoneyCurrencyConstNames() {
         return new CategoriesDto(
-                Arrays.stream(values()).map(Enum::name).toList(),
-                Arrays.stream(Currency.values()).map(Enum::name).toList()
+               ProductType.listValuesNames(),
+               Currency.listValuesNames()
         );
     }
 

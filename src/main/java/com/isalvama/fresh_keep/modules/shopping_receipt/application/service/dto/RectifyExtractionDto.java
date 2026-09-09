@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.shopping_receipt.application.service;
+package com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto;
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.StorageSpotDto;

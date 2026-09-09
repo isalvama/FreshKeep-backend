@@ -2,8 +2,10 @@ package com.isalvama.fresh_keep.shared.infrastructure.ai.shopping_receipt_proces
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProcessNewShoppingReceiptDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReprocessShoppingReceiptWithFlaggedProducts;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.AiUnprocessableInputException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -49,11 +51,29 @@ class GenAiShoppingReceiptProcessorAdapterTest {
     @InjectMocks
     private GenAiShoppingReceiptProcessorAdapter adapter;
 
+    @BeforeEach
+    void setUp() {
+        when(chatModel.getOptions()).thenReturn(GoogleGenAiChatOptions.builder().model("gemini-3.7-flash").build());
+    }
+
     private final MultipartFile file = new MockMultipartFile("file", "receipt.jpg", "image/jpeg", "fake-image-content".getBytes());
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-01T10:00:00Z"), ZoneOffset.UTC);
 
     private final ProcessNewShoppingReceiptDto dto = new ProcessNewShoppingReceiptDto(
             file,
+            List.of(),
+            clock,
+            List.of("DAIRY"),
+            List.of("USD")
+    );
+
+    private final ReprocessShoppingReceiptWithFlaggedProducts reprocessDto = new ReprocessShoppingReceiptWithFlaggedProducts(
+            "fake-image-content".getBytes(),
+            "image/jpeg",
+            LocalDate.of(2026, 9, 1),
+            "SuperMart",
+            List.of(),
+            List.of(),
             List.of(),
             clock,
             List.of("DAIRY"),
@@ -149,6 +169,101 @@ class GenAiShoppingReceiptProcessorAdapterTest {
         when(genAiExceptionTranslator.translate(original)).thenReturn(translated);
 
         Exception thrown = assertThrows(AiUnprocessableInputException.class, () -> adapter.process(dto));
+
+        assertSame(translated, thrown);
+        verifyNoInteractions(parser);
+    }
+
+    @Test
+    void reprocess_returnsTheParsedReceiptExtractionOnSuccess() {
+        String promptText = "rendered prompt text";
+        when(promptBuilder.build(anyString(), eq(reprocessDto), any())).thenReturn(promptText);
+
+        ChatResponse response = new ChatResponse(List.of(new Generation(new AssistantMessage("{}"))));
+        when(chatModel.call(any(Prompt.class))).thenReturn(response);
+
+        ReceiptExtraction expected = new ReceiptExtraction(LocalDate.of(2026, 9, 1), "SuperMart", null, List.of());
+        when(parser.parseAndValidate(eq(response), any())).thenReturn(expected);
+
+        ReceiptExtraction result = adapter.reprocess(reprocessDto);
+
+        assertSame(expected, result);
+    }
+
+    @Test
+    void reprocess_sendsAPromptContainingTheBuiltTextAndTheImageBytesAsMedia() {
+        String promptText = "rendered prompt text";
+        when(promptBuilder.build(anyString(), eq(reprocessDto), any())).thenReturn(promptText);
+
+        ChatResponse response = new ChatResponse(List.of(new Generation(new AssistantMessage("{}"))));
+        when(chatModel.call(any(Prompt.class))).thenReturn(response);
+        when(parser.parseAndValidate(any(), any())).thenReturn(new ReceiptExtraction(null, null, null, List.of()));
+
+        adapter.reprocess(reprocessDto);
+
+        ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
+        verify(chatModel).call(promptCaptor.capture());
+
+        UserMessage userMessage = promptCaptor.getValue().getUserMessage();
+        assertEquals(promptText, userMessage.getText());
+        assertEquals(1, userMessage.getMedia().size());
+        assertEquals("image/jpeg", userMessage.getMedia().getFirst().getMimeType().toString());
+        assertArrayEquals(reprocessDto.imageBytes(), userMessage.getMedia().getFirst().getDataAsByteArray());
+    }
+
+    @Test
+    void reprocess_requestsJsonResponseMatchingTheConverterSchema() throws com.fasterxml.jackson.core.JsonProcessingException {
+        when(promptBuilder.build(anyString(), eq(reprocessDto), any())).thenReturn("text");
+
+        ChatResponse response = new ChatResponse(List.of(new Generation(new AssistantMessage("{}"))));
+        when(chatModel.call(any(Prompt.class))).thenReturn(response);
+        when(parser.parseAndValidate(any(), any())).thenReturn(new ReceiptExtraction(null, null, null, List.of()));
+
+        adapter.reprocess(reprocessDto);
+
+        ArgumentCaptor<Prompt> promptCaptor = ArgumentCaptor.forClass(Prompt.class);
+        verify(chatModel).call(promptCaptor.capture());
+
+        GoogleGenAiChatOptions options = (GoogleGenAiChatOptions) promptCaptor.getValue().getOptions();
+        assertEquals("application/json", options.getResponseMimeType());
+        assertNotNull(options.getResponseSchema());
+
+        BeanOutputConverter<ReceiptExtraction> expectedConverter = new BeanOutputConverter<>(ReceiptExtraction.class);
+
+        ObjectMapper mapper = new ObjectMapper();
+        assertEquals(mapper.readTree(expectedConverter.getJsonSchema()), mapper.readTree(options.getResponseSchema()));
+    }
+
+    @Test
+    void reprocess_usesTheSameConverterInstanceForPromptAndParsing() {
+        when(promptBuilder.build(anyString(), eq(reprocessDto), any())).thenReturn("text");
+
+        ChatResponse response = new ChatResponse(List.of(new Generation(new AssistantMessage("{}"))));
+        when(chatModel.call(any(Prompt.class))).thenReturn(response);
+        when(parser.parseAndValidate(any(), any())).thenReturn(new ReceiptExtraction(null, null, null, List.of()));
+
+        adapter.reprocess(reprocessDto);
+
+        ArgumentCaptor<BeanOutputConverter> promptConverterCaptor = ArgumentCaptor.forClass(BeanOutputConverter.class);
+        verify(promptBuilder).build(anyString(), eq(reprocessDto), promptConverterCaptor.capture());
+
+        ArgumentCaptor<BeanOutputConverter> parseConverterCaptor = ArgumentCaptor.forClass(BeanOutputConverter.class);
+        verify(parser).parseAndValidate(eq(response), parseConverterCaptor.capture());
+
+        assertSame(promptConverterCaptor.getValue(), parseConverterCaptor.getValue());
+    }
+
+    @Test
+    void reprocess_translatesAndThrowsWhenChatModelFails() {
+        when(promptBuilder.build(anyString(), eq(reprocessDto), any())).thenReturn("text");
+
+        RuntimeException original = new RuntimeException("boom");
+        when(chatModel.call(any(Prompt.class))).thenThrow(original);
+
+        AiUnprocessableInputException translated = new AiUnprocessableInputException("could not be processed");
+        when(genAiExceptionTranslator.translate(original)).thenReturn(translated);
+
+        Exception thrown = assertThrows(AiUnprocessableInputException.class, () -> adapter.reprocess(reprocessDto));
 
         assertSame(translated, thrown);
         verifyNoInteractions(parser);

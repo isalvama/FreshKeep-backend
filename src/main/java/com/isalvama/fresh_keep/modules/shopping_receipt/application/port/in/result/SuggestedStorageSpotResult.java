@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.dto;
+package com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result;
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.StorageSpotDto;
 
