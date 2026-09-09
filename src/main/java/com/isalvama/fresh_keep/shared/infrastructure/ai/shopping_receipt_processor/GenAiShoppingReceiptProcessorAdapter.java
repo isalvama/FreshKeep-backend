@@ -6,6 +6,7 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.AiRetryableException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -21,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptProcessorPort {
     private final GoogleGenAiChatModel chatModel;
     private final PromptBuilder promptBuilder;
@@ -91,6 +93,7 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
         var converter = new BeanOutputConverter<>(ReceiptExtraction.class);
 
         String promptText = promptBuilder.build(PROCESS_TEMPLATE_PROMPT_TEXT, processNewShoppingReceiptDto, converter);
+        log.info("GenAiShoppingReceiptProcessorAdapter.process: promptText built by promptBuilder.build: {}", promptText);
 
         MultipartFile file = processNewShoppingReceiptDto.file();
 
@@ -98,6 +101,7 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
                 .text(promptText)
                 .media(new Media(MimeType.valueOf(file.getContentType()), file.getResource()))
                 .build();
+        log.info("GenAiShoppingReceiptProcessorAdapter.process: userMessage built: {}", userMessage);
 
         GoogleGenAiChatOptions chatOptions = GoogleGenAiChatOptions.builder()
                 .model(chatModel.getOptions().getModel())
@@ -105,14 +109,23 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
                 .responseSchema(converter.getJsonSchema())
                 .build();
 
+        log.info("GenAiShoppingReceiptProcessorAdapter.process: chatOptions built: {}", chatOptions);
+
         ChatResponse response;
         try {
             response = chatModel.call(new Prompt(userMessage, chatOptions));
+            log.info("GenAiShoppingReceiptProcessorAdapter.process: chat model call processed");
         } catch (RuntimeException e) {
+            log.info("GenAiShoppingReceiptProcessorAdapter.process: chat model threw an exception: {}", e.getMessage());
             throw genAiExceptionTranslator.translate(e);
         }
 
-        return parser.parseAndValidate(response, converter);
+        try {
+            return parser.parseAndValidate(response, converter);
+        } catch (RuntimeException e) {
+            log.info("GenAiShoppingReceiptProcessorAdapter.process: parser threw an exception: {}: {}", e.getClass().getSimpleName(), e.getMessage());
+            throw e;
+        }
     }
 
     @Override
@@ -122,26 +135,40 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
         var converter = new BeanOutputConverter<>(ReceiptExtraction.class);
 
         String promptText = promptBuilder.build(REPROCESS_TEMPLATE_PROMPT_TEXT, processShoppingReceiptFlaggedProdsDto, converter);
+        log.info("GenAiShoppingReceiptProcessorAdapter.reprocess: promptText built by promptBuilder.build: {}", promptText);
 
         var userMessage = UserMessage.builder()
                 .text(promptText)
                 .media(toMedia(processShoppingReceiptFlaggedProdsDto.imageBytes(), processShoppingReceiptFlaggedProdsDto.mimeType()))
                 .build();
+        log.info("GenAiShoppingReceiptProcessorAdapter.reprocess: userMessage built: {}", userMessage);
+
 
         GoogleGenAiChatOptions chatOptions = GoogleGenAiChatOptions.builder()
                 .model(chatModel.getOptions().getModel())
                 .responseMimeType("application/json")
                 .responseSchema(converter.getJsonSchema())
                 .build();
+        log.info("GenAiShoppingReceiptProcessorAdapter.reprocess: chatOptions built: {}", chatOptions);
 
         ChatResponse response;
         try {
             response = chatModel.call(new Prompt(userMessage, chatOptions));
+            log.info("GenAiShoppingReceiptProcessorAdapter.reprocess: chat model call processed");
         } catch (RuntimeException e) {
+            log.info("GenAiShoppingReceiptProcessorAdapter.reprocess: chat model threw an exception: {}", e.getMessage());
             throw genAiExceptionTranslator.translate(e);
         }
 
-        return parser.parseAndValidate(response, converter);
+        log.info("GenAiShoppingReceiptProcessorAdapter.reprocess: raw response text: {}",
+                response.getResult() != null ? response.getResult().getOutput().getText() : null);
+
+        try {
+            return parser.parseAndValidate(response, converter);
+        } catch (RuntimeException e) {
+            log.info("GenAiShoppingReceiptProcessorAdapter.reprocess: parser threw an exception: {}: {}", e.getClass().getSimpleName(), e.getMessage());
+            throw e;
+        }
     }
 
     private Media toMedia(byte[] imageBytes, String mimeType) {
