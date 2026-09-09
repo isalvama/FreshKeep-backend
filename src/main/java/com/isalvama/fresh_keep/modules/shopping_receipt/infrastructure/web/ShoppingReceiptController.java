@@ -1,17 +1,20 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web;
 
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ConfirmShoppingReceiptUseCase;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ProcessNewShoppingReceiptUseCase;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ReProcessShoppingReceiptUseCase;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ConfirmShoppingReceiptCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ProcessNewShoppingReceiptCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ReProcessShoppingReceiptCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ProcessNewShoppingReceiptResult;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ReProcessShoppingReceiptResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ShoppingReceiptResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.mapper.ShoppingReceiptCommandMapper;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.mapper.ShoppingReceiptResponseMapper;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.request.ConfirmShoppingReceiptRequest;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.request.ProcessNewShoppingReceiptRequest;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.request.ReProcessShoppingReceiptRequest;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ProcessNewShoppingReceiptResponse;
-import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ReprocessShoppingReceiptResponse;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ShoppingReceiptResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -35,6 +38,7 @@ import java.net.URI;
 public class ShoppingReceiptController {
     private final ProcessNewShoppingReceiptUseCase processNewShoppingReceiptUseCase;
     private final ReProcessShoppingReceiptUseCase reProcessShoppingReceiptUseCase;
+    private final ConfirmShoppingReceiptUseCase confirmShoppingReceiptUseCase;
     private final ShoppingReceiptResponseMapper responseMapper;
     private final ShoppingReceiptCommandMapper commandMapper;
 
@@ -59,17 +63,38 @@ public class ShoppingReceiptController {
         return ResponseEntity.created(location).body(responseMapper.toResponse(result));
     }
 
-    @PostMapping(value = "/shopping-receipt")
+    @PostMapping(value = "/shopping-receipt/reprocess")
     @PreAuthorize("hasRole('USER')")
-    @Operation(summary = "Reprocess the products flagged by the user with the Shopping Receipt Image and persist the Shopping Receipt and the Products")
-    public ResponseEntity<ReprocessShoppingReceiptResponse> reProcessShoppingReceiptWithFlaggedProducts(
+    @Operation(summary = "Reprocess, along with the Shopping Receipt Image, the products flagged by the user and persist the final shopping receipt and products data extracted during receipt processing and reprocessing.")
+    public ResponseEntity<ShoppingReceiptResponse> reProcessShoppingReceiptWithFlaggedProducts(
             @PathVariable(name = "spaceId") @UUID String spaceId,
             @Valid @ModelAttribute ReProcessShoppingReceiptRequest request,
             @AuthenticationPrincipal(expression = "userId") String userId) {
 
         ReProcessShoppingReceiptCommand command = commandMapper.toReProcessShoppingReceiptCommand(spaceId, request, userId);
 
-        ReProcessShoppingReceiptResult result = reProcessShoppingReceiptUseCase.execute(command);
+        ShoppingReceiptResult result = reProcessShoppingReceiptUseCase.execute(command);
+
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(result.shoppingReceiptId())
+                .toUri();
+
+        return ResponseEntity.created(location).body(responseMapper.toResponse(result));
+    }
+
+    @PostMapping(value = "/shopping-receipt/confirm")
+    @PreAuthorize("hasRole('USER')")
+    @Operation(summary = "Confirm and persist the shopping receipt and product data extracted during receipt processing.")
+    public ResponseEntity<ShoppingReceiptResponse> confirmShoppingReceipt(
+            @PathVariable(name = "spaceId") @UUID String spaceId,
+            @Valid @ModelAttribute ConfirmShoppingReceiptRequest request,
+            @AuthenticationPrincipal(expression = "userId") String userId) {
+
+        ConfirmShoppingReceiptCommand command = commandMapper.toConfirmShoppingReceiptCommand(spaceId, request, userId);
+
+        ShoppingReceiptResult result = confirmShoppingReceiptUseCase.execute(command);
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()

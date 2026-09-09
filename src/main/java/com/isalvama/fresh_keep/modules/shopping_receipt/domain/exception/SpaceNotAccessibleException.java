@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.exception;
+package com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception;
 
 import com.isalvama.fresh_keep.shared.domain.exception.ConflictException;
 

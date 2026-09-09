@@ -1,6 +1,6 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.domain.model;
 
-import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.exception.InvalidShoppingReceiptException;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.InvalidShoppingReceiptException;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ReceiptImageId;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ShoppingReceiptId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;

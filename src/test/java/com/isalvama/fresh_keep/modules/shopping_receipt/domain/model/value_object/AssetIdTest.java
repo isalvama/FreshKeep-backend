@@ -1,6 +1,6 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object;
 
-import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.exception.InvalidAssetIdException;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.InvalidAssetIdException;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
