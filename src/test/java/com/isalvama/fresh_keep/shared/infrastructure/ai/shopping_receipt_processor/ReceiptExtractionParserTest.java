@@ -112,6 +112,65 @@ class ReceiptExtractionParserTest {
     }
 
     @Test
+    void parseAndValidate_treatsBlankErrorReasonAsNoError() {
+        // Gemini's response schema declares errorReason as a required, non-nullable string, so it sometimes
+        // represents "no error" as an empty string instead of JSON null - this must not be treated as a failure.
+        String json = """
+                {
+                  "purchaseDate": "2026-09-01",
+                  "storeName": "SuperMart",
+                  "errorReason": "",
+                  "productExtractions": [
+                    {
+                      "expirationDate": "2026-09-10",
+                      "productName": "Milk",
+                      "suggestedStorageSpotId": "fridge-id",
+                      "productType": "DAIRY",
+                      "priceAmount": 2.5,
+                      "currency": "USD"
+                    }
+                  ]
+                }
+                """;
+        ChatResponse response = new ChatResponse(List.of(new Generation(new AssistantMessage(json))));
+
+        ReceiptExtraction result = parser.parseAndValidate(response, converter);
+
+        assertEquals("SuperMart", result.storeName());
+        assertEquals(1, result.productExtractions().size());
+    }
+
+    @Test
+    void parseAndValidate_treatsPlaceholderErrorReasonAsNoErrorWhenProductsWerePresent() {
+        // Observed in real Gemini output: errorReason returned as the literal word "none" (not blank, not
+        // JSON null) alongside a fully valid, non-empty product list. Per the prompt's own contract, a real
+        // error always comes with an empty product list, so a populated list here means this was a success.
+        String json = """
+                {
+                  "purchaseDate": "2026-09-04",
+                  "storeName": "LIDL",
+                  "errorReason": "none",
+                  "productExtractions": [
+                    {
+                      "expirationDate": "2026-09-15",
+                      "productName": "Tuna 6-pack",
+                      "suggestedStorageSpotId": "fridge-id",
+                      "productType": "PANTRY",
+                      "priceAmount": 4.49,
+                      "currency": "EUR"
+                    }
+                  ]
+                }
+                """;
+        ChatResponse response = new ChatResponse(List.of(new Generation(new AssistantMessage(json))));
+
+        ReceiptExtraction result = parser.parseAndValidate(response, converter);
+
+        assertEquals("LIDL", result.storeName());
+        assertEquals(1, result.productExtractions().size());
+    }
+
+    @Test
     void validateContent_shouldThrowAiUnprocessableInputExceptionWhenErrorReasonIsPresent() {
         String json = """
                 {
