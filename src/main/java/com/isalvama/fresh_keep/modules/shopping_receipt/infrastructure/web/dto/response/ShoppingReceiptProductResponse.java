@@ -3,7 +3,7 @@ package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public record ReprocessShoppingReceiptProductResponse (
+public record ShoppingReceiptProductResponse(
         String id,
         String productName,
         LocalDate expirationDate,
