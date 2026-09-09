@@ -8,7 +8,7 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.RectifyExtractionDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ReceiptImage;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ShoppingReceipt;
-import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.exception.NonExistentReceiptImageException;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.NonExistentReceiptImageException;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.AssetId;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ReceiptImageId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
