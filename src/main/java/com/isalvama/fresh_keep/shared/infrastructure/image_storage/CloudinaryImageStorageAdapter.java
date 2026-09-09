@@ -54,7 +54,7 @@ public class CloudinaryImageStorageAdapter implements ImageStoragePort {
     public byte[] fetchImageBytes(String url) {
         try {
             return restClient.get().uri(url).retrieve().onStatus(HttpStatusCode::isError, (request, response) -> {
-                        throw new ImageRetrievalException("Error downloading imagen: " + response.getStatusCode());
+                        throw new ImageRetrievalException("Error downloading image: " + response.getStatusCode());
                     })
                     .body(byte[].class);
         } catch (Exception e) {

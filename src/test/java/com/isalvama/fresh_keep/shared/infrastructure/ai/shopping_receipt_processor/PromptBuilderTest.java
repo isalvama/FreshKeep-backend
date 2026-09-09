@@ -52,10 +52,11 @@ class PromptBuilderTest {
 
         String expectedToday = LocalDateTime.now(clock).toString();
         String expected = ("template text: %s, DAIRY, FRUITS, PANTRY, USD, EUR, " +
-                "- id: fridge-id, name: Fridge, type: FRIDGE\n- id: pantry-id, name: Pantry, type: PANTRY, %s")
+                "- id: fridge-id, name: Fridge, type: FRIDGE\n- id: pantry-id, name: Pantry, type: PANTRY\n" +
+                "- id: freezer-id, name: Freezer, type: FREEZER, %s")
                 .formatted(converter.getFormat(), expectedToday);
 
-        assertEquals("", result);
+        assertEquals(expected, result);
     }
 
     @Test

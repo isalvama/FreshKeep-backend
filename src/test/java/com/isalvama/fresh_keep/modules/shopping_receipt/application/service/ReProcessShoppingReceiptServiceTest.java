@@ -114,7 +114,7 @@ class ReProcessShoppingReceiptServiceTest {
         when(spaceLookUpPort.getStorageSpotsBySpaceIdAndParticipantId(any())).thenReturn(storageSpots);
         when(productCategoriesLookUpPort.getProductTypesAndMoneyCurrencyConstNames()).thenReturn(categories);
         when(receiptImageRepositoryPort.findById(ReceiptImageId.from(receiptImageId))).thenReturn(Optional.of(receiptImage));
-        when(imageStoragePort.retrieveUrl(receiptImageId)).thenReturn(imageUrl);
+        when(imageStoragePort.retrieveUrl(receiptImage.getAssetId().toString())).thenReturn(imageUrl);
         when(imageStoragePort.fetchImageBytes(imageUrl)).thenReturn(imageBytes);
         when(aiShoppingReceiptProcessorPort.reprocess(any())).thenReturn(rawExtraction);
         when(extractionDataRectifier.rectify(any())).thenReturn(rectifiedExtraction);
@@ -180,7 +180,7 @@ class ReProcessShoppingReceiptServiceTest {
         service.execute(command);
 
         verify(spaceLookUpPort).getStorageSpotsBySpaceIdAndParticipantId(GetStorageSpotsDto.create(spaceId, creatorId));
-        verify(imageStoragePort).retrieveUrl(receiptImageId);
+        verify(imageStoragePort).retrieveUrl(receiptImage.getAssetId().toString());
         verify(imageStoragePort).fetchImageBytes(imageUrl);
 
         ArgumentCaptor<ReprocessShoppingReceiptWithFlaggedProducts> reprocessDtoCaptor = ArgumentCaptor.forClass(ReprocessShoppingReceiptWithFlaggedProducts.class);

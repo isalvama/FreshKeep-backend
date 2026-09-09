@@ -211,6 +211,6 @@ class CloudinaryImageStorageAdapterTest {
         when(response.getStatusCode()).thenReturn(HttpStatus.NOT_FOUND);
 
         Exception exception = assertThrows(ImageRetrievalException.class, () -> handlerCaptor.getValue().handle(request, response));
-        assertTrue(exception.getMessage().contains("Error downloading imagen: 404 NOT_FOUND"));
+        assertTrue(exception.getMessage().contains("Error downloading image: 404 NOT_FOUND"));
     }
 }
