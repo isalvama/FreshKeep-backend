@@ -3,13 +3,21 @@ package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.CustomUserPrincipal;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.JwtAuthenticationFilter;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ProcessNewShoppingReceiptUseCase;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ReProcessShoppingReceiptUseCase;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ProcessNewShoppingReceiptCommand;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ReProcessShoppingReceiptCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ProcessNewShoppingReceiptResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ReProcessShoppingReceiptProductResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ReProcessShoppingReceiptResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.SuggestedStorageSpotResult;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.mapper.ShoppingReceiptCommandMapper;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.mapper.ShoppingReceiptResponseMapper;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ProcessNewShoppingReceiptResponse;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ReprocessShoppingReceiptProductResponse;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ReprocessShoppingReceiptResponse;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.SuggestedStorageSpotResponse;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
@@ -27,28 +35,29 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(
         controllers = ShoppingReceiptController.class,
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtAuthenticationFilter.class)
 )
-@Import(ShoppingReceiptControllerTest.MethodSecurityConfig.class)
+@Import({ShoppingReceiptControllerTest.MethodSecurityConfig.class, ShoppingReceiptCommandMapper.class})
 class ShoppingReceiptControllerTest {
 
     @EnableMethodSecurity
     static class MethodSecurityConfig {
-        // Minimal stand-in for AppSecurityConfiguration's real SecurityFilterChain (stateless, CSRF disabled -
-        // there's no session/cookie auth here to protect against CSRF for), without pulling in JWT beans.
         @Bean
         SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
             return http
@@ -56,9 +65,6 @@ class ShoppingReceiptControllerTest {
                     .anonymous(AbstractHttpConfigurer::disable)
                     .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                     .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
-                    // Without this, Spring Security's fallback is Http403ForbiddenEntryPoint, which
-                    // returns 403 for unauthenticated requests too - the real AppSecurityConfiguration
-                    // has its own CustomAuthenticationEntryPoint for this; this is a minimal stand-in.
                     .exceptionHandling(ex -> ex.authenticationEntryPoint(
                             (request, response, authException) -> response.sendError(401)))
                     .build();
@@ -72,8 +78,13 @@ class ShoppingReceiptControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    private static final String REPROCESS_URL = "/api/v1/spaces/%s/shopping-receipt";
+
     @MockitoBean
     private ProcessNewShoppingReceiptUseCase processNewShoppingReceiptUseCase;
+
+    @MockitoBean
+    private ReProcessShoppingReceiptUseCase reProcessShoppingReceiptUseCase;
 
     @MockitoBean
     private ShoppingReceiptResponseMapper mapper;
@@ -90,6 +101,25 @@ class ShoppingReceiptControllerTest {
 
     private MockMultipartFile validFile() {
         return new MockMultipartFile("file", "receipt.jpg", "image/jpeg", "fake-image-content".getBytes());
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder validReprocessRequest() {
+        return post(REPROCESS_URL.formatted(SPACE_ID))
+                .param("receiptImageId", UUID.randomUUID().toString())
+                .param("shoppingDate", "2026-09-01")
+                .param("storeName", "SuperMart")
+                .param("flaggedProducts[0].expirationDate", "2026-09-10")
+                .param("flaggedProducts[0].productName", "Milk")
+                .param("flaggedProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
+                .param("flaggedProducts[0].productType", "DAIRY")
+                .param("flaggedProducts[0].priceAmount", "1.50")
+                .param("flaggedProducts[0].currency", "USD")
+                .param("allProducts[0].expirationDate", "2026-09-10")
+                .param("allProducts[0].productName", "Milk")
+                .param("allProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
+                .param("allProducts[0].productType", "DAIRY")
+                .param("allProducts[0].priceAmount", "1.50")
+                .param("allProducts[0].currency", "USD");
     }
 
     @Test
@@ -172,5 +202,129 @@ class ShoppingReceiptControllerTest {
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(processNewShoppingReceiptUseCase);
+    }
+
+    @Test
+    void reProcessShoppingReceiptWithFlaggedProducts_returns201WithLocationAndMappedBodyOnSuccess() throws Exception {
+        ReProcessShoppingReceiptResult result = new ReProcessShoppingReceiptResult(
+                "shopping-receipt-id", LocalDate.of(2026, 9, 1), "SuperMart",
+                List.of(new ReProcessShoppingReceiptProductResult(
+                        "product-id", "Milk", LocalDate.of(2026, 9, 10), "fridge-id", "DAIRY", BigDecimal.valueOf(1.5), "USD")),
+                List.of(new SuggestedStorageSpotResult("fridge-id", "Fridge", "FRIDGE")));
+        when(reProcessShoppingReceiptUseCase.execute(any())).thenReturn(result);
+
+        ReprocessShoppingReceiptResponse response = new ReprocessShoppingReceiptResponse(
+                "shopping-receipt-id", LocalDate.of(2026, 9, 1), "SuperMart",
+                List.of(new ReprocessShoppingReceiptProductResponse(
+                        "product-id", "Milk", LocalDate.of(2026, 9, 10), "fridge-id", "DAIRY", BigDecimal.valueOf(1.5), "USD")),
+                List.of(new SuggestedStorageSpotResponse("fridge-id", "Fridge", "FRIDGE")));
+        when(mapper.toResponse(result)).thenReturn(response);
+
+        mockMvc.perform(validReprocessRequest().with(asUser()))
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Location", containsString(REPROCESS_URL.formatted(SPACE_ID) + "/shopping-receipt-id")))
+                .andExpect(jsonPath("$.storeName").value("SuperMart"))
+                .andExpect(jsonPath("$.products[0].productName").value("Milk"))
+                .andExpect(jsonPath("$.storageSpots[0].storageSpotId").value("fridge-id"));
+    }
+
+    @Test
+    void reProcessShoppingReceiptWithFlaggedProducts_passesTheSpaceIdFromThePathAndUserIdFromThePrincipalToTheUseCase() throws Exception {
+        ReProcessShoppingReceiptResult result = new ReProcessShoppingReceiptResult(
+                "shopping-receipt-id", LocalDate.now(), "SuperMart", List.of(), List.of());
+        when(reProcessShoppingReceiptUseCase.execute(any())).thenReturn(result);
+        when(mapper.toResponse((ReProcessShoppingReceiptResult) any())).thenReturn(
+                new ReprocessShoppingReceiptResponse("shopping-receipt-id", LocalDate.now(), "SuperMart", List.of(), List.of()));
+
+        mockMvc.perform(validReprocessRequest().with(asUser()))
+                .andExpect(status().isCreated());
+
+        ArgumentCaptor<ReProcessShoppingReceiptCommand> captor = ArgumentCaptor.forClass(ReProcessShoppingReceiptCommand.class);
+        verify(reProcessShoppingReceiptUseCase).execute(captor.capture());
+
+        assertEquals(SPACE_ID, captor.getValue().spaceId());
+        assertEquals(USER_ID, captor.getValue().creatorId());
+        assertEquals(1, captor.getValue().flaggedProducts().size());
+        assertEquals("Milk", captor.getValue().flaggedProducts().getFirst().productName());
+    }
+
+    @Test
+    void reProcessShoppingReceiptWithFlaggedProducts_returns400WhenFlaggedProductsIsEmpty() throws Exception {
+        mockMvc.perform(post(REPROCESS_URL.formatted(SPACE_ID))
+                        .param("receiptImageId", UUID.randomUUID().toString())
+                        .param("shoppingDate", "2026-09-01")
+                        .param("storeName", "SuperMart")
+                        .param("allProducts[0].expirationDate", "2026-09-10")
+                        .param("allProducts[0].productName", "Milk")
+                        .param("allProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
+                        .param("allProducts[0].productType", "DAIRY")
+                        .with(asUser()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(reProcessShoppingReceiptUseCase);
+    }
+
+    @Test
+    void reProcessShoppingReceiptWithFlaggedProducts_returns400WhenAllProductsIsEmpty() throws Exception {
+        mockMvc.perform(post(REPROCESS_URL.formatted(SPACE_ID))
+                        .param("receiptImageId", UUID.randomUUID().toString())
+                        .param("shoppingDate", "2026-09-01")
+                        .param("storeName", "SuperMart")
+                        .param("flaggedProducts[0].expirationDate", "2026-09-10")
+                        .param("flaggedProducts[0].productName", "Milk")
+                        .param("flaggedProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
+                        .param("flaggedProducts[0].productType", "DAIRY")
+                        .with(asUser()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(reProcessShoppingReceiptUseCase);
+    }
+
+    @Test
+    void reProcessShoppingReceiptWithFlaggedProducts_returns400WhenReceiptImageIdIsNotAValidUuid() throws Exception {
+        mockMvc.perform(post(REPROCESS_URL.formatted(SPACE_ID))
+                        .param("receiptImageId", "not-a-uuid")
+                        .param("shoppingDate", "2026-09-01")
+                        .param("storeName", "SuperMart")
+                        .param("flaggedProducts[0].expirationDate", "2026-09-10")
+                        .param("flaggedProducts[0].productName", "Milk")
+                        .param("flaggedProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
+                        .param("flaggedProducts[0].productType", "DAIRY")
+                        .with(asUser()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(reProcessShoppingReceiptUseCase);
+    }
+
+    @Test
+    void reProcessShoppingReceiptWithFlaggedProducts_returns400WhenSpaceIdIsNotAValidUuid() throws Exception {
+        mockMvc.perform(post(REPROCESS_URL.formatted("not-a-uuid"))
+                        .param("receiptImageId", UUID.randomUUID().toString())
+                        .param("shoppingDate", "2026-09-01")
+                        .param("storeName", "SuperMart")
+                        .param("flaggedProducts[0].expirationDate", "2026-09-10")
+                        .param("flaggedProducts[0].productName", "Milk")
+                        .param("flaggedProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
+                        .param("flaggedProducts[0].productType", "DAIRY")
+                        .with(asUser()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(reProcessShoppingReceiptUseCase);
+    }
+
+    @Test
+    void reProcessShoppingReceiptWithFlaggedProducts_returns401WhenNotAuthenticated() throws Exception {
+        mockMvc.perform(validReprocessRequest())
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(reProcessShoppingReceiptUseCase);
+    }
+
+    @Test
+    void reProcessShoppingReceiptWithFlaggedProducts_returns403WhenAuthenticatedWithoutUserRole() throws Exception {
+        mockMvc.perform(validReprocessRequest().with(asAdmin()))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(reProcessShoppingReceiptUseCase);
     }
 }
