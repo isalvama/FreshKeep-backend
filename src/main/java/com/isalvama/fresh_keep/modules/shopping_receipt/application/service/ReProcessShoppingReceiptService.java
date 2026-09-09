@@ -1,5 +1,6 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.application.service;
 
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.ReProcessShoppingReceiptUseCase;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ProductCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ReProcessShoppingReceiptCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ReProcessShoppingReceiptProductResult;
@@ -25,7 +26,7 @@ import java.util.UUID;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class ReProcessShoppingReceiptService {
+public class ReProcessShoppingReceiptService implements ReProcessShoppingReceiptUseCase {
     private final SpaceLookUpPort spaceLookUpPort;
     private final ProductCategoriesLookUpPort productCategoriesLookUpPort;
     private final ReceiptImageRepositoryPort receiptImageRepositoryPort;
@@ -36,7 +37,8 @@ public class ReProcessShoppingReceiptService {
     private final ProductRegistrationPort productRegistrationPort;
     private final Clock clock;
 
-    ReProcessShoppingReceiptResult execute (ReProcessShoppingReceiptCommand command) {
+    @Override
+    public ReProcessShoppingReceiptResult execute (ReProcessShoppingReceiptCommand command) {
         List<StorageSpotDto> storageSpotDtos = spaceLookUpPort.getStorageSpotsBySpaceIdAndParticipantId(
                 GetStorageSpotsDto.create(command.spaceId(), command.creatorId())
         );
@@ -45,7 +47,7 @@ public class ReProcessShoppingReceiptService {
         ReceiptImage receiptImage = receiptImageRepositoryPort.findById(ReceiptImageId.from(command.receiptImageId()))
                 .orElseThrow(() -> new NonExistentReceiptImageException("Receipt Image with id " + command.receiptImageId() + " does not exist."));
 
-        String imageUrl = imageStoragePort.retrieveUrl(command.receiptImageId());
+        String imageUrl = imageStoragePort.retrieveUrl(receiptImage.getAssetId().toString());
         byte[] imageBytes = imageStoragePort.fetchImageBytes(imageUrl);
 
         ReceiptExtraction extraction = aiShoppingReceiptProcessorPort.reprocess(new ReprocessShoppingReceiptWithFlaggedProducts(

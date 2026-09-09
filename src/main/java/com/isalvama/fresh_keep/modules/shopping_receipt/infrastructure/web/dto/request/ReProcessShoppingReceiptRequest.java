@@ -24,6 +24,7 @@ public record ReProcessShoppingReceiptRequest (
         @NotEmpty
         List<ProductRequest> flaggedProducts,
 
+        @NotEmpty
         List<ProductRequest> allProducts
 ) {
 }
