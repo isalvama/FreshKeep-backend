@@ -45,6 +45,8 @@ class ReProcessShoppingReceiptServiceTest {
     @Mock
     private ImageStoragePort imageStoragePort;
     @Mock
+    private LanguageResolver languageResolver;
+    @Mock
     private AiShoppingReceiptProcessorPort aiShoppingReceiptProcessorPort;
     @Mock
     private ExtractionDataRectifier extractionDataRectifier;
@@ -64,6 +66,8 @@ class ReProcessShoppingReceiptServiceTest {
     private final String creatorId = UserId.create().toString();
     private final LocalDate shoppingDate = LocalDate.of(2026, 9, 5);
     private final String storeName = "SuperMart";
+    private final String language = "es";
+    private final String resolvedLanguage = "Spanish";
 
     private final ProductCommand allProductCommand = new ProductCommand(
             LocalDate.of(2026, 9, 15), "Milk", "fridge-id", "DAIRY", BigDecimal.valueOf(1.5), "USD");
@@ -72,7 +76,7 @@ class ReProcessShoppingReceiptServiceTest {
 
     private final ReProcessShoppingReceiptCommand command = new ReProcessShoppingReceiptCommand(
             receiptImageId, spaceId, creatorId, shoppingDate, storeName,
-            List.of(flaggedProductCommand), List.of(allProductCommand)
+            List.of(flaggedProductCommand), List.of(allProductCommand), language
     );
 
     private final ReceiptImage receiptImage = ReceiptImage.create(AssetId.of("shopping_receipts/receipts/abc123"), "image/jpeg");
@@ -108,6 +112,7 @@ class ReProcessShoppingReceiptServiceTest {
                 productCategoriesLookUpPort,
                 receiptImageRepositoryPort,
                 imageStoragePort,
+                languageResolver,
                 aiShoppingReceiptProcessorPort,
                 extractionDataRectifier,
                 storageSpotSuggestionResolver,
@@ -120,6 +125,7 @@ class ReProcessShoppingReceiptServiceTest {
     private void stubHappyPath() {
         when(spaceLookUpPort.getStorageSpotsBySpaceIdAndParticipantId(any())).thenReturn(storageSpots);
         when(productCategoriesLookUpPort.getProductTypesAndMoneyCurrencyConstNames()).thenReturn(categories);
+        when(languageResolver.resolve(any())).thenReturn(resolvedLanguage);
         when(receiptImageRepositoryPort.findById(ReceiptImageId.from(receiptImageId))).thenReturn(Optional.of(receiptImage));
         when(imageStoragePort.retrieveUrl(receiptImage.getAssetId().toString())).thenReturn(imageUrl);
         when(imageStoragePort.fetchImageBytes(imageUrl)).thenReturn(imageBytes);
@@ -137,7 +143,7 @@ class ReProcessShoppingReceiptServiceTest {
 
         assertThrows(NonExistentReceiptImageException.class, () -> service.execute(command));
 
-        verifyNoInteractions(imageStoragePort, aiShoppingReceiptProcessorPort, extractionDataRectifier,
+        verifyNoInteractions(imageStoragePort, languageResolver, aiShoppingReceiptProcessorPort, extractionDataRectifier,
                 storageSpotSuggestionResolver, shoppingReceiptRepositoryPort, productRegistrationPort);
     }
 
@@ -190,10 +196,11 @@ class ReProcessShoppingReceiptServiceTest {
         verify(spaceLookUpPort).getStorageSpotsBySpaceIdAndParticipantId(GetStorageSpotsDto.create(spaceId, creatorId));
         verify(imageStoragePort).retrieveUrl(receiptImage.getAssetId().toString());
         verify(imageStoragePort).fetchImageBytes(imageUrl);
+        verify(languageResolver).resolve(language);
 
-        ArgumentCaptor<ReprocessShoppingReceiptWithFlaggedProducts> reprocessDtoCaptor = ArgumentCaptor.forClass(ReprocessShoppingReceiptWithFlaggedProducts.class);
+        ArgumentCaptor<ReprocessShoppingReceiptWithFlaggedProductsDto> reprocessDtoCaptor = ArgumentCaptor.forClass(ReprocessShoppingReceiptWithFlaggedProductsDto.class);
         verify(aiShoppingReceiptProcessorPort).reprocess(reprocessDtoCaptor.capture());
-        ReprocessShoppingReceiptWithFlaggedProducts reprocessDto = reprocessDtoCaptor.getValue();
+        ReprocessShoppingReceiptWithFlaggedProductsDto reprocessDto = reprocessDtoCaptor.getValue();
         assertArrayEquals(imageBytes, reprocessDto.imageBytes());
         assertEquals(receiptImage.getMimeType(), reprocessDto.mimeType());
         assertEquals(shoppingDate, reprocessDto.purchaseDate());
@@ -206,6 +213,7 @@ class ReProcessShoppingReceiptServiceTest {
         assertSame(clock, reprocessDto.clock());
         assertEquals(categories.productTypes(), reprocessDto.productTypes());
         assertEquals(categories.moneyCurrencies(), reprocessDto.moneyCurrencies());
+        assertEquals(resolvedLanguage, reprocessDto.language());
 
         ArgumentCaptor<RectifyExtractionDto> rectifyDtoCaptor = ArgumentCaptor.forClass(RectifyExtractionDto.class);
         verify(extractionDataRectifier).rectifyPurchaseDate(rectifyDtoCaptor.capture());
