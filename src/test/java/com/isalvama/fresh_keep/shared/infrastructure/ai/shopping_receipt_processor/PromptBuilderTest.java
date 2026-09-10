@@ -3,7 +3,7 @@ package com.isalvama.fresh_keep.shared.infrastructure.ai.shopping_receipt_proces
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProcessNewShoppingReceiptDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProductExtraction;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReprocessShoppingReceiptWithFlaggedProducts;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReprocessShoppingReceiptWithFlaggedProductsDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.StorageSpotDto;
 import com.isalvama.fresh_keep.shared.infrastructure.ai.ProductExtractionsPromptFormatter;
 import org.junit.jupiter.api.Test;
@@ -21,7 +21,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class PromptBuilderTest {
-    private static final String TEMPLATE = "template text: {format}, {productTypes}, {moneyCurrencies}, {storageSpots}, {today}";
+    private static final String TEMPLATE = "template text: {format}, {productTypes}, {moneyCurrencies}, {storageSpots}, {today}, {language}";
 
     private final PromptBuilder promptBuilder = new PromptBuilder();
     private final BeanOutputConverter<ReceiptExtraction> converter = new BeanOutputConverter<>(ReceiptExtraction.class);
@@ -32,6 +32,7 @@ class PromptBuilderTest {
             "fake-image-content".getBytes()
     );
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-01T10:00:00Z"), ZoneOffset.UTC);
+    private final String language = "English";
 
     @Test
     void build_rendersEveryPlaceholderWithTheExactExpectedValue() {
@@ -45,7 +46,8 @@ class PromptBuilderTest {
                 ),
                 clock,
                 List.of("DAIRY", "FRUITS", "PANTRY"),
-                List.of("USD", "EUR")
+                List.of("USD", "EUR"),
+                language
         );
 
         String result = promptBuilder.build(TEMPLATE, dto, converter);
@@ -53,8 +55,8 @@ class PromptBuilderTest {
         String expectedToday = LocalDateTime.now(clock).toString();
         String expected = ("template text: %s, DAIRY, FRUITS, PANTRY, USD, EUR, " +
                 "- id: fridge-id, name: Fridge, type: FRIDGE\n- id: pantry-id, name: Pantry, type: PANTRY\n" +
-                "- id: freezer-id, name: Freezer, type: FREEZER, %s")
-                .formatted(converter.getFormat(), expectedToday);
+                "- id: freezer-id, name: Freezer, type: FREEZER, %s, %s")
+                .formatted(converter.getFormat(), expectedToday, language);
 
         assertEquals(expected, result);
     }
@@ -66,7 +68,8 @@ class PromptBuilderTest {
                 List.of(StorageSpotDto.create("fridge-id", "Fridge", "FRIDGE")),
                 clock,
                 List.of("DAIRY"),
-                List.of("USD")
+                List.of("USD"),
+                language
         );
 
         String result = promptBuilder.build(TEMPLATE, dto, converter);
@@ -76,6 +79,7 @@ class PromptBuilderTest {
         assertFalse(result.contains("{moneyCurrencies}"));
         assertFalse(result.contains("{storageSpots}"));
         assertFalse(result.contains("{today}"));
+        assertFalse(result.contains("{language}"));
     }
 
     @Test
@@ -85,7 +89,8 @@ class PromptBuilderTest {
                 List.of(StorageSpotDto.create("fridge-id", "Fridge", "FRIDGE")),
                 clock,
                 List.of("DAIRY"),
-                List.of("USD")
+                List.of("USD"),
+                language
         );
 
         String result = promptBuilder.build(TEMPLATE, dto, converter);
@@ -96,14 +101,14 @@ class PromptBuilderTest {
     }
 
     private static final String REPROCESS_TEMPLATE =
-            "template text: {format}, {productTypes}, {moneyCurrencies}, {storageSpots}, {today}, {purchaseDate}, {storeName}, {allProducts}, {productsToReview}";
+            "template text: {format}, {productTypes}, {moneyCurrencies}, {storageSpots}, {today}, {language}, {purchaseDate}, {storeName}, {allProducts}, {productsToReview}";
 
     private final ProductExtraction milk = new ProductExtraction(LocalDate.of(2026, 9, 10), "Milk", "fridge-id", "DAIRY", BigDecimal.valueOf(1.5), "USD");
     private final ProductExtraction yogurt = new ProductExtraction(LocalDate.of(2026, 9, 12), "Yogurt", "fridge-id", "DAIRY", BigDecimal.valueOf(2.0), "USD");
 
     @Test
     void build_reprocess_rendersEveryPlaceholderWithTheExactExpectedValue() {
-        ReprocessShoppingReceiptWithFlaggedProducts dto = new ReprocessShoppingReceiptWithFlaggedProducts(
+        ReprocessShoppingReceiptWithFlaggedProductsDto dto = new ReprocessShoppingReceiptWithFlaggedProductsDto(
                 "fake-image-content".getBytes(),
                 "image/jpeg",
                 LocalDate.of(2026, 9, 1),
@@ -113,15 +118,16 @@ class PromptBuilderTest {
                 List.of(StorageSpotDto.create("fridge-id", "Fridge", "FRIDGE")),
                 clock,
                 List.of("DAIRY"),
-                List.of("USD")
+                List.of("USD"),
+                language
         );
 
         String result = promptBuilder.build(REPROCESS_TEMPLATE, dto, converter);
 
         String expectedToday = LocalDateTime.now(clock).toString();
-        String expected = ("template text: %s, DAIRY, USD, - id: fridge-id, name: Fridge, type: FRIDGE, %s, " +
+        String expected = ("template text: %s, DAIRY, USD, - id: fridge-id, name: Fridge, type: FRIDGE, %s, %s, " +
                 "2026-09-01, SuperMart, %s, %s")
-                .formatted(converter.getFormat(), expectedToday,
+                .formatted(converter.getFormat(), expectedToday, language,
                         ProductExtractionsPromptFormatter.format(List.of(milk)),
                         ProductExtractionsPromptFormatter.format(List.of(yogurt)));
 
@@ -130,7 +136,7 @@ class PromptBuilderTest {
 
     @Test
     void build_reprocess_leavesNoPlaceholderTokenUnresolved() {
-        ReprocessShoppingReceiptWithFlaggedProducts dto = new ReprocessShoppingReceiptWithFlaggedProducts(
+        ReprocessShoppingReceiptWithFlaggedProductsDto dto = new ReprocessShoppingReceiptWithFlaggedProductsDto(
                 "fake-image-content".getBytes(),
                 "image/jpeg",
                 LocalDate.of(2026, 9, 1),
@@ -140,7 +146,8 @@ class PromptBuilderTest {
                 List.of(StorageSpotDto.create("fridge-id", "Fridge", "FRIDGE")),
                 clock,
                 List.of("DAIRY"),
-                List.of("USD")
+                List.of("USD"),
+                language
         );
 
         String result = promptBuilder.build(REPROCESS_TEMPLATE, dto, converter);
@@ -150,6 +157,7 @@ class PromptBuilderTest {
         assertFalse(result.contains("{moneyCurrencies}"));
         assertFalse(result.contains("{storageSpots}"));
         assertFalse(result.contains("{today}"));
+        assertFalse(result.contains("{language}"));
         assertFalse(result.contains("{purchaseDate}"));
         assertFalse(result.contains("{storeName}"));
         assertFalse(result.contains("{allProducts}"));
@@ -158,7 +166,7 @@ class PromptBuilderTest {
 
     @Test
     void build_reprocess_rendersEmptyStringWhenNoProductsToReview() {
-        ReprocessShoppingReceiptWithFlaggedProducts dto = new ReprocessShoppingReceiptWithFlaggedProducts(
+        ReprocessShoppingReceiptWithFlaggedProductsDto dto = new ReprocessShoppingReceiptWithFlaggedProductsDto(
                 "fake-image-content".getBytes(),
                 "image/jpeg",
                 LocalDate.of(2026, 9, 1),
@@ -168,7 +176,8 @@ class PromptBuilderTest {
                 List.of(StorageSpotDto.create("fridge-id", "Fridge", "FRIDGE")),
                 clock,
                 List.of("DAIRY"),
-                List.of("USD")
+                List.of("USD"),
+                language
         );
 
         String result = promptBuilder.build(REPROCESS_TEMPLATE, dto, converter);
