@@ -27,6 +27,7 @@ import java.util.List;
 public class ProcessNewShoppingReceiptService implements ProcessNewShoppingReceiptUseCase {
     private final SpaceLookUpPort spaceLookUpPort;
     private final ProductCategoriesLookUpPort productCategoriesLookUpPort;
+    private final LanguageResolver languageResolver;
     private final AiShoppingReceiptProcessorPort shoppingReceiptProcessorPort;
     private final AiReceiptExtractionReviewerPort extractionReviewerPort;
     private final ImageStoragePort imageStoragePort;
@@ -52,7 +53,8 @@ public class ProcessNewShoppingReceiptService implements ProcessNewShoppingRecei
                         storageSpotDtos,
                         clock,
                         categories.productTypes(),
-                        categories.moneyCurrencies()
+                        categories.moneyCurrencies(),
+                        languageResolver.resolve(command.language())
                 ));
 
         ReceiptExtraction rectifiedExtraction = extractionDataRectifier.rectifyPurchaseDate(new RectifyExtractionDto(extraction, storageSpotDtos, clock));

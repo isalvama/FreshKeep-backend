@@ -2,7 +2,7 @@ package com.isalvama.fresh_keep.shared.infrastructure.ai.shopping_receipt_proces
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.AiShoppingReceiptProcessorPort;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProcessNewShoppingReceiptDto;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReprocessShoppingReceiptWithFlaggedProducts;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReprocessShoppingReceiptWithFlaggedProductsDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.AiRetryableException;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +39,7 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
         Then extract the list of food products on the receipt. If the receipt shows several separate units of the same product purchased individually (e.g. a quantity of "6" next to a single milk bottle, or two identical lines for the same chocolate bar), return one product entry per unit, each with identical details. If instead a product is itself sold as a single multi-unit pack (e.g. a six-pack of beer, a 4-pack of yogurt cups sold together), treat that pack as one single product - do not split it into separate units. Use the receipt's own quantity information to tell these two cases apart: a purchase quantity applied to an otherwise singular item should be exploded into repeated entries, while an item whose own name or packaging already describes it as a pack/multipack should stay a single entry.
 
     For each product entry:
-    1. Clean up its name (e.g. turn "YOG.NAT.X4" into "Plain yogurt"). Constraint: Output must not exceed 30 characters.
+    1. Clean up its name (e.g. turn "YOG.NAT.X4" into "Plain yogurt"). Constraint: Output must not exceed 30 characters and must be in {language}.
     2. Classify it into one of the following product categories: {productTypes}
     3. Estimate its typical shelf life in days, based on the nature of the product.
     4. Calculate its approximate expiration date by adding that shelf life to the receipt's purchase date.
@@ -74,7 +74,7 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
     {productsToReview}
 
     For each flagged product only, re-derive its data directly from the image following these rules:
-    1. Clean up its name (e.g. turn "YOG.NAT.X4" into "Plain yogurt").
+    1. Clean up its name (e.g. turn "YOG.NAT.X4" into "Plain yogurt"). Output must not exceed 30 characters and must be in {language}.
     2. Classify it into one of the following product categories: {productTypes}
     3. Suggest the most suitable storage spot for it, choosing only from the user's available storage spots listed below and based on the storage spot and product type, responding with its id (leave it empty if none of them fit):
     {storageSpots}
@@ -130,7 +130,7 @@ public class GenAiShoppingReceiptProcessorAdapter implements AiShoppingReceiptPr
 
     @Override
     @Retryable(retryFor = AiRetryableException.class, maxAttempts = 2, backoff = @Backoff(delay = 1000))
-    public ReceiptExtraction reprocess(ReprocessShoppingReceiptWithFlaggedProducts processShoppingReceiptFlaggedProdsDto) {
+    public ReceiptExtraction reprocess(ReprocessShoppingReceiptWithFlaggedProductsDto processShoppingReceiptFlaggedProdsDto) {
 
         var converter = new BeanOutputConverter<>(ReceiptExtraction.class);
 
