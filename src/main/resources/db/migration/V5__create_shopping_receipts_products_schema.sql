@@ -30,13 +30,15 @@ CREATE TABLE products
 (
     id                        UUID PRIMARY KEY,
     name                      VARCHAR(30) NOT NULL,
-    expiration_date           TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    expiration_date           DATE DEFAULT CURRENT_DATE NOT NULL,
     suggested_storage_spot_id UUID,
     actual_storage_spot_id    UUID NOT NULL,
     product_type              VARCHAR(30) NOT NULL,
     shopping_receipt_id       UUID,
     price                     NUMERIC(10, 2),
     currency                  VARCHAR(20),
+    created_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    last_updated_at  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     version                   BIGINT NOT NULL DEFAULT 0,
 
     CONSTRAINT fk_products_suggested_storage_spot
@@ -80,7 +82,7 @@ CREATE TABLE product_storage_spot_history
     id                  BIGINT PRIMARY KEY DEFAULT nextval('product_storage_spot_history_seq'),
     product_id          UUID NOT NULL,
     user_id             UUID,
-    new_expiration_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    new_expiration_date DATE NOT NULL,
     new_storage_spot_id UUID,
     changed_at         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT fk_storage_spot_history_product

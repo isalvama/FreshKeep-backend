@@ -4,11 +4,14 @@ import com.isalvama.fresh_keep.modules.product.domain.model.ProductType;
 import com.isalvama.fresh_keep.modules.product.domain.model.value_object.Currency;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 import org.springframework.data.domain.Persistable;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -54,6 +57,14 @@ public class JpaProductEntity implements Persistable<UUID> {
     @Enumerated(EnumType.STRING)
     @Column(name = "currency", updatable = false, length = 20)
     private Currency currency;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false, nullable = false)
+    private Instant createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "last_updated_at")
+    private Instant lastUpdatedAt;
 
     @Version
     private Long version;
