@@ -1,7 +1,7 @@
 package com.isalvama.fresh_keep.shared.infrastructure.ai.shopping_receipt_processor;
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProcessNewShoppingReceiptDto;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReprocessShoppingReceiptWithFlaggedProducts;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReprocessShoppingReceiptWithFlaggedProductsDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.StorageSpotDto;
 import com.isalvama.fresh_keep.shared.infrastructure.ai.ProductExtractionsPromptFormatter;
 import com.isalvama.fresh_keep.shared.infrastructure.ai.StorageSpotsPromptFormatter;
@@ -19,13 +19,13 @@ import java.util.Map;
 public class PromptBuilder {
 
     public String build (String promptTextTemplate, ProcessNewShoppingReceiptDto dto, BeanOutputConverter<?> converter) {
-        Map<String, Object> map = buildBaseMap(new CommonPlaceholders(dto.storageSpots(), dto.clock(), dto.productTypes(), dto.moneyCurrencies()), converter);
+        Map<String, Object> map = buildBaseMap(new CommonPlaceholders(dto.storageSpots(), dto.clock(), dto.productTypes(), dto.moneyCurrencies(), dto.language()), converter);
         PromptTemplate promptTemplate = new PromptTemplate(promptTextTemplate);
         return promptTemplate.render(map);
     }
 
-    public String build (String promptTextTemplate, ReprocessShoppingReceiptWithFlaggedProducts dto, BeanOutputConverter<?> converter) {
-        Map<String, Object> map = buildBaseMap(new CommonPlaceholders(dto.storageSpots(), dto.clock(), dto.productTypes(), dto.moneyCurrencies()), converter);
+    public String build (String promptTextTemplate, ReprocessShoppingReceiptWithFlaggedProductsDto dto, BeanOutputConverter<?> converter) {
+        Map<String, Object> map = buildBaseMap(new CommonPlaceholders(dto.storageSpots(), dto.clock(), dto.productTypes(), dto.moneyCurrencies(), dto.language()), converter);
 
         map.put("purchaseDate", dto.purchaseDate().toString());
         map.put("storeName", dto.storeName());
@@ -42,7 +42,8 @@ public class PromptBuilder {
                 "productTypes", String.join(", ", cp.productTypes()),
                 "moneyCurrencies", String.join(", ", cp.moneyCurrencies()),
                 "storageSpots", StorageSpotsPromptFormatter.format(cp.storageSpots()),
-                "today", LocalDateTime.now(cp.clock()).toString()
+                "today", LocalDateTime.now(cp.clock()).toString(),
+                "language", cp.language
         ));
     }
 
@@ -50,6 +51,7 @@ public class PromptBuilder {
             List<StorageSpotDto> storageSpots,
             Clock clock,
             List<String> productTypes,
-            List<String> moneyCurrencies
+            List<String> moneyCurrencies,
+            String language
     ) {}
 }

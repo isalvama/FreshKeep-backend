@@ -2,7 +2,7 @@ package com.isalvama.fresh_keep.shared.infrastructure.ai.shopping_receipt_proces
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProcessNewShoppingReceiptDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReprocessShoppingReceiptWithFlaggedProducts;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReprocessShoppingReceiptWithFlaggedProductsDto;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.AiUnprocessableInputException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,10 +64,11 @@ class GenAiShoppingReceiptProcessorAdapterTest {
             List.of(),
             clock,
             List.of("DAIRY"),
-            List.of("USD")
+            List.of("USD"),
+            "English"
     );
 
-    private final ReprocessShoppingReceiptWithFlaggedProducts reprocessDto = new ReprocessShoppingReceiptWithFlaggedProducts(
+    private final ReprocessShoppingReceiptWithFlaggedProductsDto reprocessDto = new ReprocessShoppingReceiptWithFlaggedProductsDto(
             "fake-image-content".getBytes(),
             "image/jpeg",
             LocalDate.of(2026, 9, 1),
@@ -77,7 +78,8 @@ class GenAiShoppingReceiptProcessorAdapterTest {
             List.of(),
             clock,
             List.of("DAIRY"),
-            List.of("USD")
+            List.of("USD"),
+            "English"
     );
 
     @Test
