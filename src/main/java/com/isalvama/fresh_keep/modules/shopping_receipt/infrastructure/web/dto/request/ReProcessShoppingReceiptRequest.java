@@ -25,6 +25,9 @@ public record ReProcessShoppingReceiptRequest (
         List<ProductRequest> flaggedProducts,
 
         @NotEmpty
-        List<ProductRequest> allProducts
+        List<ProductRequest> allProducts,
+
+        @NotBlank
+        String language
 ) {
 }

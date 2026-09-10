@@ -10,6 +10,7 @@ public record ProcessNewShoppingReceiptDto(
         List<StorageSpotDto> storageSpots,
         Clock clock,
         List<String> productTypes,
-        List<String> moneyCurrencies
+        List<String> moneyCurrencies,
+        String language
 ) {
 }

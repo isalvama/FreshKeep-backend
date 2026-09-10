@@ -31,6 +31,7 @@ public class ReProcessShoppingReceiptService implements ReProcessShoppingReceipt
     private final ProductCategoriesLookUpPort productCategoriesLookUpPort;
     private final ReceiptImageRepositoryPort receiptImageRepositoryPort;
     private final ImageStoragePort imageStoragePort;
+    private final LanguageResolver languageResolver;
     private final AiShoppingReceiptProcessorPort aiShoppingReceiptProcessorPort;
     private final ExtractionDataRectifier extractionDataRectifier;
     private final StorageSpotSuggestionResolver storageSpotResolver;
@@ -51,7 +52,7 @@ public class ReProcessShoppingReceiptService implements ReProcessShoppingReceipt
         String imageUrl = imageStoragePort.retrieveUrl(receiptImage.getAssetId().toString());
         byte[] imageBytes = imageStoragePort.fetchImageBytes(imageUrl);
 
-        ReceiptExtraction extraction = aiShoppingReceiptProcessorPort.reprocess(new ReprocessShoppingReceiptWithFlaggedProducts(
+        ReceiptExtraction extraction = aiShoppingReceiptProcessorPort.reprocess(new ReprocessShoppingReceiptWithFlaggedProductsDto(
                         imageBytes,
                         receiptImage.getMimeType(),
                         command.shoppingDate(),
@@ -61,7 +62,8 @@ public class ReProcessShoppingReceiptService implements ReProcessShoppingReceipt
                         storageSpotDtos,
                         clock,
                         categories.productTypes(),
-                        categories.moneyCurrencies()
+                        categories.moneyCurrencies(),
+                        languageResolver.resolve(command.language())
                 )
         );
 

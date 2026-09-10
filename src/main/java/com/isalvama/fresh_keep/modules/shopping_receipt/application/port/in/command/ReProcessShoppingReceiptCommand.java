@@ -10,6 +10,7 @@ public record ReProcessShoppingReceiptCommand(
         LocalDate shoppingDate,
         String storeName,
         List<ProductCommand> flaggedProducts,
-        List<ProductCommand> allProducts
+        List<ProductCommand> allProducts,
+        String language
 ) {
 }

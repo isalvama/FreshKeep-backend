@@ -47,6 +47,8 @@ class ProcessNewShoppingReceiptServiceTest {
     private ExtractionDataRectifier extractionDataRectifier;
     @Mock
     private StorageSpotSuggestionResolver spotSuggestionResolver;
+    @Mock
+    private LanguageResolver languageResolver;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-01T10:00:00Z"), ZoneOffset.UTC);
 
@@ -55,7 +57,9 @@ class ProcessNewShoppingReceiptServiceTest {
     private final MultipartFile file = new MockMultipartFile("file", "receipt.jpg", "image/jpeg", "fake-image-content".getBytes());
     private final String creatorId = "creator-id";
     private final String spaceId = "space-id";
-    private final ProcessNewShoppingReceiptCommand command = new ProcessNewShoppingReceiptCommand(file, creatorId, spaceId);
+    private final String language = "es";
+    private final String resolvedLanguage = "Spanish";
+    private final ProcessNewShoppingReceiptCommand command = new ProcessNewShoppingReceiptCommand(file, creatorId, spaceId, language);
 
     private final List<StorageSpotDto> storageSpots = List.of(StorageSpotDto.create("fridge-id", "Fridge", "FRIDGE"));
     private final CategoriesDto categories = new CategoriesDto(List.of("DAIRY"), List.of("USD"));
@@ -79,6 +83,7 @@ class ProcessNewShoppingReceiptServiceTest {
         service = new ProcessNewShoppingReceiptService(
                 spaceLookUpPort,
                 productCategoriesLookUpPort,
+                languageResolver,
                 shoppingReceiptProcessorPort,
                 extractionReviewerPort,
                 imageStoragePort,
@@ -92,6 +97,7 @@ class ProcessNewShoppingReceiptServiceTest {
     private void stubHappyPath() {
         when(spaceLookUpPort.getStorageSpotsBySpaceIdAndParticipantId(any())).thenReturn(storageSpots);
         when(productCategoriesLookUpPort.getProductTypesAndMoneyCurrencyConstNames()).thenReturn(categories);
+        when(languageResolver.resolve(any())).thenReturn(resolvedLanguage);
         when(shoppingReceiptProcessorPort.process(any())).thenReturn(rawExtraction);
         when(extractionDataRectifier.rectifyPurchaseDate(any())).thenReturn(dateRectifiedExtraction);
         when(spotSuggestionResolver.resolve(any(), any())).thenReturn(resolvedProductExtractions);
@@ -102,11 +108,11 @@ class ProcessNewShoppingReceiptServiceTest {
     @Test
     void execute_throwsInvalidReceiptImageExceptionWhenFileIsEmpty() {
         MultipartFile emptyFile = new MockMultipartFile("file", "receipt.jpg", "image/jpeg", new byte[0]);
-        ProcessNewShoppingReceiptCommand emptyFileCommand = new ProcessNewShoppingReceiptCommand(emptyFile, creatorId, spaceId);
+        ProcessNewShoppingReceiptCommand emptyFileCommand = new ProcessNewShoppingReceiptCommand(emptyFile, creatorId, spaceId, language);
 
         assertThrows(InvalidReceiptImageException.class, () -> service.execute(emptyFileCommand));
 
-        verifyNoInteractions(spaceLookUpPort, productCategoriesLookUpPort, shoppingReceiptProcessorPort,
+        verifyNoInteractions(spaceLookUpPort, productCategoriesLookUpPort, languageResolver, shoppingReceiptProcessorPort,
                 extractionReviewerPort, imageStoragePort, receiptImageRepositoryPort, extractionDataRectifier, spotSuggestionResolver);
     }
 
@@ -147,6 +153,7 @@ class ProcessNewShoppingReceiptServiceTest {
         service.execute(command);
 
         verify(spaceLookUpPort).getStorageSpotsBySpaceIdAndParticipantId(GetStorageSpotsDto.create(spaceId, creatorId));
+        verify(languageResolver).resolve(language);
 
         ArgumentCaptor<ProcessNewShoppingReceiptDto> processDtoCaptor = ArgumentCaptor.forClass(ProcessNewShoppingReceiptDto.class);
         verify(shoppingReceiptProcessorPort).process(processDtoCaptor.capture());
@@ -155,6 +162,7 @@ class ProcessNewShoppingReceiptServiceTest {
         assertSame(clock, processDtoCaptor.getValue().clock());
         assertEquals(categories.productTypes(), processDtoCaptor.getValue().productTypes());
         assertEquals(categories.moneyCurrencies(), processDtoCaptor.getValue().moneyCurrencies());
+        assertEquals(resolvedLanguage, processDtoCaptor.getValue().language());
 
         ArgumentCaptor<RectifyExtractionDto> rectifyDtoCaptor = ArgumentCaptor.forClass(RectifyExtractionDto.class);
         verify(extractionDataRectifier).rectifyPurchaseDate(rectifyDtoCaptor.capture());

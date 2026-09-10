@@ -4,7 +4,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 
-public record ReprocessShoppingReceiptWithFlaggedProducts(
+public record ReprocessShoppingReceiptWithFlaggedProductsDto(
         byte[] imageBytes,
         String mimeType,
         LocalDate purchaseDate,
@@ -14,6 +14,7 @@ public record ReprocessShoppingReceiptWithFlaggedProducts(
         List<StorageSpotDto> storageSpots,
         Clock clock,
         List<String> productTypes,
-        List<String> moneyCurrencies
+        List<String> moneyCurrencies,
+        String language
 ) {
 }
