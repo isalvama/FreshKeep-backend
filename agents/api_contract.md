@@ -390,9 +390,10 @@ Consumes `multipart/form-data`.
 
 ### Request (`ProcessNewShoppingReceiptRequest`, bound via `@ModelAttribute`)
 
-| Field  | Type          | Constraints        |
-|--------|---------------|---------------------|
-| `file` | file part     | required (`@NotNull`) — the receipt image |
+| Field      | Type          | Constraints        |
+|------------|---------------|---------------------|
+| `file`     | file part     | required (`@NotNull`) — the receipt image |
+| `language` | string        | required (`@NotBlank`) — see [Language field](#language-field) below |
 
 This step only uploads and AI-extracts the receipt; it does **not** persist a `ShoppingReceipt` or any `Product`s
 yet. The uploaded image itself is persisted as a `ReceiptImage` (so its id can be referenced by `reprocess`/`confirm`
@@ -447,6 +448,8 @@ Notes on this shape:
   `suggestedStorageSpotId` to always be one of the ids the AI "saw" on the receipt.
 - If the AI review step itself is unreachable, `flaggedProducts` degrades to `[]` rather than failing the request —
   the client won't get an error for this, just no flags.
+- `productExtractions[].productName`/`flaggedProducts[].productName` (and `errorReason`, if set) are written by the
+  AI in the language requested via `language` — see [Language field](#language-field) below.
 
 ### Error responses
 
@@ -481,6 +484,7 @@ already-uploaded receipt image, then **persists** the resulting `ShoppingReceipt
   "receiptImageId": "b3f1c9a0-....",
   "shoppingDate": "2026-09-08",
   "storeName": "SuperMart",
+  "language": "es",
   "flaggedProducts": [
     { "expirationDate": "2026-09-15", "productName": "Milk", "suggestedStorageSpotId": "c4a2d8b1-....", "productType": "DAIRY", "priceAmount": 2.50, "currency": "USD" }
   ],
@@ -495,6 +499,7 @@ already-uploaded receipt image, then **persists** the resulting `ShoppingReceipt
 | `receiptImageId`  | string (UUID)           | required, must reference a `ReceiptImage` already created via `processNewShoppingReceipt` |
 | `shoppingDate`    | string (`yyyy-MM-dd`)   | required, must not be in the future (`@PastOrPresent`, evaluated against the server's system clock) |
 | `storeName`       | string                  | required, non-blank |
+| `language`        | string                  | required (`@NotBlank`) — see [Language field](#language-field) below |
 | `flaggedProducts` | array of `ProductRequest` | required, non-empty — the products the user flagged for re-extraction |
 | `allProducts`     | array of `ProductRequest` | required, non-empty — the full current product list (flagged + unflagged), used as context for the AI |
 
@@ -540,7 +545,9 @@ Spring handles the binding.
 ```
 
 Unlike step 1, `products[].id` here is a real persisted `Product` id — this response reflects what was actually
-saved, not a re-extraction preview.
+saved, not a re-extraction preview. `products[].productName` for any re-examined (flagged) product is written in
+the language requested via `language`; unflagged products keep whatever language they already had from the prior
+`processNewShoppingReceipt`/`reprocess` call, since they're carried over unchanged rather than re-extracted.
 
 ### Error responses
 
@@ -562,6 +569,25 @@ saved, not a re-extraction preview.
 Note: unlike `processNewShoppingReceipt`, this endpoint has **no fallback** if the AI call fails outright — since its
 whole purpose is re-extraction, an AI failure here surfaces as a real error to the client rather than degrading
 silently.
+
+---
+
+## Language field {#language-field}
+
+`processNewShoppingReceipt` and `reprocess` both take a `language` field, used to instruct the AI to write
+`productName` (and `errorReason`, if set) in that language rather than whatever language the receipt itself is in.
+
+- Send the **language subtag only** — e.g. `"es"`, not `"es-AR"`. On Flutter, that's
+  `WidgetsBinding.instance.platformDispatcher.locale.languageCode`, not `.toLanguageTag()`.
+- Matching is case-insensitive.
+- Currently recognized values: `en` (English), `es` (Spanish), `ca` (Catalan), `fr` (French), `de` (German),
+  `pt` (Portuguese), `it` (Italian).
+- `language` is required at the request level (`@NotBlank` — a missing field is a `400`), but an unrecognized value
+  is **not** an error: the backend silently falls back to English rather than rejecting the request, since the
+  device can legitimately report a language the app doesn't support yet. Don't rely on validating this value against
+  the list above client-side beyond keeping the user's actual device language — send whatever `languageCode` you
+  get and let the backend degrade gracefully.
+- `confirm` has no `language` field — it never calls the AI, so there's nothing to translate.
 
 ---
 

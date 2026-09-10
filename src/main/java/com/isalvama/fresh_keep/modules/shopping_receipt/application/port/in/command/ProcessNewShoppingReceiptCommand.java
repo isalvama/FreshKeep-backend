@@ -5,6 +5,7 @@ import org.springframework.web.multipart.MultipartFile;
 public record ProcessNewShoppingReceiptCommand(
         MultipartFile file,
         String creatorId,
-        String spaceId
+        String spaceId,
+        String language
 ) {
 }

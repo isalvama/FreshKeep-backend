@@ -114,6 +114,7 @@ class ShoppingReceiptControllerTest {
                 .param("receiptImageId", UUID.randomUUID().toString())
                 .param("shoppingDate", "2026-09-01")
                 .param("storeName", "SuperMart")
+                .param("language", "es")
                 .param("flaggedProducts[0].expirationDate", "2026-09-10")
                 .param("flaggedProducts[0].productName", "Milk")
                 .param("flaggedProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
@@ -155,6 +156,7 @@ class ShoppingReceiptControllerTest {
 
         mockMvc.perform(multipart(BASE_URL.formatted(SPACE_ID))
                         .file(validFile())
+                        .param("language", "es")
                         .with(asUser()))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", containsString(BASE_URL.formatted(SPACE_ID) + "/receipt-image-id")))
@@ -174,6 +176,7 @@ class ShoppingReceiptControllerTest {
 
         mockMvc.perform(multipart(BASE_URL.formatted(SPACE_ID))
                         .file(validFile())
+                        .param("language", "es")
                         .with(asUser()))
                 .andExpect(status().isCreated());
 
@@ -183,6 +186,7 @@ class ShoppingReceiptControllerTest {
 
         org.junit.jupiter.api.Assertions.assertEquals(SPACE_ID, captor.getValue().spaceId());
         org.junit.jupiter.api.Assertions.assertEquals(USER_ID, captor.getValue().creatorId());
+        org.junit.jupiter.api.Assertions.assertEquals("es", captor.getValue().language());
     }
 
     @Test
@@ -197,6 +201,17 @@ class ShoppingReceiptControllerTest {
     @Test
     void processNewShoppingReceipt_returns400WhenSpaceIdIsNotAValidUuid() throws Exception {
         mockMvc.perform(multipart(BASE_URL.formatted("not-a-uuid"))
+                        .file(validFile())
+                        .param("language", "es")
+                        .with(asUser()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(processNewShoppingReceiptUseCase);
+    }
+
+    @Test
+    void processNewShoppingReceipt_returns400WhenLanguageIsMissing() throws Exception {
+        mockMvc.perform(multipart(BASE_URL.formatted(SPACE_ID))
                         .file(validFile())
                         .with(asUser()))
                 .andExpect(status().isBadRequest());
@@ -217,6 +232,7 @@ class ShoppingReceiptControllerTest {
     void processNewShoppingReceipt_returns403WhenAuthenticatedWithoutUserRole() throws Exception {
         mockMvc.perform(multipart(BASE_URL.formatted(SPACE_ID))
                         .file(validFile())
+                        .param("language", "es")
                         .with(asAdmin()))
                 .andExpect(status().isForbidden());
 
@@ -265,6 +281,27 @@ class ShoppingReceiptControllerTest {
         assertEquals(USER_ID, captor.getValue().creatorId());
         assertEquals(1, captor.getValue().flaggedProducts().size());
         assertEquals("Milk", captor.getValue().flaggedProducts().getFirst().productName());
+        assertEquals("es", captor.getValue().language());
+    }
+
+    @Test
+    void reProcessShoppingReceiptWithFlaggedProducts_returns400WhenLanguageIsMissing() throws Exception {
+        mockMvc.perform(post(REPROCESS_URL.formatted(SPACE_ID))
+                        .param("receiptImageId", UUID.randomUUID().toString())
+                        .param("shoppingDate", "2026-09-01")
+                        .param("storeName", "SuperMart")
+                        .param("flaggedProducts[0].expirationDate", "2026-09-10")
+                        .param("flaggedProducts[0].productName", "Milk")
+                        .param("flaggedProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
+                        .param("flaggedProducts[0].productType", "DAIRY")
+                        .param("allProducts[0].expirationDate", "2026-09-10")
+                        .param("allProducts[0].productName", "Milk")
+                        .param("allProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
+                        .param("allProducts[0].productType", "DAIRY")
+                        .with(asUser()))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(reProcessShoppingReceiptUseCase);
     }
 
     @Test
