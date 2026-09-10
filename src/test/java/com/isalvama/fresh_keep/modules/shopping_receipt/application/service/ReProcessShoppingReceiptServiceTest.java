@@ -234,6 +234,25 @@ class ReProcessShoppingReceiptServiceTest {
     }
 
     @Test
+    void execute_returnsProductsSortedByExpirationDateAscendingWithNullsLast() {
+        stubHappyPath();
+
+        List<RegisteredProductDto> unsortedRegisteredProducts = List.of(
+                new RegisteredProductDto(UUID.randomUUID(), "Yogurt", LocalDate.of(2026, 9, 20), "fridge-id", "DAIRY", BigDecimal.valueOf(2.0), "USD"),
+                new RegisteredProductDto(UUID.randomUUID(), "Bread", null, "fridge-id", "BAKERY", BigDecimal.valueOf(1.0), "USD"),
+                new RegisteredProductDto(UUID.randomUUID(), "Milk", LocalDate.of(2026, 9, 10), "fridge-id", "DAIRY", BigDecimal.valueOf(1.5), "USD")
+        );
+        when(productRegistrationPort.registerProducts(any())).thenReturn(unsortedRegisteredProducts);
+
+        ShoppingReceiptResult result = service.execute(command);
+
+        assertEquals(3, result.products().size());
+        assertEquals("Milk", result.products().get(0).productName());
+        assertEquals("Yogurt", result.products().get(1).productName());
+        assertEquals("Bread", result.products().get(2).productName());
+    }
+
+    @Test
     void execute_persistsAShoppingReceiptWithTheRectifiedPurchaseDateAndStoreName() {
         stubHappyPath();
 

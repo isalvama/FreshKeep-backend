@@ -20,8 +20,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+
+import static java.util.stream.Collectors.toList;
 
 @Service
 @Transactional
@@ -95,11 +98,13 @@ public class ReProcessShoppingReceiptService implements ReProcessShoppingReceipt
                         )).toList()
         );
 
+        List<RegisteredProductDto> registeredSortedProducts = registeredProducts.stream().sorted(Comparator.comparing(RegisteredProductDto::expirationDate, Comparator.nullsLast(Comparator.naturalOrder()))).toList();
+
         return new ShoppingReceiptResult(
                 shoppingReceipt.getId().toString(),
                 shoppingReceipt.getPurchaseDate(),
                 shoppingReceipt.getStoreName(),
-                registeredProducts.stream().map(ProductResult::toResult).toList(),
+                registeredSortedProducts.stream().map(ProductResult::toResult).toList(),
                 storageSpotDtos.stream().map(SuggestedStorageSpotResult::fromStorageSpotDto).toList()
                 );
     }
