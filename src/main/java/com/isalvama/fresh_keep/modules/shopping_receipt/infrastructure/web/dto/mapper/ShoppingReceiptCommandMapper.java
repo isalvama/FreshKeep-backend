@@ -18,7 +18,8 @@ public class ShoppingReceiptCommandMapper {
         return new ProcessNewShoppingReceiptCommand(
                 request.file(),
                 userId,
-                spaceId
+                spaceId,
+                request.language()
         );
     }
 
@@ -30,7 +31,8 @@ public class ShoppingReceiptCommandMapper {
                 request.shoppingDate(),
                 request.storeName(),
                 toProductCommand(request.flaggedProducts()),
-                toProductCommand(request.allProducts())
+                toProductCommand(request.allProducts()),
+                request.language()
                 );
     }
 
