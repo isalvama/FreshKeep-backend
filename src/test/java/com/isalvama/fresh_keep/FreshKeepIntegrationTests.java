@@ -26,6 +26,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.test.context.TestPropertySource;
@@ -39,6 +40,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import tools.jackson.databind.ObjectMapper;
 import org.testcontainers.utility.DockerImageName;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -46,6 +48,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -109,6 +112,17 @@ public class FreshKeepIntegrationTests {
 
         @Autowired
         private RegisterUserAccountService registerUserAccountService;
+
+        @Autowired
+        private JpaSpaceSpringDataRepository spaceSpringDataRepository;
+
+        // Spaces created by other nested test classes (which share this same Testcontainers Postgres instance)
+        // must be cleared before accounts, or a leftover spaces_participants row referencing an account this
+        // class is about to delete violates its FK and breaks an unrelated test.
+        @BeforeEach
+        void clearSpaces() {
+            spaceSpringDataRepository.deleteAll();
+        }
 
         @Nested
         @DisplayName("POST " + API_AUTH + "/register")
@@ -877,6 +891,69 @@ public class FreshKeepIntegrationTests {
                 result.andExpect(status().isForbidden())
                         .andExpect(jsonPath("$.title").value("Forbidden"))
                         .andExpect(jsonPath("$.detail", containsString("Access Denied")));
+            }
+        }
+
+        @Nested
+        @DisplayName("GET " + API_SPACES + "/{spaceId}/overview")
+        class GetOverview {
+
+            @Autowired
+            private JdbcTemplate jdbcTemplate;
+
+            private String overviewSpaceId;
+            private UUID overviewStorageSpotId;
+
+            @BeforeEach
+            void setUp() throws Exception {
+                ResultActions creation = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validRequest())));
+
+                String creationResponse = creation.andReturn().getResponse().getContentAsString();
+                overviewSpaceId = com.jayway.jsonpath.JsonPath.read(creationResponse, "$.id");
+                String storageSpotId = com.jayway.jsonpath.JsonPath.read(creationResponse, "$.storageSpots[0].storageSpotId");
+                overviewStorageSpotId = UUID.fromString(storageSpotId);
+            }
+
+            // Not a precise benchmark - its job is to catch a real regression (e.g. an accidental N+1 query
+            // per product) rather than measure exact latency, hence the generous time budget.
+            @DisplayName("should return 200 within a generous time budget for a space with a large number of products")
+            @Test
+            void shouldReturnOverviewWithinTimeBudgetForALargeNumberOfProducts() throws Exception {
+                int productCount = 500;
+                insertProducts(productCount, UUID.fromString(overviewSpaceId), overviewStorageSpotId);
+
+                long startNanos = System.nanoTime();
+
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.get(API_SPACES + "/" + overviewSpaceId + "/overview")
+                        .header("Authorization", "Bearer " + userToken));
+
+                long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
+
+                result.andExpect(status().isOk())
+                        .andExpect(jsonPath("$.productResults", hasSize(productCount)));
+
+                long budgetMs = 3000;
+                assertTrue(elapsedMs < budgetMs, () -> "Expected the overview endpoint to respond within " + budgetMs
+                        + "ms for " + productCount + " products, but took " + elapsedMs + "ms - possible N+1 query"
+                        + " or other regression in the products lookup path.");
+            }
+
+            private void insertProducts(int count, UUID spaceId, UUID storageSpotId) {
+                List<Object[]> batchArgs = new java.util.ArrayList<>(count);
+                for (int i = 0; i < count; i++) {
+                    batchArgs.add(new Object[]{
+                            UUID.randomUUID(), "Product " + i, LocalDate.now().plusDays(i % 60),
+                            storageSpotId, storageSpotId, "OTHER", BigDecimal.valueOf(1.0), "USD"
+                    });
+                }
+                jdbcTemplate.batchUpdate(
+                        "INSERT INTO products (id, name, expiration_date, suggested_storage_spot_id, actual_storage_spot_id, product_type, price, currency) "
+                                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                        batchArgs
+                );
             }
         }
     }

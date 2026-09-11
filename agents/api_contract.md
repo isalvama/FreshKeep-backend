@@ -224,8 +224,9 @@ Any other route not matched above (i.e. anything outside `/api/v1/auth/**`) requ
 
 # Space API Contract
 
-Source: `SpaceController` (`modules/space/infrastructure/web`), `CreateSpaceService`, `Space`/`StorageSpot`/`Emoji` domain
-models, `JpaSpaceRepositoryAdapter`.
+Source: `SpaceController` (`modules/space/infrastructure/web`), `CreateSpaceService`, `GetSpaceOverviewService`,
+`GetStorageSpotsService`, `Space`/`StorageSpot`/`Emoji` domain models, `JpaSpaceRepositoryAdapter`,
+`SpaceProductsLookUpPort`/`ProductQueryAdapter` (product-listing lookup, `modules/product`).
 
 Base path: `api/v1/spaces`
 
@@ -345,16 +346,68 @@ Returns `200 OK` with an empty array (`[]`) — not an error — when the user i
 
 ---
 
+## 3. Get Space Overview
+
+`GET /api/v1/spaces/{spaceId}/overview`
+
+Returns a single space's current name/emoji/storage spots together with every product currently stored in it —
+the "what's in this space right now" view, meant to be used right after confirming/reprocessing a receipt, and
+whenever the user revisits the space afterward. Unlike the other endpoints in this section, storage spots and
+products are looked up live for this one call, not carried over from any earlier request — if a participant renamed
+a storage spot or another user added/removed products moments ago, this reflects that immediately.
+
+### Success response — `200 OK`
+
+```json
+{
+  "id": "b3f1c9a0-....",
+  "name": "Kitchen",
+  "emoji": "🏠",
+  "storageSpots": [
+    { "storageSpotId": "c4a2d8b1-....", "storageSpotName": "Fridge", "storageSpotType": "FRIDGE" }
+  ],
+  "productResults": [
+    {
+      "id": "e6c4fa03-....",
+      "productName": "Milk",
+      "expirationDate": "2026-09-15",
+      "storageSpotId": "c4a2d8b1-....",
+      "productType": "DAIRY",
+      "priceAmount": 2.50,
+      "currency": "USD"
+    }
+  ]
+}
+```
+
+`productResults` is returned sorted by `expirationDate` ascending (soonest-to-expire first) — same convention as
+the `confirm`/`reprocess` product lists. A space with no products yet returns `200 OK` with `productResults: []`,
+not an error.
+
+### Error responses
+
+| Status | Condition | Body (`ProblemDetail`) title |
+|--------|-----------|-------------------------------|
+| 400 Bad Request | `spaceId` path variable is not a valid UUID | "Validation Error in Parameter" |
+| 400 Bad Request | Space does not exist (`InvalidSpaceReferenceException`) | "Business Rule Error" |
+| 401 Unauthorized | No `Authorization` header, or an invalid/malformed/expired bearer token | "Unauthorized" |
+| 403 Forbidden | Valid token, but the account does not have the `USER` role | "Forbidden" |
+| 409 Conflict | Authenticated user is not a participant of `spaceId` (`SpaceNotAccessibleException`) | "Conflict Error" |
+
+---
+
 ## Security & access control {#security--access-control-1}
 
-Enforced via `@PreAuthorize("hasRole('USER')")` on both `SpaceController.create` and `SpaceController.getByParticipantId`
-— there is no URL-level rule for `/api/v1/spaces/**` in `AppSecurityConfiguration`, so it falls under the default
-`anyRequest().authenticated()` at the filter-chain level, with the role check happening at the method-security layer.
+Enforced via `@PreAuthorize("hasRole('USER')")` on `SpaceController.create`, `SpaceController.getByParticipantId`, and
+`SpaceController.getOverView` — there is no URL-level rule for `/api/v1/spaces/**` in `AppSecurityConfiguration`, so it
+falls under the default `anyRequest().authenticated()` at the filter-chain level, with the role check happening at the
+method-security layer.
 
 | Endpoint | Filter chain | Method security | Net effect |
 |----------|--------------|------------------|------------|
 | `POST /api/v1/spaces` | `authenticated()` | `@PreAuthorize("hasRole('USER')")` | Requires a valid `Bearer` JWT for an account with role `USER` |
 | `GET /api/v1/spaces` | `authenticated()` | `@PreAuthorize("hasRole('USER')")` | Requires a valid `Bearer` JWT for an account with role `USER` |
+| `GET /api/v1/spaces/{spaceId}/overview` | `authenticated()` | `@PreAuthorize("hasRole('USER')")` | Requires a valid `Bearer` JWT for an account with role `USER` |
 
 Failure handling matches the rest of the API (see [Failure handling for authorization](#failure-handling-for-authorization)):
 no/invalid token → 401 via `CustomAuthenticationEntryPoint`; valid token without the `USER` role → 403 via
@@ -549,6 +602,9 @@ saved, not a re-extraction preview. `products[].productName` for any re-examined
 the language requested via `language`; unflagged products keep whatever language they already had from the prior
 `processNewShoppingReceipt`/`reprocess` call, since they're carried over unchanged rather than re-extracted.
 
+`products` is returned sorted by `expirationDate` ascending (soonest-to-expire first), nulls last — the sort only
+affects response order, not persistence order.
+
 ### Error responses
 
 | Status | Condition | Body title |
@@ -630,6 +686,9 @@ Unlike reprocess, `shoppingDate`/`storeName`/product fields here are **not** run
 rectification before persisting — they're saved exactly as submitted (storage-spot fallback resolution still
 applies). If `shoppingDate` is in the future, `ShoppingReceipt.create()`'s own domain validation rejects it (see
 error table below) rather than silently clamping it, unlike step 1's preview response.
+
+As with reprocess, `products` is returned sorted by `expirationDate` ascending (soonest-to-expire first), nulls
+last.
 
 ### Error responses
 
