@@ -17,6 +17,7 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ShoppingRec
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ReceiptImageId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +28,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ConfirmShoppingReceiptService implements ConfirmShoppingReceiptUseCase {
     private final SpaceLookUpPort spaceLookUpPort;
     private final ReceiptImageRepositoryPort receiptImageRepositoryPort;
