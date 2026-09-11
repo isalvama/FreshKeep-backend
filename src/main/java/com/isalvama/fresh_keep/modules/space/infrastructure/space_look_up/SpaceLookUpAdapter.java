@@ -3,35 +3,26 @@ package com.isalvama.fresh_keep.modules.space.infrastructure.space_look_up;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.SpaceLookUpPort;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.GetStorageSpotsDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.StorageSpotDto;
-import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.InvalidSpaceReferenceException;
-import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.SpaceNotAccessibleException;
-import com.isalvama.fresh_keep.modules.space.application.port.out.SpaceRepositoryPort;
-import com.isalvama.fresh_keep.modules.space.domain.model.Space;
-import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
-import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
+import com.isalvama.fresh_keep.modules.space.application.port.in.GetStorageSpotsUseCase;
+import com.isalvama.fresh_keep.modules.space.application.port.in.command.GetStorageSpotsCommand;
+import com.isalvama.fresh_keep.modules.space.application.port.in.dto.StorageSpotResult;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-@Service
+@Component
 @RequiredArgsConstructor
 public class SpaceLookUpAdapter implements SpaceLookUpPort {
-    private final SpaceRepositoryPort spaceRepositoryPort;
+    private final GetStorageSpotsUseCase getStorageSpotsUseCase;
 
     @Override
     public List<StorageSpotDto> getStorageSpotsBySpaceIdAndParticipantId(GetStorageSpotsDto dto) {
-        Space space = spaceRepositoryPort.getById(SpaceId.from(dto.spaceId()))
-                .orElseThrow(() -> new InvalidSpaceReferenceException("Space with id " + dto.spaceId() + " does not exist."));
 
-        List<Space> spaces = spaceRepositoryPort.getByParticipantId(UserId.from(dto.creatorId()));
+        List<StorageSpotResult> result = getStorageSpotsUseCase.execute(new GetStorageSpotsCommand(dto.spaceId(), dto.userId()));
 
-        if (!spaces.contains(space)){
-            throw new SpaceNotAccessibleException("User with id " + dto.creatorId() + " is not a participant of the Space with id " + dto.spaceId());
-        }
-
-        return space.getStorageSpots().stream()
-                .map(s -> StorageSpotDto.create(s.getId().toString(), s.getName().value(), s.getType().name()))
+        return result.stream()
+                .map(r -> StorageSpotDto.create(r.id(), r.name(), r.type()))
                 .toList();
     }
 }
