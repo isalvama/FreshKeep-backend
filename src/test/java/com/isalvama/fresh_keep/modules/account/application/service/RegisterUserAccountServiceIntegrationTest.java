@@ -37,7 +37,10 @@ import static org.mockito.Mockito.when;
         "JWT_SECRET=a-very-long-secret-to-avoid-any-key-size-related-errors-123456",
         "application.security.jwt.secret-key=a-very-long-secret-to-avoid-any-key-size-related-errors-123456",
         "application.security.jwt.expiration=3600000",
-        "application.security.jwt.refresh-token.expiration=86400000"
+        "application.security.jwt.refresh-token.expiration=86400000",
+        "cloudinary.cloud_name=test-cloud",
+        "cloudinary.api_key=test-api-key",
+        "cloudinary.api_secret=test-api-secret"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
     class RegisterUserAccountTransactionIntegrationTest {
