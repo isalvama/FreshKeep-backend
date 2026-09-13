@@ -3,6 +3,7 @@ package com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa;
 import com.isalvama.fresh_keep.modules.space.application.port.out.SpaceRepositoryPort;
 import com.isalvama.fresh_keep.modules.space.domain.model.Space;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
+import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotId;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaSpaceEntity;
 import com.isalvama.fresh_keep.modules.space.infrastructure.exception.SpacePersistenceException;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.mapper.SpaceMapper;
@@ -42,6 +43,11 @@ public class JpaSpaceRepositoryAdapter implements SpaceRepositoryPort {
             throw new SpacePersistenceException(
                     "Failed to retrieve data of spaces where user with id " + id + " is participant in: " + e.getMessage());
         }
+    }
+
+    @Override
+    public boolean existsByIdAndParticipantId(UserId userId, StorageSpotId storageSpotId) {
+             return spaceSpringDataRepository.existsByIdAndParticipantId(userId.value(), storageSpotId.value());
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa;
 
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaSpaceEntity;
+import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaStorageSpotEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,4 +16,12 @@ public interface JpaSpaceSpringDataRepository extends JpaRepository<JpaSpaceEnti
         WHERE :participantId member of s.participantIds
         """)
     List<JpaSpaceEntity> findByParticipantId(@Param("participantId") UUID participantId);
+
+    @Query("""
+        SELECT COUNT(ss) > 0 FROM JpaStorageSpotEntity ss
+                JOIN ss.space s
+                        WHERE ss.id = :storageSpottId
+                        AND :participantId member of s.participantIds
+        """)
+    boolean existsByIdAndParticipantId(@Param("participantId") UUID participantId, @Param("StorageSpotId") UUID storageSpotId);
 }
