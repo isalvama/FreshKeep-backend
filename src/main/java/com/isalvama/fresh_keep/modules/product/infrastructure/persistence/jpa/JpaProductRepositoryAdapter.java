@@ -1,6 +1,7 @@
 package com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa;
 
 import com.isalvama.fresh_keep.modules.product.application.port.out.ProductRepositoryPort;
+import com.isalvama.fresh_keep.modules.product.domain.exception.ProductConcurrentlyModifiedException;
 import com.isalvama.fresh_keep.modules.product.domain.model.Product;
 import com.isalvama.fresh_keep.modules.product.domain.model.value_object.ProductId;
 import com.isalvama.fresh_keep.modules.product.infrastructure.exception.ProductPersistenceException;
@@ -8,6 +9,7 @@ import com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa.en
 import com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa.mapper.ProductMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -33,9 +35,14 @@ public class JpaProductRepositoryAdapter implements ProductRepositoryPort {
     @Override
     public void delete(Product product) {
         try {
-            JpaProductEntity entity = mapper.toEntity(product);
+
+            JpaProductEntity entity = jpaProductRepository.findById(product.getId().value()).orElseThrow(() -> new ProductPersistenceException(
+                    "Product with id " + product.getId() + " not found for deletion."));
             entity.delete();
             jpaProductRepository.save(entity);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new ProductConcurrentlyModifiedException(
+                    "Product with id " + product.getId() + " was modified or deleted by someone else in the meantime. Please retry.");
         } catch (DataAccessException e){
             throw new ProductPersistenceException("Failed to delete product with id " + product.getId().toString() + ". " + e.getMessage());
         }

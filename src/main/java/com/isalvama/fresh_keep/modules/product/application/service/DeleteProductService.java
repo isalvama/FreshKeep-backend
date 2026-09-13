@@ -8,6 +8,7 @@ import com.isalvama.fresh_keep.modules.product.domain.exception.NonExistentProdu
 import com.isalvama.fresh_keep.modules.product.domain.model.Product;
 import com.isalvama.fresh_keep.modules.product.domain.model.value_object.ProductId;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.SpaceNotAccessibleException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -18,14 +19,15 @@ public class DeleteProductService implements DeleteProductUseCase {
     private final SpaceParticipancyLookUpPort spaceParticipancyLookUpPort;
 
     @Override
+    @Transactional
     public void execute(DeleteProductCommand command) {
 
         Product product = productRepositoryPort.findById(ProductId.from(command.productId()))
-                .orElseThrow(() -> new NonExistentProductException("Receipt Image with id " + command.productId() + " does not exist."));
+                .orElseThrow(() -> new NonExistentProductException("Product with id " + command.productId() + " does not exist."));
 
         boolean isUserParticipant = spaceParticipancyLookUpPort.isParticipant(command.userId(), product.getActualStorageSpotId().toString());
 
-        if (isUserParticipant){
+        if (!isUserParticipant){
             throw new SpaceNotAccessibleException("User with id " + command.userId() + " is not a participant of the Space with id " + command);
         }
 
