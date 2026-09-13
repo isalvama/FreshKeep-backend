@@ -66,6 +66,9 @@ public class JpaProductEntity implements Persistable<UUID> {
     @Column(name = "last_updated_at")
     private Instant lastUpdatedAt;
 
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
     @Version
     private Long version;
 
@@ -82,6 +85,10 @@ public class JpaProductEntity implements Persistable<UUID> {
     @PostPersist
     void markNotNew() {
         this.isNew = false;
+    }
+
+    public void delete(){
+        this.deletedAt = Instant.now();
     }
 
 }

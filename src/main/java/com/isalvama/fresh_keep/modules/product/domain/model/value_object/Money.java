@@ -27,4 +27,8 @@ public record Money (Amount amount, Currency currency){
     public static Money from (BigDecimal amount, String currencyConstName){
         return new Money(Amount.of(amount), Currency.valueOf(currencyConstName));
     }
+
+    public static Money from (BigDecimal amount, Currency currency){
+        return new Money(Amount.of(amount), currency);
+    }
 }
