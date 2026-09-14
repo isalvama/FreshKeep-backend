@@ -1,6 +1,7 @@
 package com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa;
 
 import com.isalvama.fresh_keep.modules.product.application.port.out.ProductRepositoryPort;
+import com.isalvama.fresh_keep.modules.product.domain.exception.NonExistentProductException;
 import com.isalvama.fresh_keep.modules.product.domain.exception.ProductConcurrentlyModifiedException;
 import com.isalvama.fresh_keep.modules.product.domain.model.Product;
 import com.isalvama.fresh_keep.modules.product.domain.model.value_object.ProductId;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 @RequiredArgsConstructor
@@ -35,9 +37,8 @@ public class JpaProductRepositoryAdapter implements ProductRepositoryPort {
     @Override
     public void delete(Product product) {
         try {
-
-            JpaProductEntity entity = jpaProductRepository.findById(product.getId().value()).orElseThrow(() -> new ProductPersistenceException(
-                    "Product with id " + product.getId() + " not found for deletion."));
+            JpaProductEntity entity = jpaProductRepository.findById(product.getId().value()).orElseThrow(() -> new NonExistentProductException(
+                    "Product with id " + product.getId() + " does not exist."));
             entity.delete();
             jpaProductRepository.save(entity);
         } catch (ObjectOptimisticLockingFailureException e) {
@@ -46,12 +47,40 @@ public class JpaProductRepositoryAdapter implements ProductRepositoryPort {
         } catch (DataAccessException e){
             throw new ProductPersistenceException("Failed to delete product with id " + product.getId().toString() + ". " + e.getMessage());
         }
+    }
 
+    @Override
+    public void deleteAll(List<Product> products) {
+        List<UUID> productsIds = products.stream().map(p -> p.getId().value()).toList();
+        try {
+            List<JpaProductEntity> entities = jpaProductRepository.findAllById(productsIds);
+            if (entities.size() != productsIds.size()) {
+                throw new ProductConcurrentlyModifiedException(
+                        "One or more products with ids " + productsIds + " were modified or deleted by someone else in the meantime. Please retry.");
+            }
+            entities.forEach(JpaProductEntity::delete);
+            jpaProductRepository.saveAllAndFlush(entities);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new ProductConcurrentlyModifiedException(
+                    "One or more products with ids " + productsIds + " were modified or deleted by someone else in the meantime. Please retry.");
+        } catch (DataAccessException e){
+            throw new ProductPersistenceException("Failed to delete products with ids " + productsIds + ". " + e.getMessage());
+        }
     }
 
     @Override
     public Optional<Product> findById(ProductId id) {
         Optional<JpaProductEntity> jpaEntity = jpaProductRepository.findById(id.value());
         return jpaEntity.map(mapper::toDomain);
+    }
+
+    @Override
+    public List<Product> findAllById(List<ProductId> ids) {
+        List<UUID> productIds = ids.stream().map(ProductId::value).toList();
+        List<JpaProductEntity> jpaEntities = jpaProductRepository.findAllById(productIds);
+        if (jpaEntities.isEmpty()){
+            return List.of();
+        }
+        return jpaEntities.stream().map(mapper::toDomain).toList();
     }
 }

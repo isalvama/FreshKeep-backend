@@ -9,5 +9,7 @@ import java.util.Optional;
 public interface ProductRepositoryPort {
     void saveAll(List<Product> product);
     void delete(Product product);
+    void deleteAll(List<Product> products);
     Optional<Product> findById(ProductId id);
+    List<Product> findAllById(List<ProductId> ids);
 }
