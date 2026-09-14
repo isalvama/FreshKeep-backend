@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -21,31 +22,28 @@ import java.util.stream.Collectors;
 public class DeleteProductsService implements DeleteProductsUseCase {
     private final ProductRepositoryPort productRepositoryPort;
     private final SpaceParticipancyLookUpPort spaceParticipancyLookUpPort;
+    private final Clock clock;
 
     @Override
     @Transactional
     public void execute(DeleteProductsCommand command) {
 
-        List<ProductId> ids = command.productsIds().stream().map(ProductId::of).toList();
+        List<ProductId> productIds = command.productsIds().stream().map(ProductId::of).toList();
+        List<Product> products = productRepositoryPort.findAllById(productIds);
 
-        List<Product> products = productRepositoryPort.findAllById(ids);
-
-        List<ProductId> missingIds = products.stream().map(Product::getId).filter(id -> !ids.contains(id)).toList();
-
+        List<ProductId> missingIds = products.stream().map(Product::getId).filter(id -> !productIds.contains(id)).toList();
         if (!missingIds.isEmpty()){
             throw new NonExistentProductException("Products with id " + String.join(", ", missingIds.toString()) + " not found.");
         }
 
         Set<String> storageSpotsIds = products.stream().map(p -> p.getId().toString()).collect(Collectors.toSet());
-
         Set<String> accessibleSpotsIds = spaceParticipancyLookUpPort.filterAccessible(command.userId().toString(), storageSpotsIds);
 
         List<Product> notAccessibleProducts = products.stream().filter(p -> !accessibleSpotsIds.contains(p.getActualStorageSpotId().toString())).toList();
-
         if (!notAccessibleProducts.isEmpty()){
             throw new SpaceNotAccessibleException("User with id " + command.userId() + " is not a participant of the space/s where the product/s with id " + String.join(", ", notAccessibleProducts.stream().map(p -> p.getId().toString()).toList()) + " are.");
         }
 
-        productRepositoryPort.deleteAll(products);
+        productRepositoryPort.deleteAll(products, clock);
     }
 }

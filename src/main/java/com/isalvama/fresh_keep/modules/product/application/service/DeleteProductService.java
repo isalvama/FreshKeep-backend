@@ -12,11 +12,14 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
+
 @Service
 @RequiredArgsConstructor
 public class DeleteProductService implements DeleteProductUseCase {
     private final ProductRepositoryPort productRepositoryPort;
     private final SpaceParticipancyLookUpPort spaceParticipancyLookUpPort;
+    private final Clock clock;
 
     @Override
     @Transactional
@@ -31,6 +34,6 @@ public class DeleteProductService implements DeleteProductUseCase {
             throw new SpaceNotAccessibleException("User with id " + command.userId() + " is not a participant of the Space with id " + command);
         }
 
-        productRepositoryPort.delete(product);
+        productRepositoryPort.delete(product, clock);
     }
 }
