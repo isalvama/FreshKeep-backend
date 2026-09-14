@@ -7,10 +7,12 @@ import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface SpaceRepositoryPort {
     void save (Space space);
     List<Space> getByParticipantId(UserId id);
     boolean existsByIdAndParticipantId(UserId userId, StorageSpotId storageSpotId);
+    Set<String> findAccessible(String userId, List<StorageSpotId> storageSpotIds);
     Optional<Space> getById(SpaceId spaceId);
     }
