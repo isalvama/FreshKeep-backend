@@ -1,6 +1,7 @@
 package com.isalvama.fresh_keep.modules.space.application.port.out;
 
 import com.isalvama.fresh_keep.modules.space.domain.model.Space;
+import com.isalvama.fresh_keep.modules.space.domain.model.StorageSpot;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotId;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
@@ -15,4 +16,5 @@ public interface SpaceRepositoryPort {
     boolean existsByIdAndParticipantId(UserId userId, StorageSpotId storageSpotId);
     Set<String> findAccessible(String userId, List<StorageSpotId> storageSpotIds);
     Optional<Space> getById(SpaceId spaceId);
+    List<StorageSpot> findStorageSpotsByIds(Set<StorageSpotId> storageSpotIds);
     }
