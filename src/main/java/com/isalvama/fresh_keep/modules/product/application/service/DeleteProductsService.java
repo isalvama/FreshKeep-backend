@@ -31,12 +31,13 @@ public class DeleteProductsService implements DeleteProductsUseCase {
         List<ProductId> productIds = command.productsIds().stream().map(ProductId::of).toList();
         List<Product> products = productRepositoryPort.findAllById(productIds);
 
-        List<ProductId> missingIds = products.stream().map(Product::getId).filter(id -> !productIds.contains(id)).toList();
+        Set<ProductId> foundIds = products.stream().map(Product::getId).collect(Collectors.toSet());
+        List<ProductId> missingIds = productIds.stream().filter(id -> !foundIds.contains(id)).toList();
         if (!missingIds.isEmpty()){
-            throw new NonExistentProductException("Products with id " + String.join(", ", missingIds.toString()) + " not found.");
+            throw new NonExistentProductException("Products with id " + missingIds.stream().map(ProductId::toString).collect(Collectors.joining(", ")) + " not found.");
         }
 
-        Set<String> storageSpotsIds = products.stream().map(p -> p.getId().toString()).collect(Collectors.toSet());
+        Set<String> storageSpotsIds = products.stream().map(p -> p.getActualStorageSpotId().toString()).collect(Collectors.toSet());
         Set<String> accessibleSpotsIds = spaceParticipancyLookUpPort.filterAccessible(command.userId().toString(), storageSpotsIds);
 
         List<Product> notAccessibleProducts = products.stream().filter(p -> !accessibleSpotsIds.contains(p.getActualStorageSpotId().toString())).toList();
