@@ -40,8 +40,8 @@ public class JpaProductRepositoryAdapter implements ProductRepositoryPort {
         try {
             JpaProductEntity entity = jpaProductRepository.findById(product.getId().value()).orElseThrow(() -> new NonExistentProductException(
                     "Product with id " + product.getId() + " does not exist."));
-            entity.delete();
-            jpaProductRepository.save(entity);
+            entity.delete(clock.instant());
+            jpaProductRepository.saveAndFlush(entity);
         } catch (ObjectOptimisticLockingFailureException e) {
             throw new ProductConcurrentlyModifiedException(
                     "Product with id " + product.getId() + " was modified or deleted by someone else in the meantime. Please retry.");
@@ -59,7 +59,7 @@ public class JpaProductRepositoryAdapter implements ProductRepositoryPort {
                 throw new ProductConcurrentlyModifiedException(
                         "One or more products with ids " + productsIds + " were modified or deleted by someone else in the meantime. Please retry.");
             }
-            entities.forEach(JpaProductEntity::delete);
+            entities.forEach(entity -> entity.delete(clock.instant()));
             jpaProductRepository.saveAllAndFlush(entities);
         } catch (ObjectOptimisticLockingFailureException e) {
             throw new ProductConcurrentlyModifiedException(

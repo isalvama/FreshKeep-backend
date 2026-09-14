@@ -23,7 +23,7 @@ public interface JpaSpaceSpringDataRepository extends JpaRepository<JpaSpaceEnti
                         WHERE ss.id = :storageSpotId
                         AND :participantId member of s.participantIds
         """)
-    boolean existsByIdAndParticipantId(@Param("participantId") UUID participantId, @Param("StorageSpotId") UUID storageSpotId);
+    boolean existsByIdAndParticipantId(@Param("participantId") UUID participantId, @Param("storageSpotId") UUID storageSpotId);
 
     @Query("""
         SELECT ss.id FROM JpaStorageSpotEntity ss

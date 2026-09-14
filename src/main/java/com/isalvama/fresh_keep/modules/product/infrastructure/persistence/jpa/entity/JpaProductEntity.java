@@ -89,8 +89,8 @@ public class JpaProductEntity implements Persistable<UUID> {
         this.isNew = false;
     }
 
-    public void delete(){
-        this.deletedAt = Instant.now();
+    public void delete(Instant deletedAt){
+        this.deletedAt = deletedAt;
     }
 
 }
