@@ -68,7 +68,7 @@ public class ShoppingReceiptController {
     @Operation(summary = "Reprocess, along with the Shopping Receipt Image, the products flagged by the user and persist the final shopping receipt and products data extracted during receipt processing and reprocessing.")
     public ResponseEntity<ShoppingReceiptResponse> reProcessShoppingReceiptWithFlaggedProducts(
             @PathVariable(name = "spaceId") @UUID String spaceId,
-            @Valid @ModelAttribute ReProcessShoppingReceiptRequest request,
+            @Valid @RequestBody ReProcessShoppingReceiptRequest request,
             @AuthenticationPrincipal(expression = "userId") String userId) {
 
         ReProcessShoppingReceiptCommand command = commandMapper.toReProcessShoppingReceiptCommand(spaceId, request, userId);
@@ -89,7 +89,7 @@ public class ShoppingReceiptController {
     @Operation(summary = "Confirm and persist the shopping receipt and product data extracted during receipt processing.")
     public ResponseEntity<ShoppingReceiptResponse> confirmShoppingReceipt(
             @PathVariable(name = "spaceId") @UUID String spaceId,
-            @Valid @ModelAttribute ConfirmShoppingReceiptRequest request,
+            @Valid @RequestBody ConfirmShoppingReceiptRequest request,
             @AuthenticationPrincipal(expression = "userId") String userId) {
 
         ConfirmShoppingReceiptCommand command = commandMapper.toConfirmShoppingReceiptCommand(spaceId, request, userId);

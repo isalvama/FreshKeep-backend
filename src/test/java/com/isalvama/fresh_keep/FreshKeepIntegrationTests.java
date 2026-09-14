@@ -13,6 +13,7 @@ import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.Jp
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.CustomUserPrincipal;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.JwtTokenGeneratorAdapter;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.JpaSpaceSpringDataRepository;
+import com.isalvama.fresh_keep.modules.product.infrastructure.web.dto.request.DeleteProductsRequest;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.request.CreateSpaceRequest;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.request.StorageSpotRequest;
 import org.junit.jupiter.api.Assumptions;
@@ -48,6 +49,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collection;
@@ -80,6 +82,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class FreshKeepIntegrationTests {
     private static final String API_AUTH = "/api/v1/auth";
     private static final String API_SPACES = "/api/v1/spaces";
+    private static final String API_PRODUCTS = "/api/v1/products";
 
     @Container
     @ServiceConnection
@@ -954,6 +957,208 @@ public class FreshKeepIntegrationTests {
                                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                         batchArgs
                 );
+            }
+        }
+    }
+
+    @Nested
+    @DisplayName(API_PRODUCTS)
+    class Products {
+
+        private static final String EMAIL = "product-owner@email.com";
+        private static final String PASSWORD = "Password1";
+        private String userToken;
+        private UUID storageSpotId;
+        private UUID shoppingReceiptId;
+
+        @Autowired
+        private MockMvc mockMvc;
+
+        @Autowired
+        private ObjectMapper objectMapper;
+
+        @Autowired
+        private AccountSpringDataRepository accountSpringDataRepository;
+
+        @Autowired
+        private JpaSpaceSpringDataRepository spaceSpringDataRepository;
+
+        @Autowired
+        private JwtTokenGeneratorAdapter jwtTokenGeneratorAdapter;
+
+        @Autowired
+        private JdbcTemplate jdbcTemplate;
+
+        @BeforeEach
+        void setUp() throws Exception {
+            spaceSpringDataRepository.deleteAll();
+            accountSpringDataRepository.deleteAll();
+
+            userToken = registerAndLogin(EMAIL, PASSWORD);
+
+            ResultActions spaceCreation = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                    .header("Authorization", "Bearer " + userToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new CreateSpaceRequest(
+                            "Kitchen", "🏠", List.of(new StorageSpotRequest("Fridge", "FRIDGE"))))));
+
+            String spaceResponse = spaceCreation.andReturn().getResponse().getContentAsString();
+            String storageSpotIdString = com.jayway.jsonpath.JsonPath.read(spaceResponse, "$.storageSpots[0].storageSpotId");
+            storageSpotId = UUID.fromString(storageSpotIdString);
+
+            shoppingReceiptId = UUID.randomUUID();
+            jdbcTemplate.update("INSERT INTO shopping_receipts (id) VALUES (?)", shoppingReceiptId);
+        }
+
+        private String registerAndLogin(String email, String password) throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new AuthRequest(email, password))))
+                    .andExpect(status().isCreated());
+
+            ResultActions loginResult = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(new AuthRequest(email, password))));
+
+            String loginResponse = loginResult.andReturn().getResponse().getContentAsString();
+            return com.jayway.jsonpath.JsonPath.read(loginResponse, "$.jwtString");
+        }
+
+        private UUID insertProduct(UUID storageSpotId) {
+            UUID id = UUID.randomUUID();
+            jdbcTemplate.update(
+                    "INSERT INTO products (id, name, expiration_date, suggested_storage_spot_id, actual_storage_spot_id, product_type, shopping_receipt_id, price, currency) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    id, "Milk", LocalDate.now().plusDays(7), storageSpotId, storageSpotId, "DAIRY", shoppingReceiptId, BigDecimal.valueOf(1.5), "USD"
+            );
+            return id;
+        }
+
+        private Instant deletedAtOf(UUID productId) {
+            return jdbcTemplate.queryForObject("SELECT deleted_at FROM products WHERE id = ?", Instant.class, productId);
+        }
+
+        @Nested
+        @DisplayName("DELETE " + API_PRODUCTS + "/{id}")
+        class DeleteProduct {
+
+            @DisplayName("should return 204 and soft-delete the product when authenticated as a participant")
+            @Test
+            void shouldReturn204AndSoftDeleteProductWhenAuthenticatedAsParticipant() throws Exception {
+                UUID productId = insertProduct(storageSpotId);
+
+                mockMvc.perform(MockMvcRequestBuilders.delete(API_PRODUCTS + "/" + productId)
+                                .header("Authorization", "Bearer " + userToken))
+                        .andExpect(status().isNoContent());
+
+                assertNotNull(deletedAtOf(productId));
+            }
+
+            @DisplayName("should return 400 when the product does not exist")
+            @Test
+            void shouldReturn400WhenProductDoesNotExist() throws Exception {
+                mockMvc.perform(MockMvcRequestBuilders.delete(API_PRODUCTS + "/" + UUID.randomUUID())
+                                .header("Authorization", "Bearer " + userToken))
+                        .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.title").value("Business Rule Error"));
+            }
+
+            @DisplayName("should return 409 and leave the product untouched when authenticated user is not a participant of its space")
+            @Test
+            void shouldReturn409WhenNotAParticipant() throws Exception {
+                UUID productId = insertProduct(storageSpotId);
+                String otherUserToken = registerAndLogin("other-user@email.com", PASSWORD);
+
+                mockMvc.perform(MockMvcRequestBuilders.delete(API_PRODUCTS + "/" + productId)
+                                .header("Authorization", "Bearer " + otherUserToken))
+                        .andExpect(status().isConflict());
+
+                assertNull(deletedAtOf(productId));
+            }
+
+            @DisplayName("should return 401 when not authenticated")
+            @Test
+            void shouldReturn401WhenNotAuthenticated() throws Exception {
+                UUID productId = insertProduct(storageSpotId);
+
+                mockMvc.perform(MockMvcRequestBuilders.delete(API_PRODUCTS + "/" + productId))
+                        .andExpect(status().isUnauthorized());
+
+                assertNull(deletedAtOf(productId));
+            }
+        }
+
+        @Nested
+        @DisplayName("DELETE " + API_PRODUCTS)
+        class DeleteProducts {
+
+            @DisplayName("should return 204 and soft-delete every product when authenticated as a participant")
+            @Test
+            void shouldReturn204AndSoftDeleteAllProductsWhenAuthenticatedAsParticipant() throws Exception {
+                UUID milkId = insertProduct(storageSpotId);
+                UUID yogurtId = insertProduct(storageSpotId);
+
+                mockMvc.perform(MockMvcRequestBuilders.delete(API_PRODUCTS)
+                                .header("Authorization", "Bearer " + userToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new DeleteProductsRequest(List.of(milkId, yogurtId)))))
+                        .andExpect(status().isNoContent());
+
+                assertNotNull(deletedAtOf(milkId));
+                assertNotNull(deletedAtOf(yogurtId));
+            }
+
+            @DisplayName("should return 400 and delete nothing when any requested id does not exist")
+            @Test
+            void shouldReturn400AndDeleteNothingWhenAnyIdDoesNotExist() throws Exception {
+                UUID milkId = insertProduct(storageSpotId);
+
+                mockMvc.perform(MockMvcRequestBuilders.delete(API_PRODUCTS)
+                                .header("Authorization", "Bearer " + userToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new DeleteProductsRequest(List.of(milkId, UUID.randomUUID())))))
+                        .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.title").value("Business Rule Error"));
+
+                assertNull(deletedAtOf(milkId));
+            }
+
+            @DisplayName("should return 409 and delete nothing when any product is not accessible to the authenticated user")
+            @Test
+            void shouldReturn409AndDeleteNothingWhenAnyProductIsNotAccessible() throws Exception {
+                UUID milkId = insertProduct(storageSpotId);
+                String otherUserToken = registerAndLogin("other-user@email.com", PASSWORD);
+
+                mockMvc.perform(MockMvcRequestBuilders.delete(API_PRODUCTS)
+                                .header("Authorization", "Bearer " + otherUserToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new DeleteProductsRequest(List.of(milkId)))))
+                        .andExpect(status().isConflict());
+
+                assertNull(deletedAtOf(milkId));
+            }
+
+            @DisplayName("should return 400 when productsIds is empty")
+            @Test
+            void shouldReturn400WhenProductsIdsIsEmpty() throws Exception {
+                mockMvc.perform(MockMvcRequestBuilders.delete(API_PRODUCTS)
+                                .header("Authorization", "Bearer " + userToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new DeleteProductsRequest(List.of()))))
+                        .andExpect(status().isBadRequest());
+            }
+
+            @DisplayName("should return 401 when not authenticated")
+            @Test
+            void shouldReturn401WhenNotAuthenticated() throws Exception {
+                UUID milkId = insertProduct(storageSpotId);
+
+                mockMvc.perform(MockMvcRequestBuilders.delete(API_PRODUCTS)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new DeleteProductsRequest(List.of(milkId)))))
+                        .andExpect(status().isUnauthorized());
+
+                assertNull(deletedAtOf(milkId));
             }
         }
     }
