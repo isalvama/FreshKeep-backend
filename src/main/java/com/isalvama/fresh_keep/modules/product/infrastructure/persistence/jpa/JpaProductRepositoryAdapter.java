@@ -13,6 +13,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Repository;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,7 +36,7 @@ public class JpaProductRepositoryAdapter implements ProductRepositoryPort {
     }
 
     @Override
-    public void delete(Product product) {
+    public void delete(Product product, Clock clock) {
         try {
             JpaProductEntity entity = jpaProductRepository.findById(product.getId().value()).orElseThrow(() -> new NonExistentProductException(
                     "Product with id " + product.getId() + " does not exist."));
@@ -50,7 +51,7 @@ public class JpaProductRepositoryAdapter implements ProductRepositoryPort {
     }
 
     @Override
-    public void deleteAll(List<Product> products) {
+    public void deleteAll(List<Product> products, Clock clock) {
         List<UUID> productsIds = products.stream().map(p -> p.getId().value()).toList();
         try {
             List<JpaProductEntity> entities = jpaProductRepository.findAllById(productsIds);
