@@ -7,6 +7,7 @@ import com.isalvama.fresh_keep.modules.space.domain.model.StorageSpotType;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.Emoji;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceName;
+import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotName;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaSpaceEntity;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.mapper.SpaceMapper;
@@ -252,6 +253,104 @@ class JpaSpaceRepositoryAdapterTest {
         void getById_ShouldReturnEmptyListWhenASpaceWithAMatchingIdDoesNotExist(){
             Optional<Space> result = adapter.getById(SpaceId.create());
             assertTrue(result.isEmpty());
+        }
+    }
+
+    @Nested
+    class ExistsByIdAndParticipantId {
+
+        private StorageSpot spotOnlyCreatorCanAccess;
+        private StorageSpot spotBothCanAccess;
+
+        @BeforeEach
+        void setUp() {
+            spotOnlyCreatorCanAccess = StorageSpot.create(StorageSpotName.from("Freezer"), StorageSpotType.FREEZER);
+            spotBothCanAccess = StorageSpot.create(StorageSpotName.from("Pantry"), StorageSpotType.PANTRY);
+
+            Space creatorOnlySpace = Space.reconstitute(
+                    SpaceId.create(), SpaceName.from("Creator Only"), Emoji.from("🏠"),
+                    Set.of(spotOnlyCreatorCanAccess), creatorUserId, Set.of(creatorUserId)
+            );
+            Space sharedSpace = Space.reconstitute(
+                    SpaceId.create(), SpaceName.from("Shared"), Emoji.from("🏠"),
+                    Set.of(spotBothCanAccess), creatorUserId, Set.of(creatorUserId, participantUserId)
+            );
+
+            adapter.save(creatorOnlySpace);
+            adapter.save(sharedSpace);
+            spaceSpringDataRepository.flush();
+        }
+
+        @Test
+        void shouldReturnTrueWhenUserIsParticipantOfSpaceOwningStorageSpot() {
+            assertTrue(adapter.existsByIdAndParticipantId(participantUserId, spotBothCanAccess.getId()));
+            assertTrue(adapter.existsByIdAndParticipantId(creatorUserId, spotOnlyCreatorCanAccess.getId()));
+        }
+
+        @Test
+        void shouldReturnFalseWhenUserIsNotParticipantOfSpaceOwningStorageSpot() {
+            assertFalse(adapter.existsByIdAndParticipantId(participantUserId, spotOnlyCreatorCanAccess.getId()));
+        }
+
+        @Test
+        void shouldReturnFalseWhenStorageSpotDoesNotExist() {
+            assertFalse(adapter.existsByIdAndParticipantId(creatorUserId, StorageSpotId.create()));
+        }
+    }
+
+    @Nested
+    class FindAccessible {
+
+        private StorageSpot spotOnlyCreatorCanAccess;
+        private StorageSpot spotBothCanAccess;
+
+        @BeforeEach
+        void setUp() {
+            spotOnlyCreatorCanAccess = StorageSpot.create(StorageSpotName.from("Freezer"), StorageSpotType.FREEZER);
+            spotBothCanAccess = StorageSpot.create(StorageSpotName.from("Pantry"), StorageSpotType.PANTRY);
+
+            Space creatorOnlySpace = Space.reconstitute(
+                    SpaceId.create(), SpaceName.from("Creator Only"), Emoji.from("🏠"),
+                    Set.of(spotOnlyCreatorCanAccess), creatorUserId, Set.of(creatorUserId)
+            );
+            Space sharedSpace = Space.reconstitute(
+                    SpaceId.create(), SpaceName.from("Shared"), Emoji.from("🏠"),
+                    Set.of(spotBothCanAccess), creatorUserId, Set.of(creatorUserId, participantUserId)
+            );
+
+            adapter.save(creatorOnlySpace);
+            adapter.save(sharedSpace);
+            spaceSpringDataRepository.flush();
+        }
+
+        @Test
+        void shouldReturnOnlyAccessibleStorageSpotIds() {
+            Set<String> result = adapter.findAccessible(
+                    participantUserId.value().toString(),
+                    List.of(spotOnlyCreatorCanAccess.getId(), spotBothCanAccess.getId())
+            );
+
+            assertEquals(Set.of(spotBothCanAccess.getId().value().toString()), result);
+        }
+
+        @Test
+        void shouldReturnEmptySetWhenNoneAccessible() {
+            Set<String> result = adapter.findAccessible(
+                    participantUserId.value().toString(),
+                    List.of(spotOnlyCreatorCanAccess.getId())
+            );
+
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        void shouldIgnoreNonExistentStorageSpotIds() {
+            Set<String> result = adapter.findAccessible(
+                    creatorUserId.value().toString(),
+                    List.of(spotOnlyCreatorCanAccess.getId(), StorageSpotId.create())
+            );
+
+            assertEquals(Set.of(spotOnlyCreatorCanAccess.getId().value().toString()), result);
         }
     }
 
