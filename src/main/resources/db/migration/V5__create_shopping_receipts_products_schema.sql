@@ -39,6 +39,7 @@ CREATE TABLE products
     currency                  VARCHAR(20),
     created_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     last_updated_at  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at       TIMESTAMP WITH TIME ZONE,
     version                   BIGINT NOT NULL DEFAULT 0,
 
     CONSTRAINT fk_products_suggested_storage_spot

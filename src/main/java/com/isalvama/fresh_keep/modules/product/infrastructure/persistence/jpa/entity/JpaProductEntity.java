@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 import org.springframework.data.domain.Persistable;
@@ -22,6 +23,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Entity
 @Table(name = "products")
+@SQLRestriction("deleted_at IS NULL")
 public class JpaProductEntity implements Persistable<UUID> {
 
     @Id
@@ -66,6 +68,9 @@ public class JpaProductEntity implements Persistable<UUID> {
     @Column(name = "last_updated_at")
     private Instant lastUpdatedAt;
 
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
     @Version
     private Long version;
 
@@ -82,6 +87,10 @@ public class JpaProductEntity implements Persistable<UUID> {
     @PostPersist
     void markNotNew() {
         this.isNew = false;
+    }
+
+    public void delete(Instant deletedAt){
+        this.deletedAt = deletedAt;
     }
 
 }

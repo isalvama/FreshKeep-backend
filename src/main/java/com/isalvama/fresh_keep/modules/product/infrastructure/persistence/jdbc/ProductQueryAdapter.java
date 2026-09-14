@@ -30,6 +30,7 @@ public class ProductQueryAdapter implements ProductQueryPort {
             JOIN storage_spots ss
             ON p.actual_storage_spot_id = ss.id
                WHERE ss.space_id = :spaceId
+                    AND p.deleted_at IS NULL
                     ORDER BY p.expiration_date ASC
     """;
 

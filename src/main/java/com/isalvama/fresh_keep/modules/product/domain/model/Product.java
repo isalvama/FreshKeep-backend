@@ -45,6 +45,17 @@ public class Product {
                 price);
     }
 
+    public static Product reconstitute(ProductId id, ProductName name, LocalDate expirationDate, StorageSpotId suggestedStorageSpotId, ProductType productType, ShoppingReceiptId shoppingReceiptId, Money price) {
+        return new Product(
+                id,
+                name,
+                expirationDate,
+                suggestedStorageSpotId,
+                productType,
+                shoppingReceiptId,
+                price);
+    }
+
     private static <T> T validateNotNull(T fieldValue, String fieldName) {
         if (fieldValue == null)
             throw new InvalidProductException(fieldName + " cannot be null.");
