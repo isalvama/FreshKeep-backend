@@ -1,9 +1,9 @@
-package com.isalvama.fresh_keep.shared.infrastructure.ai.receipt_extraction_reviewer;
+package com.isalvama.fresh_keep.shared.infrastructure;
 
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.AiReceiptExtractionReviewerPort;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReviewNewShoppingReceiptDto;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProductReviewFlag;
+import com.isalvama.fresh_keep.modules.product.application.port.out.ProductMovedExpirationDateCalculatorPort;
+import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductMovedDto;
 import com.isalvama.fresh_keep.shared.infrastructure.ai.dto.ReceiptExtractionToReview;
+import com.isalvama.fresh_keep.shared.infrastructure.ai.receipt_extraction_reviewer.ReviewPromptBuilder;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.AiRetryableException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,18 +12,17 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
+import java.time.LocalDate;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class OllamaReceiptExtractionReviewerAdapter implements AiReceiptExtractionReviewerPort {
+public class OllamaProductMovedExpirationDateCalculatorAdapter implements ProductMovedExpirationDateCalculatorPort {
     private final OllamaChatModel chatModel;
     private final ReviewPromptBuilder reviewPromptBuilder;
+
 
     private static final String TEMPLATE_PROMPT_TEXT = """
             You are reviewing a list of grocery products that were just extracted from a shopping receipt by another AI system. Your job is to catch mistakes, not to redo the extraction.
@@ -47,20 +46,15 @@ public class OllamaReceiptExtractionReviewerAdapter implements AiReceiptExtracti
             """;
 
     @Override
-    @Retryable(retryFor = AiRetryableException.class, maxAttempts = 2,  backoff = @Backoff(delay = 1000))
-    public List<ProductReviewFlag> review(ReviewNewShoppingReceiptDto dto) {
+    public LocalDate execute(ProductMovedDto dto) {
 
-        if (dto == null || dto.productExtractions() == null || dto.productExtractions().isEmpty() || dto.shoppingDate() == null){
-            log.error("OllamaReceiptExtractionReviewerAdapter.review() returns an empty list because ReviewNewShoppingReceiptDto instance is null or has null shoppingDate or null or empty productExtractions");
-            return List.of();
-        }
-
-        BeanOutputConverter<ReceiptExtractionToReview> converter = new BeanOutputConverter<>(ReceiptExtractionToReview.class);
+        BeanOutputConverter<LocalDate> converter = new BeanOutputConverter<>(LocalDate.class);
 
         OllamaChatOptions chatOptions = OllamaChatOptions.builder()
                 .outputSchema(converter.getJsonSchema())
                 .build();
         ChatResponse response;
+
         try {
             response = chatModel.call(new Prompt(reviewPromptBuilder.build(TEMPLATE_PROMPT_TEXT, dto, converter), chatOptions));
         } catch (RuntimeException e) {
@@ -69,8 +63,7 @@ public class OllamaReceiptExtractionReviewerAdapter implements AiReceiptExtracti
 
         return parseAndValidate(response, converter);
     }
-
-    private List<ProductReviewFlag> parseAndValidate(ChatResponse response, BeanOutputConverter<ReceiptExtractionToReview> converter) {
+    private LocalDate parseAndValidate(ChatResponse response, BeanOutputConverter<LocalDate> converter) {
 
         if (response.getResult() == null) {
             throw new AiRetryableException("The AI reviewer did not return any response to the ticket");
@@ -82,18 +75,14 @@ public class OllamaReceiptExtractionReviewerAdapter implements AiReceiptExtracti
             throw new AiRetryableException("The AI reviewer returned and empty response.");
         }
 
-        ReceiptExtractionToReview receiptExtractionToReview;
+        LocalDate expirationDate;
 
         try {
-             receiptExtractionToReview = converter.convert(jsonText);
+            expirationDate = converter.convert(jsonText);
         } catch (Exception e) {
             throw new AiRetryableException("The AI reviewer answer could not be parsed", e);
         }
 
-        if (receiptExtractionToReview.flaggedProducts() == null || receiptExtractionToReview.flaggedProducts().isEmpty()) {
-            return List.of();
-        }
-
-        return receiptExtractionToReview.flaggedProducts();
+        return expirationDate;
     }
-}
+    }
