@@ -66,7 +66,7 @@ public class ProcessNewShoppingReceiptService implements ProcessNewShoppingRecei
                     new ReviewNewShoppingReceiptDto(storageSpotDtos, productExtractions, rectifiedExtraction.purchaseDate()));
         } catch (InfrastructureException e){
             productsToReview = List.of();
-            log.warn("The AiReceiptExtractionReviewerPort.execute() threw an exception with the following message: {}. productsToReview is initialized as an empty list.", e.getMessage());
+            log.warn("The AiReceiptExtractionReviewerPort.execute() threw an exception. productsToReview is initialized as an empty list.", e);
         }
 
         String avatarAssetId = imageStoragePort.upload(command.file(), "shopping_receipts/receipts");

@@ -12,6 +12,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,9 @@ import java.util.List;
 public class OllamaReceiptExtractionReviewerAdapter implements AiReceiptExtractionReviewerPort {
     private final OllamaChatModel chatModel;
     private final ReviewPromptBuilder reviewPromptBuilder;
+
+    @Value("${spring.ai.ollama.chat.options.model}")
+    private String model;
 
     private static final String TEMPLATE_PROMPT_TEXT = """
             You are reviewing a list of grocery products that were just extracted from a shopping receipt by another AI system. Your job is to catch mistakes, not to redo the extraction.
@@ -58,6 +62,7 @@ public class OllamaReceiptExtractionReviewerAdapter implements AiReceiptExtracti
         BeanOutputConverter<ReceiptExtractionToReview> converter = new BeanOutputConverter<>(ReceiptExtractionToReview.class);
 
         OllamaChatOptions chatOptions = OllamaChatOptions.builder()
+                .model(model)
                 .outputSchema(converter.getJsonSchema())
                 .build();
         ChatResponse response;
