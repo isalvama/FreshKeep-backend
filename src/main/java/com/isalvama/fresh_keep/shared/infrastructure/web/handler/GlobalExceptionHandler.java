@@ -2,6 +2,7 @@ package com.isalvama.fresh_keep.shared.infrastructure.web.handler;
 
 import com.isalvama.fresh_keep.modules.account.domain.exception.ForbiddenException;
 import com.isalvama.fresh_keep.modules.account.domain.exception.UnauthorizedException;
+import com.isalvama.fresh_keep.shared.application.exception.ApplicationException;
 import com.isalvama.fresh_keep.shared.domain.exception.ConflictException;
 import com.isalvama.fresh_keep.shared.domain.exception.DomainException;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.*;
@@ -29,6 +30,15 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleInfrastructureException(InfrastructureException ex) {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         problemDetail.setTitle("Server Error");
+        problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    @ResponseBody
+    @ExceptionHandler(ApplicationException.class)
+    public ProblemDetail handleApplicationException(ApplicationException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+        problemDetail.setTitle("Application Server Error");
         problemDetail.setDetail(ex.getMessage());
         return problemDetail;
     }

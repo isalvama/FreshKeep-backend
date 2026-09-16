@@ -2,9 +2,12 @@ package com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa;
 
 import com.isalvama.fresh_keep.modules.space.application.port.out.SpaceRepositoryPort;
 import com.isalvama.fresh_keep.modules.space.domain.model.Space;
+import com.isalvama.fresh_keep.modules.space.domain.model.StorageSpot;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotId;
+import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotName;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaSpaceEntity;
+import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaStorageSpotEntity;
 import com.isalvama.fresh_keep.modules.space.infrastructure.exception.SpacePersistenceException;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.mapper.SpaceMapper;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
@@ -63,5 +66,14 @@ public class JpaSpaceRepositoryAdapter implements SpaceRepositoryPort {
     @Override
     public Optional<Space> getById(SpaceId spaceId) {
         return spaceSpringDataRepository.findById(spaceId.value()).map(spaceMapper::toDomain);
+    }
+
+    @Override
+    public List<StorageSpot> findStorageSpotsByIds(Set<StorageSpotId> storageSpotIds) {
+        Set<UUID> ids = storageSpotIds.stream().map(StorageSpotId::value).collect(Collectors.toSet());
+        List<JpaStorageSpotEntity> entities = spaceSpringDataRepository.findStorageSpotsByIds(ids);
+        return entities.stream()
+                .map(e -> StorageSpot.reconstitute(StorageSpotId.of(e.getId()), StorageSpotName.from(e.getName()), e.getType()))
+                .toList();
     }
 }

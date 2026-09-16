@@ -26,6 +26,7 @@ import org.testcontainers.utility.DockerImageName;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
@@ -136,5 +137,34 @@ class JpaShoppingReceiptRepositoryAdapterTest {
 
             assertTrue(exception.getMessage().contains(invalidReceipt.getId().toString()));
         }
+    }
+
+    @Nested
+    class GetShoppingDate {
+
+        @Test
+        void shouldReturnTheShoppingDateForAnExistingReceipt() {
+            Instant shoppingDate = Instant.parse("2026-09-06T12:00:00Z");
+            insertShoppingReceipt(UUID.fromString(id), shoppingDate);
+
+            Optional<LocalDate> result = adapter.getShoppingDate(ShoppingReceiptId.from(id));
+
+            assertEquals(Optional.of(LocalDate.ofInstant(shoppingDate, ZoneId.systemDefault())), result);
+        }
+
+        @Test
+        void shouldReturnEmptyWhenTheReceiptDoesNotExist() {
+            Optional<LocalDate> result = adapter.getShoppingDate(ShoppingReceiptId.create());
+
+            assertTrue(result.isEmpty());
+        }
+
+    }
+
+    private void insertShoppingReceipt(UUID id, Instant purchaseDate) {
+        jdbcTemplate.update(
+                "INSERT INTO shopping_receipts (id, purchase_date) VALUES (?, ?)",
+                id, java.sql.Timestamp.from(purchaseDate)
+        );
     }
 }
