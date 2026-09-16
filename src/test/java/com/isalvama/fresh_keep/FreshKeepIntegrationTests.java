@@ -6,6 +6,7 @@ import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.Ac
 import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.AuthRequest;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.product.domain.model.ProductType;
+import com.isalvama.fresh_keep.modules.product.application.port.out.ProductMovedExpirationDateCalculatorPort;
 import com.isalvama.fresh_keep.modules.user.domain.model.User;
 import com.isalvama.fresh_keep.modules.user.infrastructure.persistence.jpa.JpaUserRepositoryAdapter;
 import com.isalvama.fresh_keep.shared.domain.value_object.Email;
@@ -14,6 +15,7 @@ import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.Cus
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.JwtTokenGeneratorAdapter;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.JpaSpaceSpringDataRepository;
 import com.isalvama.fresh_keep.modules.product.infrastructure.web.dto.request.DeleteProductsRequest;
+import com.isalvama.fresh_keep.modules.product.infrastructure.web.dto.request.MoveProductRequest;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.request.CreateSpaceRequest;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.request.StorageSpotRequest;
 import org.junit.jupiter.api.Assumptions;
@@ -31,6 +33,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -968,7 +971,9 @@ public class FreshKeepIntegrationTests {
         private static final String EMAIL = "product-owner@email.com";
         private static final String PASSWORD = "Password1";
         private String userToken;
+        private UUID spaceId;
         private UUID storageSpotId;
+        private UUID newStorageSpotId;
         private UUID shoppingReceiptId;
 
         @Autowired
@@ -1003,8 +1008,14 @@ public class FreshKeepIntegrationTests {
                             "Kitchen", "🏠", List.of(new StorageSpotRequest("Fridge", "FRIDGE"))))));
 
             String spaceResponse = spaceCreation.andReturn().getResponse().getContentAsString();
+            spaceId = UUID.fromString(com.jayway.jsonpath.JsonPath.read(spaceResponse, "$.id"));
             String storageSpotIdString = com.jayway.jsonpath.JsonPath.read(spaceResponse, "$.storageSpots[0].storageSpotId");
             storageSpotId = UUID.fromString(storageSpotIdString);
+            newStorageSpotId = UUID.randomUUID();
+            jdbcTemplate.update(
+                    "INSERT INTO storage_spots (id, name, storage_spot_type, space_id) VALUES (?, ?, ?, ?)",
+                    newStorageSpotId, "Freezer", "FREEZER", spaceId
+            );
 
             shoppingReceiptId = UUID.randomUUID();
             jdbcTemplate.update("INSERT INTO shopping_receipts (id) VALUES (?)", shoppingReceiptId);
@@ -1026,16 +1037,54 @@ public class FreshKeepIntegrationTests {
 
         private UUID insertProduct(UUID storageSpotId) {
             UUID id = UUID.randomUUID();
+            UUID userId = jdbcTemplate.queryForObject(
+                    "SELECT id FROM users WHERE email = ?", UUID.class, EMAIL);
             jdbcTemplate.update(
                     "INSERT INTO products (id, name, expiration_date, suggested_storage_spot_id, actual_storage_spot_id, product_type, shopping_receipt_id, price, currency) "
                             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     id, "Milk", LocalDate.now().plusDays(7), storageSpotId, storageSpotId, "DAIRY", shoppingReceiptId, BigDecimal.valueOf(1.5), "USD"
+            );
+            jdbcTemplate.update(
+                    "INSERT INTO product_storage_spot_history (product_id, user_id, new_expiration_date, new_storage_spot_id) "
+                            + "VALUES (?, ?, ?, ?)",
+                    id, userId, LocalDate.now().plusDays(7), storageSpotId
             );
             return id;
         }
 
         private Instant deletedAtOf(UUID productId) {
             return jdbcTemplate.queryForObject("SELECT deleted_at FROM products WHERE id = ?", Instant.class, productId);
+        }
+
+        @Nested
+        @DisplayName("PATCH " + API_PRODUCTS + "/{id}/storage-spot")
+        class MoveProduct {
+
+            @MockitoBean
+            private ProductMovedExpirationDateCalculatorPort expirationDateCalculatorPort;
+
+            @Test
+            void shouldMoveProductAndPersistTheNewStorageSpotAndExpirationDate() throws Exception {
+                UUID productId = insertProduct(storageSpotId);
+                LocalDate newExpirationDate = LocalDate.of(2026, 9, 25);
+                org.mockito.Mockito.when(expirationDateCalculatorPort.execute(org.mockito.ArgumentMatchers.any()))
+                        .thenReturn(newExpirationDate);
+
+                mockMvc.perform(MockMvcRequestBuilders.patch(API_PRODUCTS + "/" + productId + "/storage-spot")
+                                .header("Authorization", "Bearer " + userToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(
+                                        new MoveProductRequest(storageSpotId, newStorageSpotId))))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.productId").value(productId.toString()))
+                        .andExpect(jsonPath("$.newStorageSpotId").value(newStorageSpotId.toString()))
+                        .andExpect(jsonPath("$.newExpirationDate").value(newExpirationDate.toString()));
+
+                Map<String, Object> persistedProduct = jdbcTemplate.queryForMap(
+                        "SELECT actual_storage_spot_id, expiration_date FROM products WHERE id = ?", productId);
+                assertEquals(newStorageSpotId, persistedProduct.get("actual_storage_spot_id"));
+                assertEquals(newExpirationDate, ((java.sql.Date) persistedProduct.get("expiration_date")).toLocalDate());
+            }
         }
 
         @Nested
@@ -1546,4 +1595,3 @@ public class FreshKeepIntegrationTests {
         }
     }
 }
-
