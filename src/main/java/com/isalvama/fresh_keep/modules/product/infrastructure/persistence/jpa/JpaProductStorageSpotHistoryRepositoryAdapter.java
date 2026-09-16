@@ -35,6 +35,9 @@ public class JpaProductStorageSpotHistoryRepositoryAdapter implements ProductSto
     @Override
     public List<ProductMove> findByProductId(ProductId productId) {
         List<JpaProductStorageSpotHistoryEntity> entities = jpaProductStorageSpotHistoryRepository.findByProductId(productId.value());
+        if (entities.isEmpty()) {
+            return List.of();
+        }
         return entities.stream().map(e -> new ProductMove(
                 e.getUserId().toString(),
                 e.getNewStorageSpotId().toString(),

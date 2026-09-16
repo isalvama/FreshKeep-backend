@@ -11,9 +11,9 @@ import java.util.UUID;
 public interface JpaProductStorageSpotHistorySpringDataRepository extends JpaRepository<JpaProductStorageSpotHistoryEntity, Long> {
 
     @Query("""
-        SELECT h FROM JpaProductStorageSpotHistoryEntity
+        SELECT h FROM JpaProductStorageSpotHistoryEntity h
                 WHERE h.productId = :productId
-                        ORDER BY h.changed_at ASC
+                        ORDER BY h.changedAt ASC
         """)
     List<JpaProductStorageSpotHistoryEntity> findByProductId(@Param("productId") UUID productId);
 }

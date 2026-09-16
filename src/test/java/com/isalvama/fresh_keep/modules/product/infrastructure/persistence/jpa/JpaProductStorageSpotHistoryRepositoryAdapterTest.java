@@ -2,6 +2,7 @@ package com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa;
 
 import com.isalvama.fresh_keep.modules.product.domain.model.Product;
 import com.isalvama.fresh_keep.modules.product.domain.model.ProductType;
+import com.isalvama.fresh_keep.modules.product.application.service.dto.ProductMove;
 import com.isalvama.fresh_keep.modules.product.domain.model.value_object.Money;
 import com.isalvama.fresh_keep.modules.product.domain.model.value_object.ProductName;
 import com.isalvama.fresh_keep.modules.product.infrastructure.exception.ProductStorageSpotHistoryPersistenceException;
@@ -127,6 +128,32 @@ class JpaProductStorageSpotHistoryRepositoryAdapterTest {
                     () -> adapter.saveAll(List.of(milk), nonExistentCreatorId));
 
             assertTrue(exception.getMessage().contains(milk.getId().toString()));
+        }
+    }
+
+    @Nested
+    class FindByProductId {
+
+        @Test
+        void shouldReturnProductMovesForTheRequestedProduct() {
+            Product milk = createAndPersistProduct("Milk");
+            adapter.saveAll(List.of(milk), creatorId);
+
+            List<ProductMove> result = adapter.findByProductId(milk.getId());
+
+            assertEquals(1, result.size());
+            ProductMove move = result.getFirst();
+            assertEquals(creatorId.toString(), move.userId());
+            assertEquals(storageSpotId.toString(), move.newStorageSpotId());
+            assertEquals(milk.getExpirationDate(), move.newExpirationDate());
+            assertNotNull(move.changedAt());
+        }
+
+        @Test
+        void shouldReturnEmptyListWhenProductHasNoHistory() {
+            Product milk = createAndPersistProduct("Milk");
+
+            assertTrue(adapter.findByProductId(milk.getId()).isEmpty());
         }
     }
 
