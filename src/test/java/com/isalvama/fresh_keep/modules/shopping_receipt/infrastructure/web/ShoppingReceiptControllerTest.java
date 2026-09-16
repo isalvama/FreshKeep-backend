@@ -19,6 +19,7 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.r
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.ShoppingReceiptResponse;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.web.dto.response.SuggestedStorageSpotResponse;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -111,35 +112,43 @@ class ShoppingReceiptControllerTest {
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder validReprocessRequest() {
         return post(REPROCESS_URL.formatted(SPACE_ID))
-                .param("receiptImageId", UUID.randomUUID().toString())
-                .param("shoppingDate", "2026-09-01")
-                .param("storeName", "SuperMart")
-                .param("language", "es")
-                .param("flaggedProducts[0].expirationDate", "2026-09-10")
-                .param("flaggedProducts[0].productName", "Milk")
-                .param("flaggedProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
-                .param("flaggedProducts[0].productType", "DAIRY")
-                .param("flaggedProducts[0].priceAmount", "1.50")
-                .param("flaggedProducts[0].currency", "USD")
-                .param("allProducts[0].expirationDate", "2026-09-10")
-                .param("allProducts[0].productName", "Milk")
-                .param("allProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
-                .param("allProducts[0].productType", "DAIRY")
-                .param("allProducts[0].priceAmount", "1.50")
-                .param("allProducts[0].currency", "USD");
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "receiptImageId": "%s",
+                          "shoppingDate": "2026-09-01",
+                          "storeName": "SuperMart",
+                          "flaggedProducts": [%s],
+                          "allProducts": [%s],
+                          "language": "es"
+                        }
+                        """.formatted(UUID.randomUUID(), validProductJson(), validProductJson()));
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder validConfirmRequest() {
         return post(CONFIRM_URL.formatted(SPACE_ID))
-                .param("receiptImageId", UUID.randomUUID().toString())
-                .param("shoppingDate", "2026-09-01")
-                .param("storeName", "SuperMart")
-                .param("allProducts[0].expirationDate", "2026-09-10")
-                .param("allProducts[0].productName", "Milk")
-                .param("allProducts[0].suggestedStorageSpotId", UUID.randomUUID().toString())
-                .param("allProducts[0].productType", "DAIRY")
-                .param("allProducts[0].priceAmount", "1.50")
-                .param("allProducts[0].currency", "USD");
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "receiptImageId": "%s",
+                          "shoppingDate": "2026-09-01",
+                          "storeName": "SuperMart",
+                          "allProducts": [%s]
+                        }
+                        """.formatted(UUID.randomUUID(), validProductJson()));
+    }
+
+    private String validProductJson() {
+        return """
+                {
+                  "expirationDate": "2026-09-10",
+                  "productName": "Milk",
+                  "suggestedStorageSpotId": "%s",
+                  "productType": "DAIRY",
+                  "priceAmount": 1.50,
+                  "currency": "USD"
+                }
+                """.formatted(UUID.randomUUID());
     }
 
     @Test

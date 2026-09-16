@@ -18,7 +18,7 @@ public class EnumValueValidator implements ConstraintValidator<EnumValue, String
 
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {
-        if (value == null) return true;
+        if (value == null || value.isBlank()) return true;
 
         boolean isValid = acceptedValues.contains(value.toUpperCase());
 

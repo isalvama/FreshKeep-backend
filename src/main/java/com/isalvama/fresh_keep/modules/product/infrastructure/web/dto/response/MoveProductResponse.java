@@ -1,8 +1,8 @@
-package com.isalvama.fresh_keep.modules.product.application.port.in.result;
+package com.isalvama.fresh_keep.modules.product.infrastructure.web.dto.response;
 
 import java.time.LocalDate;
 
-public record MoveProductResult(
+public record MoveProductResponse (
         String productId,
         String newStorageSpotId,
         LocalDate newExpirationDate
