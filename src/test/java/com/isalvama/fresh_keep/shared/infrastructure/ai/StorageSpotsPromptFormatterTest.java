@@ -1,6 +1,5 @@
 package com.isalvama.fresh_keep.shared.infrastructure.ai;
 
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.StorageSpotDto;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -11,9 +10,9 @@ class StorageSpotsPromptFormatterTest {
 
     @Test
     void format_joinsMultipleStorageSpotsOnePerLine() {
-        List<StorageSpotDto> storageSpots = List.of(
-                StorageSpotDto.create("fridge-id", "Fridge", "FRIDGE"),
-                StorageSpotDto.create("pantry-id", "Pantry", "PANTRY")
+        List<StorageSpotsPromptFormatter.StorageSpotData> storageSpots = List.of(
+                new StorageSpotsPromptFormatter.StorageSpotData("fridge-id", "Fridge", "FRIDGE"),
+                new StorageSpotsPromptFormatter.StorageSpotData("pantry-id", "Pantry", "PANTRY")
         );
 
         String result = StorageSpotsPromptFormatter.format(storageSpots);
@@ -23,7 +22,9 @@ class StorageSpotsPromptFormatterTest {
 
     @Test
     void format_formatsASingleStorageSpotWithoutTrailingNewline() {
-        List<StorageSpotDto> storageSpots = List.of(StorageSpotDto.create("fridge-id", "Fridge", "FRIDGE"));
+        List<StorageSpotsPromptFormatter.StorageSpotData> storageSpots = List.of(
+                new StorageSpotsPromptFormatter.StorageSpotData("fridge-id", "Fridge", "FRIDGE")
+        );
 
         String result = StorageSpotsPromptFormatter.format(storageSpots);
 
@@ -35,5 +36,15 @@ class StorageSpotsPromptFormatterTest {
         String result = StorageSpotsPromptFormatter.format(List.of());
 
         assertEquals("", result);
+    }
+
+    @Test
+    void formatWithTitle_putsTheTitleBeforeTheFormattedStorageSpot() {
+        StorageSpotsPromptFormatter.StorageSpotData storageSpot =
+                new StorageSpotsPromptFormatter.StorageSpotData("fridge-id", "Fridge", "FRIDGE");
+
+        String result = StorageSpotsPromptFormatter.formatWithTitle(storageSpot, "Old Storage Spot");
+
+        assertEquals("Old Storage Spot\n- id: fridge-id, name: Fridge, type: FRIDGE", result);
     }
 }

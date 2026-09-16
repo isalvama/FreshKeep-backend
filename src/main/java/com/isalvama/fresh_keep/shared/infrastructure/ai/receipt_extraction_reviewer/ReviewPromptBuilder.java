@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -19,7 +20,14 @@ public class ReviewPromptBuilder {
 
     public String build(String promptTextTemplate, ReviewNewShoppingReceiptDto dto, BeanOutputConverter<ReceiptExtractionToReview> converter) {
 
-        String storageSpotsList = StorageSpotsPromptFormatter.format(dto.storageSpots());
+        List<StorageSpotsPromptFormatter.StorageSpotData> storageSpotData = dto.storageSpots().stream().map(sp -> new StorageSpotsPromptFormatter.StorageSpotData(
+                sp.id(),
+                sp.name(),
+                sp.type()
+                )
+        ).toList();
+
+        String storageSpotsList = StorageSpotsPromptFormatter.format(storageSpotData);
 
         Map<String, Object> map = buildBaseMap(new CommonPlaceholders(dto.shoppingDate()), converter);
         map.put("storageSpots", storageSpotsList);
@@ -29,14 +37,33 @@ public class ReviewPromptBuilder {
         return promptTemplate.render(map);
     }
 
+
     public String build(String promptTextTemplate, ProductMovedDto dto, BeanOutputConverter<LocalDate> converter) {
 
         String productChangesList = ProductChangesPromptFormatter.format(dto.productChanges());
+
+        String oldStorageSpotString = StorageSpotsPromptFormatter.formatWithTitle(new StorageSpotsPromptFormatter.StorageSpotData(
+                        dto.oldStorageSpotInfo().id(),
+                        dto.oldStorageSpotInfo().name(),
+                        dto.oldStorageSpotInfo().type()
+                ),
+                "Old Storage Spot"
+        );
+
+        String newStorageSpotString = StorageSpotsPromptFormatter.formatWithTitle(new StorageSpotsPromptFormatter.StorageSpotData(
+                        dto.newStorageSpotInfo().id(),
+                        dto.newStorageSpotInfo().name(),
+                        dto.newStorageSpotInfo().type()
+                ),
+                "New Storage Spot"
+        );
 
         Map<String, Object> map = buildBaseMap(new CommonPlaceholders(dto.shoppingDate()), converter);
         map.put("productName", dto.productName());
         map.put("productType", dto.productType());
         map.put("productChanges", productChangesList);
+        map.put("oldStorageSpot", oldStorageSpotString);
+        map.put("newStorageSpot", newStorageSpotString);
         map.put("today", LocalDateTime.now(dto.clock()).toString());
 
         PromptTemplate promptTemplate = new PromptTemplate(promptTextTemplate);

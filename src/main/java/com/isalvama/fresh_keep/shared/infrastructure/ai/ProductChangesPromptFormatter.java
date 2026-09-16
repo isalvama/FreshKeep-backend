@@ -11,7 +11,7 @@ public class ProductChangesPromptFormatter {
 
     public static String format(List<ProductChangesDto> productChangesDtos) {
         return productChangesDtos.stream()
-                .map(pc -> "- new storage spot name: %s, new storage spot type: %s, change date: %s, new expiration date set with the change: %s".formatted(pc.newStorageSpotName(), pc.newStorageSpotType(), pc.changedAt().toString(), pc.newExpirationDate()))
+                .map(pc -> "- storage spot name: %s, new storage spot type: %s, change date: %s, new expiration date set with the change: %s".formatted(pc.newStorageSpotName(), pc.newStorageSpotType(), pc.changedAt().toString(), pc.newExpirationDate()))
                 .collect(Collectors.joining("\n"));
     }
 }
