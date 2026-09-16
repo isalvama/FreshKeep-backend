@@ -9,6 +9,8 @@ public record ProductMovedDto(
         String productType,
         LocalDate shoppingDate,
         List<ProductChangesDto> productChanges,
+        StorageSpotInfoDto oldStorageSpotInfo,
+        StorageSpotInfoDto newStorageSpotInfo,
         Clock clock
 ) {
 }
