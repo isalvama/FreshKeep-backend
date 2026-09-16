@@ -126,6 +126,45 @@ class JpaSpaceRepositoryAdapterTest {
     }
 
     @Nested
+    class FindStorageSpotsByIds {
+
+        @Test
+        void shouldReturnStorageSpotsMatchingTheRequestedIds() {
+            UUID spaceId = UUID.randomUUID();
+            UUID fridgeId = UUID.randomUUID();
+            UUID pantryId = UUID.randomUUID();
+            insertSpace(spaceId, "Kitchen", "🏠");
+            insertStorageSpot(fridgeId, "Fridge", "FRIDGE", spaceId);
+            insertStorageSpot(pantryId, "Pantry", "PANTRY", spaceId);
+
+            List<StorageSpot> result = adapter.findStorageSpotsByIds(Set.of(
+                    StorageSpotId.of(fridgeId), StorageSpotId.of(pantryId)));
+
+            assertEquals(2, result.size());
+            assertTrue(result.stream().anyMatch(spot -> spot.getId().value().equals(fridgeId)
+                    && spot.getName().value().equals("Fridge")
+                    && spot.getType() == StorageSpotType.FRIDGE));
+            assertTrue(result.stream().anyMatch(spot -> spot.getId().value().equals(pantryId)
+                    && spot.getName().value().equals("Pantry")
+                    && spot.getType() == StorageSpotType.PANTRY));
+        }
+
+        @Test
+        void shouldReturnOnlyExistingStorageSpots() {
+            UUID spaceId = UUID.randomUUID();
+            UUID existingId = UUID.randomUUID();
+            insertSpace(spaceId, "Kitchen", "🏠");
+            insertStorageSpot(existingId, "Fridge", "FRIDGE", spaceId);
+
+            List<StorageSpot> result = adapter.findStorageSpotsByIds(Set.of(
+                    StorageSpotId.of(existingId), StorageSpotId.create()));
+
+            assertEquals(1, result.size());
+            assertEquals(existingId, result.getFirst().getId().value());
+        }
+    }
+
+    @Nested
     class GetSpaces {
 
         private Space space1;
@@ -365,6 +404,20 @@ class JpaSpaceRepositoryAdapterTest {
         jdbcTemplate.update(
                 "INSERT INTO users (id, account_id, email, username) VALUES (?, ?, ?, ?)",
                 id, accountId, email, username
+        );
+    }
+
+    private void insertSpace(UUID id, String name, String emoji) {
+        jdbcTemplate.update(
+                "INSERT INTO spaces (id, name, emoji) VALUES (?, ?, ?)",
+                id, name, emoji
+        );
+    }
+
+    private void insertStorageSpot(UUID id, String name, String type, UUID spaceId) {
+        jdbcTemplate.update(
+                "INSERT INTO storage_spots (id, name, storage_spot_type, space_id) VALUES (?, ?, ?, ?)",
+                id, name, type, spaceId
         );
     }
 }
