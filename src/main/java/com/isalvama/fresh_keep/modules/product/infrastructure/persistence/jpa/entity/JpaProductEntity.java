@@ -89,6 +89,20 @@ public class JpaProductEntity implements Persistable<UUID> {
         this.isNew = false;
     }
 
+    @PreUpdate
+    protected void onUpdate() {
+        lastUpdatedAt = Instant.now();
+    }
+
+    public void updateProfile(String name, LocalDate expirationDate, UUID actualStorageSpotId, ProductType productType, BigDecimal price, Currency currency){
+        this.name = name;
+        this.expirationDate = expirationDate;
+        this.actualStorageSpotId = actualStorageSpotId;
+        this.productType = productType;
+        this.price = price;
+        this.currency = currency;
+    }
+
     public void delete(Instant deletedAt){
         this.deletedAt = deletedAt;
     }
