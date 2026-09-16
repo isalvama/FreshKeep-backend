@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
@@ -29,8 +30,8 @@ public class JpaShoppingReceiptRepositoryAdapter implements ShoppingReceiptRepos
     }
 
     @Override
-    public LocalDate getShoppingDate(ShoppingReceiptId shoppingReceiptId) {
-        Instant shoppingDate = jpaRepository.getShoppingDateById(shoppingReceiptId.value());
-        return LocalDate.ofInstant(shoppingDate, ZoneId.systemDefault());
+    public Optional<LocalDate> getShoppingDate(ShoppingReceiptId shoppingReceiptId) {
+        Optional<Instant> shoppingDate = jpaRepository.getShoppingDateById(shoppingReceiptId.value());
+        return shoppingDate.map(instant -> LocalDate.ofInstant(instant, ZoneId.systemDefault()));
     }
 }
