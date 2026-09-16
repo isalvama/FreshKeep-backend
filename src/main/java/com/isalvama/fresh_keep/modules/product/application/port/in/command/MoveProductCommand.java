@@ -1,9 +1,11 @@
 package com.isalvama.fresh_keep.modules.product.application.port.in.command;
 
+import java.util.UUID;
+
 public record MoveProductCommand(
-        String userId,
-        String productId,
-        String oldStorageSpotId,
-        String newStorageSpotId
+        UUID userId,
+        UUID productId,
+        UUID oldStorageSpotId,
+        UUID newStorageSpotId
 ) {
 }
