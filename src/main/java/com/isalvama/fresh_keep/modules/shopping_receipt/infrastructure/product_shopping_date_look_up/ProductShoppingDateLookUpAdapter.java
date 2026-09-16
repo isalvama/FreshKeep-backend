@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -14,7 +15,7 @@ public class ProductShoppingDateLookUpAdapter implements ProductShoppingDateLook
     private final ShoppingReceiptRepositoryPort shoppingReceiptRepositoryPort;
 
     @Override
-    public LocalDate findShoppingDate(String shoppingReceiptId) {
+    public Optional<LocalDate> findShoppingDate(String shoppingReceiptId) {
         return shoppingReceiptRepositoryPort.getShoppingDate(ShoppingReceiptId.from(shoppingReceiptId));
     }
 }
