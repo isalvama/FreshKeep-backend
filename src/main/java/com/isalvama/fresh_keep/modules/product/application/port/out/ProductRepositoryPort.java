@@ -8,7 +8,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ProductRepositoryPort {
-    void saveAll(List<Product> product);
+    void saveAll(List<Product> products);
+    void save(Product product);
     void delete(Product product, Clock clock);
     void deleteAll(List<Product> products, Clock clock);
     Optional<Product> findById(ProductId id);

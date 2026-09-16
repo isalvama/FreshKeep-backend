@@ -1,6 +1,7 @@
 package com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa;
 
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaSpaceEntity;
+import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaStorageSpotEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -32,4 +33,10 @@ public interface JpaSpaceSpringDataRepository extends JpaRepository<JpaSpaceEnti
                         AND :participantId member of s.participantIds
         """)
     Set<UUID> findAccessible (@Param("participantId") UUID participantId, @Param("ids") List<UUID> storageSpotIds);
+
+    @Query("""
+        SELECT ss FROM JpaStorageSpotEntity ss
+                WHERE ss.id IN :ids
+        """)
+    List<JpaStorageSpotEntity> findStorageSpotsByIds (@Param("ids") Set<UUID> storageSpotIds);
 }

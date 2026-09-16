@@ -1,8 +1,10 @@
 package com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.mapper;
 
 import com.isalvama.fresh_keep.modules.space.application.port.in.dto.GetSpaceOverviewResult;
+import com.isalvama.fresh_keep.modules.space.application.port.in.dto.SpaceProductResult;
 import com.isalvama.fresh_keep.modules.space.application.port.in.dto.SpaceResult;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.response.SpaceOverviewResponse;
+import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.response.SpaceProductResponse;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.response.SpaceResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -30,7 +32,19 @@ public class SpaceResponseMapper {
                 result.name(),
                 result.emoji(),
                 result.storageSpots().stream().map(storageSpotResponseMapper::toResponse).toList(),
-                result.productResults().stream().map(productResponseMapper::toResponse).toList()
+                result.productResults().stream().map(this::toResponse).toList()
+        );
+    }
+
+    public SpaceProductResponse toResponse (SpaceProductResult result){
+        return new SpaceProductResponse(
+                result.id(),
+                result.productName(),
+                result.expirationDate(),
+                result.storageSpotId(),
+                result.productType(),
+                result.priceAmount(),
+                result.currency()
         );
     }
 }

@@ -37,11 +37,18 @@ public class PromptBuilder {
     }
 
     private Map<String, Object> buildBaseMap(CommonPlaceholders cp, BeanOutputConverter<?> converter){
+
+        List<StorageSpotsPromptFormatter.StorageSpotData> storageSpotData = cp.storageSpots().stream().map(sp -> new StorageSpotsPromptFormatter.StorageSpotData(
+                sp.id(),
+                sp.name(),
+                sp.type()
+        )).toList();
+
         return new HashMap<>(Map.of(
                 "format", converter.getFormat(),
                 "productTypes", String.join(", ", cp.productTypes()),
                 "moneyCurrencies", String.join(", ", cp.moneyCurrencies()),
-                "storageSpots", StorageSpotsPromptFormatter.format(cp.storageSpots()),
+                "storageSpots", StorageSpotsPromptFormatter.format(storageSpotData),
                 "today", LocalDateTime.now(cp.clock()).toString(),
                 "language", cp.language
         ));

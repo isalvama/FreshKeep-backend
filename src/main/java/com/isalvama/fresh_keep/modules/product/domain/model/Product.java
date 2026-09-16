@@ -17,7 +17,7 @@ public class Product {
     private final ProductId id;
     private final ProductName name;
     private LocalDate expirationDate;
-    private StorageSpotId suggestedStorageSpotId;
+    private final StorageSpotId suggestedStorageSpotId;
     private StorageSpotId actualStorageSpotId;
     private ProductType productType;
     private final ShoppingReceiptId shoppingReceiptId;
@@ -60,5 +60,10 @@ public class Product {
         if (fieldValue == null)
             throw new InvalidProductException(fieldName + " cannot be null.");
         return fieldValue;
+    }
+
+    public void updateStorageSpot(StorageSpotId newStorageSpotId, LocalDate newExpirationDate){
+        this.actualStorageSpotId = validateNotNull(newStorageSpotId, "newStorageSpotId");
+        this.expirationDate = validateNotNull(newExpirationDate, "newExpirationDate");
     }
 }

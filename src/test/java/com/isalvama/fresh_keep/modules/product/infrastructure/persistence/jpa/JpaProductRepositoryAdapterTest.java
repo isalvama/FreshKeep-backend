@@ -64,10 +64,11 @@ class JpaProductRepositoryAdapterTest {
 
     private UUID storageSpotId;
     private UUID shoppingReceiptId;
+    private UUID spaceId;
 
     @BeforeEach
     void setUp() {
-        UUID spaceId = UUID.randomUUID();
+        spaceId = UUID.randomUUID();
         storageSpotId = UUID.randomUUID();
         shoppingReceiptId = UUID.randomUUID();
 
@@ -87,6 +88,63 @@ class JpaProductRepositoryAdapterTest {
         );
         product.setActualStorageSpotId(StorageSpotId.of(storageSpotId));
         return product;
+    }
+
+    @Nested
+    class Save {
+
+        @Test
+        void shouldPersistNewProduct() {
+            Product product = createProduct("Milk", BigDecimal.valueOf(1.5), "USD");
+
+            adapter.save(product);
+            jpaProductRepository.flush();
+
+            JpaProductEntity saved = jpaProductRepository.findById(product.getId().value()).orElseThrow();
+            assertEquals(product.getId().value(), saved.getId());
+            assertEquals("Milk", saved.getName());
+            assertEquals(product.getExpirationDate(), saved.getExpirationDate());
+            assertEquals(storageSpotId, saved.getSuggestedStorageSpotId());
+            assertEquals(storageSpotId, saved.getActualStorageSpotId());
+            assertEquals(ProductType.DAIRY, saved.getProductType());
+            assertEquals(shoppingReceiptId, saved.getShoppingReceiptId());
+            assertEquals(0, BigDecimal.valueOf(1.5).compareTo(saved.getPrice()));
+            assertEquals(Currency.USD, saved.getCurrency());
+        }
+
+        @Test
+        void shouldUpdateExistingProductWithoutChangingImmutableFields() {
+            Product original = createProduct("Milk", BigDecimal.valueOf(1.5), "USD");
+            adapter.save(original);
+            jpaProductRepository.flush();
+
+            UUID updatedStorageSpotId = UUID.randomUUID();
+            insertStorageSpot(updatedStorageSpotId, "Pantry", "PANTRY", spaceId);
+            Product updated = Product.reconstitute(
+                    original.getId(),
+                    ProductName.from("Updated Milk"),
+                    LocalDate.now().plusDays(14),
+                    StorageSpotId.of(UUID.randomUUID()),
+                    ProductType.PANTRY,
+                    ShoppingReceiptId.of(UUID.randomUUID()),
+                    Money.from(BigDecimal.valueOf(9.99), "EUR")
+            );
+            updated.setActualStorageSpotId(StorageSpotId.of(updatedStorageSpotId));
+
+            adapter.save(updated);
+            jpaProductRepository.flush();
+            entityManager.clear();
+
+            JpaProductEntity saved = jpaProductRepository.findById(original.getId().value()).orElseThrow();
+            assertEquals("Updated Milk", saved.getName());
+            assertEquals(updated.getExpirationDate(), saved.getExpirationDate());
+            assertEquals(updatedStorageSpotId, saved.getActualStorageSpotId());
+            assertEquals(ProductType.PANTRY, saved.getProductType());
+            assertEquals(storageSpotId, saved.getSuggestedStorageSpotId());
+            assertEquals(shoppingReceiptId, saved.getShoppingReceiptId());
+            assertEquals(0, BigDecimal.valueOf(1.5).compareTo(saved.getPrice()));
+            assertEquals(Currency.USD, saved.getCurrency());
+        }
     }
 
     @Nested

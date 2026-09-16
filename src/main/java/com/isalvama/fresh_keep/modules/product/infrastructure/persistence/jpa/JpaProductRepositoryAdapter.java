@@ -36,6 +36,25 @@ public class JpaProductRepositoryAdapter implements ProductRepositoryPort {
     }
 
     @Override
+    public void save(Product product) {
+        jpaProductRepository.findById(product.getId().value())
+                .map(entity -> {
+                            entity.updateProfile(
+                                    product.getName().value(),
+                                    product.getExpirationDate(),
+                                    product.getActualStorageSpotId().value(),
+                                    product.getProductType(),
+                                    product.getPrice().amount().value(),
+                                    product.getPrice().currency()
+                            );
+                            jpaProductRepository.save(entity);
+                            return entity;
+                        }
+                )
+                .orElseGet(() -> jpaProductRepository.save(mapper.toEntity(product)));
+    }
+
+    @Override
     public void delete(Product product, Clock clock) {
         try {
             JpaProductEntity entity = jpaProductRepository.findById(product.getId().value()).orElseThrow(() -> new NonExistentProductException(
