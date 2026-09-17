@@ -4,15 +4,14 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.comm
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.command.ProductCommand;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ShoppingReceiptResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.ProductRegistrationPort;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.ReceiptImageRepositoryPort;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.ShoppingReceiptRepositoryPort;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.SpaceLookUpPort;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.*;
-import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.NonExistentReceiptImageException;
-import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ReceiptImage;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.NonExistentShoppingReceiptException;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ShoppingReceipt;
-import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.AssetId;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ShoppingReceiptStatus;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ReceiptImageId;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ShoppingReceiptId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,11 +40,11 @@ class ConfirmShoppingReceiptServiceTest {
     @Mock
     private SpaceLookUpPort spaceLookUpPort;
     @Mock
-    private ReceiptImageRepositoryPort receiptImageRepositoryPort;
-    @Mock
     private ShoppingReceiptRepositoryPort shoppingReceiptRepositoryPort;
     @Mock
     private StorageSpotSuggestionResolver storageSpotSuggestionResolver;
+    @Mock
+    private ExtractionDataRectifier extractionDataRectifier;
     @Mock
     private ProductRegistrationPort productRegistrationPort;
 
@@ -54,19 +53,18 @@ class ConfirmShoppingReceiptServiceTest {
     private ConfirmShoppingReceiptService service;
 
     private final String receiptImageId = ReceiptImageId.create().toString();
+    private final String shoppingReceiptId = ShoppingReceiptId.create().toString();
     private final String spaceId = SpaceId.create().toString();
     private final String creatorId = UserId.create().toString();
     private final LocalDate shoppingDate = LocalDate.of(2026, 9, 5);
     private final String storeName = "SuperMart";
 
     private final ProductCommand productCommand = new ProductCommand(
-            LocalDate.of(2026, 9, 15), "Milk", "fridge-id", "DAIRY", BigDecimal.valueOf(1.5), "USD");
+            LocalDate.of(2026, 9, 15), "Milk", "fridge-id", "DAIRY", BigDecimal.valueOf(1.5), "USD", false);
 
     private final ConfirmShoppingReceiptCommand command = new ConfirmShoppingReceiptCommand(
-            receiptImageId, spaceId, creatorId, shoppingDate, storeName, List.of(productCommand)
+                shoppingReceiptId, receiptImageId, spaceId, creatorId, shoppingDate, storeName, List.of(productCommand)
     );
-
-    private final ReceiptImage receiptImage = ReceiptImage.create(AssetId.of("shopping_receipts/receipts/abc123"), "image/jpeg");
 
     private final List<StorageSpotDto> storageSpots = List.of(StorageSpotDto.create("fridge-id", "Fridge", "FRIDGE"));
 
@@ -78,13 +76,23 @@ class ConfirmShoppingReceiptServiceTest {
             new RegisteredProductDto(UUID.randomUUID(), "Milk", LocalDate.of(2026, 9, 15), "fridge-id", "DAIRY", BigDecimal.valueOf(1.5), "USD")
     );
 
+    private final ShoppingReceipt shoppingReceipt = ShoppingReceipt.reconstitute(
+            ShoppingReceiptId.from(shoppingReceiptId),
+            UserId.from(creatorId),
+            SpaceId.from(spaceId),
+            ReceiptImageId.from(receiptImageId),
+            shoppingDate,
+            storeName,
+            ShoppingReceiptStatus.DRAFT
+    );
+
     @BeforeEach
     void setUp() {
         service = new ConfirmShoppingReceiptService(
                 spaceLookUpPort,
-                receiptImageRepositoryPort,
                 shoppingReceiptRepositoryPort,
                 storageSpotSuggestionResolver,
+                extractionDataRectifier,
                 productRegistrationPort,
                 clock
         );
@@ -92,19 +100,19 @@ class ConfirmShoppingReceiptServiceTest {
 
     private void stubHappyPath() {
         when(spaceLookUpPort.getStorageSpotsBySpaceIdAndParticipantId(any())).thenReturn(storageSpots);
-        when(receiptImageRepositoryPort.findById(ReceiptImageId.from(receiptImageId))).thenReturn(Optional.of(receiptImage));
+        when(shoppingReceiptRepositoryPort.getById(ShoppingReceiptId.from(shoppingReceiptId))).thenReturn(Optional.of(shoppingReceipt));
         when(storageSpotSuggestionResolver.resolve(any(), any())).thenReturn(resolvedProductExtractions);
         when(productRegistrationPort.registerProducts(any())).thenReturn(registeredProducts);
     }
 
     @Test
-    void execute_throwsNonExistentReceiptImageExceptionWhenReceiptImageDoesNotExist() {
+    void execute_throwsNonExistentShoppingReceiptExceptionWhenReceiptDoesNotExist() {
         when(spaceLookUpPort.getStorageSpotsBySpaceIdAndParticipantId(any())).thenReturn(storageSpots);
-        when(receiptImageRepositoryPort.findById(ReceiptImageId.from(receiptImageId))).thenReturn(Optional.empty());
+        when(shoppingReceiptRepositoryPort.getById(ShoppingReceiptId.from(shoppingReceiptId))).thenReturn(Optional.empty());
 
-        assertThrows(NonExistentReceiptImageException.class, () -> service.execute(command));
+        assertThrows(NonExistentShoppingReceiptException.class, () -> service.execute(command));
 
-        verifyNoInteractions(storageSpotSuggestionResolver, shoppingReceiptRepositoryPort, productRegistrationPort);
+        verifyNoInteractions(storageSpotSuggestionResolver, productRegistrationPort);
     }
 
     @Test
@@ -115,7 +123,7 @@ class ConfirmShoppingReceiptServiceTest {
 
         ShoppingReceiptResult result = service.execute(command);
 
-        verify(shoppingReceiptRepositoryPort).save(shoppingReceiptCaptor.capture());
+        verify(shoppingReceiptRepositoryPort).update(shoppingReceiptCaptor.capture());
         String expectedShoppingReceiptId = shoppingReceiptCaptor.getValue().getId().toString();
 
         assertEquals(expectedShoppingReceiptId, result.shoppingReceiptId());
@@ -162,12 +170,12 @@ class ConfirmShoppingReceiptServiceTest {
         service.execute(command);
 
         ArgumentCaptor<ShoppingReceipt> shoppingReceiptCaptor = ArgumentCaptor.forClass(ShoppingReceipt.class);
-        verify(shoppingReceiptRepositoryPort).save(shoppingReceiptCaptor.capture());
+        verify(shoppingReceiptRepositoryPort).update(shoppingReceiptCaptor.capture());
 
         ShoppingReceipt savedReceipt = shoppingReceiptCaptor.getValue();
         assertEquals(UserId.from(creatorId), savedReceipt.getCreatorId());
         assertEquals(SpaceId.from(spaceId), savedReceipt.getSpaceId());
-        assertEquals(receiptImage.getId(), savedReceipt.getReceiptImageId());
+        assertEquals(ReceiptImageId.from(receiptImageId), savedReceipt.getReceiptImageId());
         assertEquals(shoppingDate, savedReceipt.getPurchaseDate());
         assertEquals(storeName, savedReceipt.getStoreName());
     }
