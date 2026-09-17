@@ -64,6 +64,12 @@ public class ShoppingReceipt {
         );
     }
 
+    public void confirm(LocalDate purchaseDate, String storeName) {
+        this.purchaseDate = validateNotNull(purchaseDate, "purchaseDate");
+        this.storeName = storeName;
+        this.status = ShoppingReceiptStatus.CONFIRMED;
+    }
+
     private static <T> T validateNotNull(T fieldValue, String fieldName) {
         if (fieldValue == null)
             throw new InvalidShoppingReceiptException(fieldName + " cannot be null.");

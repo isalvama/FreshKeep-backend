@@ -130,12 +130,13 @@ class ShoppingReceiptControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
+                          "shoppingReceiptId": "%s",
                           "receiptImageId": "%s",
                           "shoppingDate": "2026-09-01",
                           "storeName": "SuperMart",
                           "allProducts": [%s]
                         }
-                        """.formatted(UUID.randomUUID(), validProductJson()));
+                        """.formatted(UUID.randomUUID(), UUID.randomUUID(), validProductJson()));
     }
 
     private String validProductJson() {
@@ -146,7 +147,8 @@ class ShoppingReceiptControllerTest {
                   "suggestedStorageSpotId": "%s",
                   "productType": "DAIRY",
                   "priceAmount": 1.50,
-                  "currency": "USD"
+                  "currency": "USD",
+                  "manuallyEditedExpirationDate": false
                 }
                 """.formatted(UUID.randomUUID());
     }
