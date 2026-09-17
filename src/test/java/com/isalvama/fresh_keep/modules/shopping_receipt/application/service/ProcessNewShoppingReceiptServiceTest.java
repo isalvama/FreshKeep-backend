@@ -4,7 +4,8 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.comm
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.ProcessNewShoppingReceiptResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.*;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.RectifyExtractionDto;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.ProcessReceiptToRectifyDto;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.RectifiedReceiptDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ReceiptImage;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.InvalidReceiptImageException;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.InfrastructureException;
@@ -71,8 +72,8 @@ class ProcessNewShoppingReceiptServiceTest {
             List.of(new ProductExtraction(LocalDate.of(2026, 9, 10), "Milk-Raw", "fridge-id", "DAIRY", BigDecimal.valueOf(2.5), "USD"))
     );
 
-    private final ReceiptExtraction dateRectifiedExtraction = new ReceiptExtraction(
-            LocalDate.of(2026, 9, 1), "SuperMart", null,
+    private final RectifiedReceiptDto dateRectifiedExtraction = new RectifiedReceiptDto(
+            LocalDate.of(2026, 9, 1),
             List.of(new ProductExtraction(LocalDate.of(2026, 9, 9), "Milk-DateRectified", "fridge-id", "DAIRY", BigDecimal.valueOf(2.5), "USD"))
     );
 
@@ -102,7 +103,7 @@ class ProcessNewShoppingReceiptServiceTest {
         when(productCategoriesLookUpPort.getProductTypesAndMoneyCurrencyConstNames()).thenReturn(categories);
         when(languageResolver.resolve(any())).thenReturn(resolvedLanguage);
         when(shoppingReceiptProcessorPort.process(any())).thenReturn(rawExtraction);
-        when(extractionDataRectifier.rectifyPurchaseDate(any())).thenReturn(dateRectifiedExtraction);
+        when(extractionDataRectifier.rectifyPurchaseDate(any(ProcessReceiptToRectifyDto.class))).thenReturn(dateRectifiedExtraction);
         when(spotSuggestionResolver.resolve(any(), any())).thenReturn(resolvedProductExtractions);
         when(extractionReviewerPort.review(any())).thenReturn(List.of());
         when(imageStoragePort.upload(any(), any())).thenReturn("shopping_receipts/receipts/abc123");
@@ -138,7 +139,7 @@ class ProcessNewShoppingReceiptServiceTest {
         verify(shoppingReceiptRepositoryPort).save(any());
         assertNotNull(result.shoppingReceiptId());
         assertEquals(dateRectifiedExtraction.purchaseDate(), result.purchaseShoppingDate());
-        assertEquals(dateRectifiedExtraction.storeName(), result.storeName());
+        assertEquals("SuperMart", result.storeName());
 
         assertEquals(1, result.storageSpotResults().size());
         assertEquals("fridge-id", result.storageSpotResults().getFirst().id());
@@ -170,10 +171,10 @@ class ProcessNewShoppingReceiptServiceTest {
         assertEquals(categories.moneyCurrencies(), processDtoCaptor.getValue().moneyCurrencies());
         assertEquals(resolvedLanguage, processDtoCaptor.getValue().language());
 
-        ArgumentCaptor<RectifyExtractionDto> rectifyDtoCaptor = ArgumentCaptor.forClass(RectifyExtractionDto.class);
+        ArgumentCaptor<ProcessReceiptToRectifyDto> rectifyDtoCaptor = ArgumentCaptor.forClass(ProcessReceiptToRectifyDto.class);
         verify(extractionDataRectifier).rectifyPurchaseDate(rectifyDtoCaptor.capture());
-        assertSame(rawExtraction, rectifyDtoCaptor.getValue().extraction());
-        assertEquals(storageSpots, rectifyDtoCaptor.getValue().storageSpots());
+        assertEquals(rawExtraction.purchaseDate(), rectifyDtoCaptor.getValue().purchaseDate());
+        assertEquals(rawExtraction.productExtractions(), rectifyDtoCaptor.getValue().productExtractions());
         assertSame(clock, rectifyDtoCaptor.getValue().clock());
 
         verify(spotSuggestionResolver).resolve(dateRectifiedExtraction.productExtractions(), storageSpots);

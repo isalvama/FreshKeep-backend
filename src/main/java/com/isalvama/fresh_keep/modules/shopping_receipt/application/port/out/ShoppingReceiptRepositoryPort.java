@@ -8,5 +8,7 @@ import java.util.Optional;
 
 public interface ShoppingReceiptRepositoryPort {
     void save (ShoppingReceipt shoppingReceipt);
+    void update (ShoppingReceipt shoppingReceipt);
     Optional<LocalDate> getShoppingDate (ShoppingReceiptId shoppingReceiptId);
+    Optional<ShoppingReceipt> getById(ShoppingReceiptId id);
 }

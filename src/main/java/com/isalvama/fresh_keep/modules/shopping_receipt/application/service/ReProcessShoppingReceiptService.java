@@ -8,7 +8,8 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.resu
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.in.result.SuggestedStorageSpotResult;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.*;
-import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.RectifyExtractionDto;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.ProcessReceiptToRectifyDto;
+import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.RectifiedReceiptDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ReceiptImage;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ShoppingReceipt;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.NonExistentReceiptImageException;
@@ -68,7 +69,14 @@ public class ReProcessShoppingReceiptService implements ReProcessShoppingReceipt
                 )
         );
 
-        ReceiptExtraction rectifiedExtraction = extractionDataRectifier.rectifyPurchaseDate(new RectifyExtractionDto(extraction, storageSpotDtos, clock));
+        RectifiedReceiptDto rectifiedReceipt = extractionDataRectifier.rectifyPurchaseDate(
+                ProcessReceiptToRectifyDto.from(extraction, clock)
+        );
+        ReceiptExtraction rectifiedExtraction = ReceiptExtraction.from(
+                rectifiedReceipt,
+                extraction.storeName(),
+                extraction.errorReason()
+        );
         List<ProductExtraction> productExtractions = storageSpotResolver.resolve(rectifiedExtraction.productExtractions(), storageSpotDtos);
 
         ShoppingReceipt shoppingReceipt = ShoppingReceipt.createDraft(
