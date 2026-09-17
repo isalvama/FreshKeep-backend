@@ -17,7 +17,7 @@ public class SpaceParticipancyLookUpAdapter implements SpaceParticipancyLookUpPo
 
     @Override
     public boolean isParticipant(String userId, String storageSpotId) {
-        return spaceRepositoryPort.existsByIdAndParticipantId(UserId.from(userId), StorageSpotId.from(storageSpotId));
+        return spaceRepositoryPort.existsStorageSpotByIdAndParticipantId(UserId.from(userId), StorageSpotId.from(storageSpotId));
     }
 
     @Override
