@@ -25,6 +25,7 @@ public class ShoppingReceiptMapper {
                 .receiptImageId(shoppingReceipt.getReceiptImageId().value())
                 .purchaseDate(shoppingReceipt.getPurchaseDate().atStartOfDay(ZoneOffset.UTC).toInstant())
                 .storeName(shoppingReceipt.getStoreName())
+                .status(shoppingReceipt.getStatus())
                 .build();
     }
 
@@ -35,7 +36,8 @@ public class ShoppingReceiptMapper {
                 SpaceId.of(entity.getSpaceId()),
                 ReceiptImageId.of(entity.getReceiptImageId()),
                 entity.getPurchaseDate().atZone(ZoneOffset.UTC).toLocalDate(),
-                entity.getStoreName()
+                entity.getStoreName(),
+                entity.getStatus()
         );
     }
 }

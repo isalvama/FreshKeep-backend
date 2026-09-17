@@ -9,6 +9,7 @@ public class ShoppingReceiptResponseMapper {
 
     public ProcessNewShoppingReceiptResponse toResponse (ProcessNewShoppingReceiptResult result){
         return new ProcessNewShoppingReceiptResponse(
+                result.shoppingReceiptId(),
                 result.receiptImageId(),
                 result.storageSpotResults().stream().map(this::toSuggestedStorageSpotResponse).toList(),
                 result.purchaseShoppingDate(),

@@ -1,6 +1,7 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa;
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ShoppingReceipt;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ShoppingReceiptStatus;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ReceiptImageId;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ShoppingReceiptId;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.exception.ShoppingReceiptPersistenceException;
@@ -106,7 +107,7 @@ class JpaShoppingReceiptRepositoryAdapterTest {
 
         @Test
         void shouldSaveShoppingReceiptSuccessfullyAndUpdateCreatedAt(){
-            adapter.save(ShoppingReceipt.reconstitute(ShoppingReceiptId.from(id), UserId.from(creatorId), SpaceId.from(spaceId), ReceiptImageId.from(receiptImageId), purchaseDate, storeName));
+            adapter.save(ShoppingReceipt.reconstitute(ShoppingReceiptId.from(id), UserId.from(creatorId), SpaceId.from(spaceId), ReceiptImageId.from(receiptImageId), purchaseDate, storeName, ShoppingReceiptStatus.DRAFT));
 
             Optional<JpaShoppingReceiptEntity> result = jpaRepository.findById(UUID.fromString(id));
 
@@ -118,6 +119,7 @@ class JpaShoppingReceiptRepositoryAdapterTest {
             assertEquals(resultingEntity.getReceiptImageId().toString(), receiptImageId);
             assertEquals(resultingEntity.getPurchaseDate().atZone(ZoneOffset.UTC).toLocalDate(), purchaseDate);
             assertEquals(resultingEntity.getStoreName(), storeName);
+            assertEquals(ShoppingReceiptStatus.DRAFT, resultingEntity.getStatus());
             assertTrue(resultingEntity.getCreatedAt().isBefore(Instant.now().plus(1, ChronoUnit.MINUTES)));
             assertTrue(resultingEntity.getCreatedAt().isAfter(Instant.now().minus(1, ChronoUnit.MINUTES)));
         }
@@ -130,7 +132,8 @@ class JpaShoppingReceiptRepositoryAdapterTest {
                     SpaceId.from(spaceId),
                     ReceiptImageId.create(),
                     purchaseDate,
-                    storeName
+                    storeName,
+                    ShoppingReceiptStatus.DRAFT
             );
 
             Exception exception = assertThrows(ShoppingReceiptPersistenceException.class, () -> adapter.save(invalidReceipt));
@@ -163,7 +166,7 @@ class JpaShoppingReceiptRepositoryAdapterTest {
 
     private void insertShoppingReceipt(UUID id, Instant purchaseDate) {
         jdbcTemplate.update(
-                "INSERT INTO shopping_receipts (id, purchase_date) VALUES (?, ?)",
+                "INSERT INTO shopping_receipts (id, purchase_date, status) VALUES (?, ?, 'DRAFT')",
                 id, java.sql.Timestamp.from(purchaseDate)
         );
     }

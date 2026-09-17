@@ -6,6 +6,7 @@ CREATE TABLE shopping_receipts
     receipt_image_id UUID UNIQUE,
     purchase_date    TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     store_name       VARCHAR(255),
+    status           VARCHAR(30) NOT NULL,
     created_at       TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     last_updated_at  TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_shopping_receipt_creator
@@ -19,7 +20,9 @@ CREATE TABLE shopping_receipts
     CONSTRAINT fk_shopping_receipt_image
         FOREIGN KEY (receipt_image_id)
             REFERENCES receipt_images (id)
-            ON DELETE SET NULL
+            ON DELETE SET NULL,
+    CONSTRAINT chk_shopping_receipts_status CHECK (status IN
+            ('DRAFT', 'CONFIRMED'))
 );
 
 CREATE INDEX idx_shopping_receipts_creator_id ON shopping_receipts(creator_id);

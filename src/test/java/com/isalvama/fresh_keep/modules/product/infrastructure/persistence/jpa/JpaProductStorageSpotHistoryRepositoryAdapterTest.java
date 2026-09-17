@@ -186,6 +186,6 @@ class JpaProductStorageSpotHistoryRepositoryAdapterTest {
     }
 
     private void insertShoppingReceipt(UUID id) {
-        jdbcTemplate.update("INSERT INTO shopping_receipts (id) VALUES (?)", id);
+        jdbcTemplate.update("INSERT INTO shopping_receipts (id, status) VALUES (?, 'DRAFT')", id);
     }
 }

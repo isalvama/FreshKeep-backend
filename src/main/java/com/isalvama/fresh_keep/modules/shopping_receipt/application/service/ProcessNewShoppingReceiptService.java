@@ -10,9 +10,12 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.RectifyExtractionDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ReceiptImage;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.InvalidReceiptImageException;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ShoppingReceipt;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.AssetId;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProductReviewFlag;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;
+import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
+import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.InfrastructureException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +37,7 @@ public class ProcessNewShoppingReceiptService implements ProcessNewShoppingRecei
     private final ReceiptImageRepositoryPort receiptImageRepositoryPort;
     private final ExtractionDataRectifier extractionDataRectifier;
     private final StorageSpotSuggestionResolver spotSuggestionResolver;
+    private final ShoppingReceiptRepositoryPort shoppingReceiptRepositoryPort;
     private final Clock clock;
 
     @Override
@@ -75,7 +79,19 @@ public class ProcessNewShoppingReceiptService implements ProcessNewShoppingRecei
 
         receiptImageRepositoryPort.save(receiptImage);
 
+        ShoppingReceipt shoppingReceipt = ShoppingReceipt.createDraft(
+                UserId.from(command.creatorId()),
+                SpaceId.from(command.spaceId()),
+                receiptImage.getId(),
+                rectifiedExtraction.purchaseDate(),
+                rectifiedExtraction.storeName(),
+                clock
+        );
+
+        shoppingReceiptRepositoryPort.save(shoppingReceipt);
+
         return new ProcessNewShoppingReceiptResult(
+                shoppingReceipt.getId().toString(),
                 receiptImage.getId().toString(),
                 storageSpotDtos.stream().map(SuggestedStorageSpotResult::fromStorageSpotDto).toList(),
                 rectifiedExtraction.purchaseDate(),

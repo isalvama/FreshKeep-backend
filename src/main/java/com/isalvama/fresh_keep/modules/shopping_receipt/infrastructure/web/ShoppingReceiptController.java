@@ -65,7 +65,7 @@ public class ShoppingReceiptController {
 
     @PostMapping(value = "/shopping-receipt/reprocess")
     @PreAuthorize("hasRole('USER')")
-    @Operation(summary = "Reprocess, along with the Shopping Receipt Image, the products flagged by the user and persist the final shopping receipt and products data extracted during receipt processing and reprocessing.")
+    @Operation(summary = "Reprocess, along with the Shopping Receipt Image, the products flagged by the user; and persist the final shopping receipt and products data extracted during receipt processing and reprocessing.")
     public ResponseEntity<ShoppingReceiptResponse> reProcessShoppingReceiptWithFlaggedProducts(
             @PathVariable(name = "spaceId") @UUID String spaceId,
             @Valid @RequestBody ReProcessShoppingReceiptRequest request,

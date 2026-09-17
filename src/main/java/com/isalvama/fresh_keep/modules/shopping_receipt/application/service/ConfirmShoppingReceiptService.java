@@ -50,7 +50,7 @@ public class ConfirmShoppingReceiptService implements ConfirmShoppingReceiptUseC
 
         List<ProductExtraction> resolvedProductExtractions = storageSpotSuggestionResolver.resolve(toProductExtractions(command.products()), storageSpotDtos);
 
-        ShoppingReceipt shoppingReceipt = ShoppingReceipt.create(
+        ShoppingReceipt shoppingReceipt = ShoppingReceipt.createDraft(
                 UserId.from(command.creatorId()),
                 SpaceId.from(command.spaceId()),
                 receiptImage.getId(),

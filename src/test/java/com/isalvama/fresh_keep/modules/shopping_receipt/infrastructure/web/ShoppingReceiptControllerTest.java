@@ -154,12 +154,12 @@ class ShoppingReceiptControllerTest {
     @Test
     void processNewShoppingReceipt_returns201WithLocationAndMappedBodyOnSuccess() throws Exception {
         ProcessNewShoppingReceiptResult result = new ProcessNewShoppingReceiptResult(
-                "receipt-image-id", List.of(new SuggestedStorageSpotResult("fridge-id", "Fridge", "FRIDGE")),
+                "shopping-receipt-id", "receipt-image-id", List.of(new SuggestedStorageSpotResult("fridge-id", "Fridge", "FRIDGE")),
                 LocalDate.of(2026, 9, 1), "SuperMart", List.of(), List.of());
         when(processNewShoppingReceiptUseCase.execute(any())).thenReturn(result);
 
         ProcessNewShoppingReceiptResponse response = new ProcessNewShoppingReceiptResponse(
-                "receipt-image-id", List.of(new SuggestedStorageSpotResponse("fridge-id", "Fridge", "FRIDGE")),
+                "shopping-receipt-id", "receipt-image-id", List.of(new SuggestedStorageSpotResponse("fridge-id", "Fridge", "FRIDGE")),
                 LocalDate.of(2026, 9, 1), "SuperMart", List.of(), List.of());
         when(mapper.toResponse(result)).thenReturn(response);
 
@@ -178,10 +178,10 @@ class ShoppingReceiptControllerTest {
     @Test
     void processNewShoppingReceipt_passesTheSpaceIdFromThePathAndUserIdFromThePrincipalToTheUseCase() throws Exception {
         ProcessNewShoppingReceiptResult result = new ProcessNewShoppingReceiptResult(
-                "receipt-image-id", List.of(), LocalDate.now(), "SuperMart", List.of(), List.of());
+                "shopping-receipt-id", "receipt-image-id", List.of(), LocalDate.now(), "SuperMart", List.of(), List.of());
         when(processNewShoppingReceiptUseCase.execute(any())).thenReturn(result);
         when(mapper.toResponse((ProcessNewShoppingReceiptResult) any())).thenReturn(
-                new ProcessNewShoppingReceiptResponse("receipt-image-id", List.of(), LocalDate.now(), "SuperMart", List.of(), List.of()));
+                new ProcessNewShoppingReceiptResponse("shopping-receipt-id", "receipt-image-id", List.of(), LocalDate.now(), "SuperMart", List.of(), List.of()));
 
         mockMvc.perform(multipart(BASE_URL.formatted(SPACE_ID))
                         .file(validFile())

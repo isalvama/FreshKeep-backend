@@ -1,5 +1,6 @@
 package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity;
 
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ShoppingReceiptStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -8,7 +9,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
-import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -42,6 +42,10 @@ public class JpaShoppingReceiptEntity {
 
     @Column(name = "store_name", updatable = false)
     private String storeName;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private ShoppingReceiptStatus status;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)
