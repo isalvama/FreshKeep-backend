@@ -9,7 +9,9 @@ public record ProductCommand(
         String suggestedStorageSpotId,
         String productType,
         BigDecimal priceAmount,
-        String currency
+        String currency,
+        Boolean manuallyEditedExpirationDate
+
 ) {
 
 }

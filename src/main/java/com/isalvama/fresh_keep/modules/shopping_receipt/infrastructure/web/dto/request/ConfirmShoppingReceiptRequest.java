@@ -13,6 +13,10 @@ public record ConfirmShoppingReceiptRequest(
 
         @UUID
         @NotNull
+        String shoppingReceiptId,
+
+        @UUID
+        @NotNull
         String receiptImageId,
 
         @NotNull
