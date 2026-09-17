@@ -54,4 +54,10 @@ public class JpaShoppingReceiptEntity {
     @UpdateTimestamp
     @Column(name = "last_updated_at")
     private Instant lastUpdatedAt;
+
+    public void update (Instant purchaseDate, String storeName, ShoppingReceiptStatus status){
+        this.purchaseDate = purchaseDate;
+        this.storeName = storeName;
+        this.status = status;
+    }
 }
