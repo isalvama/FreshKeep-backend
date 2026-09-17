@@ -52,8 +52,13 @@ public class JpaSpaceRepositoryAdapter implements SpaceRepositoryPort {
     }
 
     @Override
-    public boolean existsByIdAndParticipantId(UserId userId, StorageSpotId storageSpotId) {
-             return spaceSpringDataRepository.existsByIdAndParticipantId(userId.value(), storageSpotId.value());
+    public boolean existsStorageSpotByIdAndParticipantId(UserId userId, StorageSpotId storageSpotId) {
+             return spaceSpringDataRepository.existsStorageSpotByIdAndParticipantId(userId.value(), storageSpotId.value());
+    }
+
+    @Override
+    public boolean existsSpaceByIdAndParticipantId(UserId userId, SpaceId spaceId) {
+        return spaceSpringDataRepository.existsSpaceByIdAndParticipantId(userId.value(), spaceId.value());
     }
 
     @Override

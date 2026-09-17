@@ -322,18 +322,18 @@ class JpaSpaceRepositoryAdapterTest {
 
         @Test
         void shouldReturnTrueWhenUserIsParticipantOfSpaceOwningStorageSpot() {
-            assertTrue(adapter.existsByIdAndParticipantId(participantUserId, spotBothCanAccess.getId()));
-            assertTrue(adapter.existsByIdAndParticipantId(creatorUserId, spotOnlyCreatorCanAccess.getId()));
+            assertTrue(adapter.existsStorageSpotByIdAndParticipantId(participantUserId, spotBothCanAccess.getId()));
+            assertTrue(adapter.existsStorageSpotByIdAndParticipantId(creatorUserId, spotOnlyCreatorCanAccess.getId()));
         }
 
         @Test
         void shouldReturnFalseWhenUserIsNotParticipantOfSpaceOwningStorageSpot() {
-            assertFalse(adapter.existsByIdAndParticipantId(participantUserId, spotOnlyCreatorCanAccess.getId()));
+            assertFalse(adapter.existsStorageSpotByIdAndParticipantId(participantUserId, spotOnlyCreatorCanAccess.getId()));
         }
 
         @Test
         void shouldReturnFalseWhenStorageSpotDoesNotExist() {
-            assertFalse(adapter.existsByIdAndParticipantId(creatorUserId, StorageSpotId.create()));
+            assertFalse(adapter.existsStorageSpotByIdAndParticipantId(creatorUserId, StorageSpotId.create()));
         }
     }
 
