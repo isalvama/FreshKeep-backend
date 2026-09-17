@@ -44,6 +44,8 @@ class ProcessNewShoppingReceiptServiceTest {
     @Mock
     private ReceiptImageRepositoryPort receiptImageRepositoryPort;
     @Mock
+    private ShoppingReceiptRepositoryPort shoppingReceiptRepositoryPort;
+    @Mock
     private ExtractionDataRectifier extractionDataRectifier;
     @Mock
     private StorageSpotSuggestionResolver spotSuggestionResolver;
@@ -55,8 +57,8 @@ class ProcessNewShoppingReceiptServiceTest {
     private ProcessNewShoppingReceiptService service;
 
     private final MultipartFile file = new MockMultipartFile("file", "receipt.jpg", "image/jpeg", "fake-image-content".getBytes());
-    private final String creatorId = "creator-id";
-    private final String spaceId = "space-id";
+    private final String creatorId = "11111111-1111-1111-1111-111111111111";
+    private final String spaceId = "22222222-2222-2222-2222-222222222222";
     private final String language = "es";
     private final String resolvedLanguage = "Spanish";
     private final ProcessNewShoppingReceiptCommand command = new ProcessNewShoppingReceiptCommand(file, creatorId, spaceId, language);
@@ -90,6 +92,7 @@ class ProcessNewShoppingReceiptServiceTest {
                 receiptImageRepositoryPort,
                 extractionDataRectifier,
                 spotSuggestionResolver,
+                shoppingReceiptRepositoryPort,
                 clock
         );
     }
@@ -113,7 +116,8 @@ class ProcessNewShoppingReceiptServiceTest {
         assertThrows(InvalidReceiptImageException.class, () -> service.execute(emptyFileCommand));
 
         verifyNoInteractions(spaceLookUpPort, productCategoriesLookUpPort, languageResolver, shoppingReceiptProcessorPort,
-                extractionReviewerPort, imageStoragePort, receiptImageRepositoryPort, extractionDataRectifier, spotSuggestionResolver);
+                extractionReviewerPort, imageStoragePort, receiptImageRepositoryPort, extractionDataRectifier, spotSuggestionResolver,
+                shoppingReceiptRepositoryPort);
     }
 
     @Test
@@ -131,6 +135,8 @@ class ProcessNewShoppingReceiptServiceTest {
         String expectedReceiptImageId = receiptImageCaptor.getValue().getId().toString();
 
         assertEquals(expectedReceiptImageId, result.receiptImageId());
+        verify(shoppingReceiptRepositoryPort).save(any());
+        assertNotNull(result.shoppingReceiptId());
         assertEquals(dateRectifiedExtraction.purchaseDate(), result.purchaseShoppingDate());
         assertEquals(dateRectifiedExtraction.storeName(), result.storeName());
 

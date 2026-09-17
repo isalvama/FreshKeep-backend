@@ -24,8 +24,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-import static java.util.stream.Collectors.toList;
-
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -73,7 +71,7 @@ public class ReProcessShoppingReceiptService implements ReProcessShoppingReceipt
         ReceiptExtraction rectifiedExtraction = extractionDataRectifier.rectifyPurchaseDate(new RectifyExtractionDto(extraction, storageSpotDtos, clock));
         List<ProductExtraction> productExtractions = storageSpotResolver.resolve(rectifiedExtraction.productExtractions(), storageSpotDtos);
 
-        ShoppingReceipt shoppingReceipt = ShoppingReceipt.create(
+        ShoppingReceipt shoppingReceipt = ShoppingReceipt.createDraft(
                 UserId.from(command.creatorId()),
                 SpaceId.from(command.spaceId()),
                 receiptImage.getId(),

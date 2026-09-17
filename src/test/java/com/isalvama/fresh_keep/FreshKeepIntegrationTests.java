@@ -87,6 +87,14 @@ public class FreshKeepIntegrationTests {
     private static final String API_SPACES = "/api/v1/spaces";
     private static final String API_PRODUCTS = "/api/v1/products";
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void clearProductStorageSpotHistory() {
+        jdbcTemplate.update("DELETE FROM product_storage_spot_history");
+    }
+
     @Container
     @ServiceConnection
     static PostgreSQLContainer postgres = new PostgreSQLContainer(DockerImageName.parse("postgres:16-alpine"));
@@ -1018,7 +1026,7 @@ public class FreshKeepIntegrationTests {
             );
 
             shoppingReceiptId = UUID.randomUUID();
-            jdbcTemplate.update("INSERT INTO shopping_receipts (id) VALUES (?)", shoppingReceiptId);
+            jdbcTemplate.update("INSERT INTO shopping_receipts (id, status) VALUES (?, 'DRAFT')", shoppingReceiptId);
         }
 
         private String registerAndLogin(String email, String password) throws Exception {
