@@ -13,7 +13,8 @@ import java.util.Set;
 public interface SpaceRepositoryPort {
     void save (Space space);
     List<Space> getByParticipantId(UserId id);
-    boolean existsByIdAndParticipantId(UserId userId, StorageSpotId storageSpotId);
+    boolean existsStorageSpotByIdAndParticipantId(UserId userId, StorageSpotId storageSpotId);
+    boolean existsSpaceByIdAndParticipantId(UserId userId, SpaceId spaceId);
     Set<String> findAccessible(String userId, List<StorageSpotId> storageSpotIds);
     Optional<Space> getById(SpaceId spaceId);
     List<StorageSpot> findStorageSpotsByIds(Set<StorageSpotId> storageSpotIds);

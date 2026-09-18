@@ -20,17 +20,19 @@ public class ShoppingReceipt {
     private ReceiptImageId receiptImageId;
     private LocalDate purchaseDate;
     private String storeName;
+    private ShoppingReceiptStatus status;
 
-    private ShoppingReceipt(ShoppingReceiptId id, UserId creatorId, SpaceId spaceId, ReceiptImageId receiptImageId, LocalDate purchaseDate, String storeName) {
+    private ShoppingReceipt(ShoppingReceiptId id, UserId creatorId, SpaceId spaceId, ReceiptImageId receiptImageId, LocalDate purchaseDate, String storeName, ShoppingReceiptStatus status) {
         this.id = validateNotNull(id, "id");
         this.creatorId = validateNotNull(creatorId, "creatorId");
         this.spaceId = validateNotNull(spaceId, "spaceId");
         this.receiptImageId = validateNotNull(receiptImageId, "receiptImageId");
         this.purchaseDate = validateNotNull(purchaseDate, "purchaseDate");
         this.storeName = storeName;
+        this.status = status;
     }
 
-    public static ShoppingReceipt create (
+    public static ShoppingReceipt createDraft(
             UserId creatorId, SpaceId spaceId, ReceiptImageId receiptImageId, LocalDate purchaseDate, String storeName, Clock clock
     ) {
         ShoppingReceipt shoppingReceipt = new ShoppingReceipt(
@@ -39,7 +41,8 @@ public class ShoppingReceipt {
                 spaceId,
                 receiptImageId,
                 purchaseDate,
-                storeName
+                storeName,
+                ShoppingReceiptStatus.DRAFT
         );
         if (shoppingReceipt.purchaseDate.isAfter(LocalDate.now(clock))) {
             throw new InvalidShoppingReceiptException("The purchase date cannot be later than the current date");
@@ -48,7 +51,7 @@ public class ShoppingReceipt {
     }
 
     public static ShoppingReceipt reconstitute (
-            ShoppingReceiptId id, UserId creatorId, SpaceId spaceId, ReceiptImageId receiptImageId, LocalDate purchaseDate, String storeName
+            ShoppingReceiptId id, UserId creatorId, SpaceId spaceId, ReceiptImageId receiptImageId, LocalDate purchaseDate, String storeName, ShoppingReceiptStatus status
     ) {
         return new ShoppingReceipt(
                 id,
@@ -56,8 +59,15 @@ public class ShoppingReceipt {
                 spaceId,
                 receiptImageId,
                 purchaseDate,
-                storeName
+                storeName,
+                status
         );
+    }
+
+    public void confirm(LocalDate purchaseDate, String storeName) {
+        this.purchaseDate = validateNotNull(purchaseDate, "purchaseDate");
+        this.storeName = storeName;
+        this.status = ShoppingReceiptStatus.CONFIRMED;
     }
 
     private static <T> T validateNotNull(T fieldValue, String fieldName) {

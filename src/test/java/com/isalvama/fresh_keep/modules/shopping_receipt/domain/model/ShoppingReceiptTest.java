@@ -20,12 +20,13 @@ class ShoppingReceiptTest {
     private static final ReceiptImageId RECEIPT_IMAGE_ID = ReceiptImageId.create();
     private static final String STORE_NAME = "Mercadona";
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-09-01T10:00:00Z"), ZoneOffset.UTC);
+    private static final ShoppingReceiptStatus DRAFT = ShoppingReceiptStatus.DRAFT;
 
     @Test
     void create_generatesShoppingReceiptWithGeneratedId() {
         LocalDate purchaseDate = LocalDate.now(CLOCK);
 
-        ShoppingReceipt shoppingReceipt = ShoppingReceipt.create(CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME, CLOCK);
+        ShoppingReceipt shoppingReceipt = ShoppingReceipt.createDraft(CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME, CLOCK);
 
         assertNotNull(shoppingReceipt);
         assertNotNull(shoppingReceipt.getId());
@@ -34,14 +35,15 @@ class ShoppingReceiptTest {
         assertEquals(RECEIPT_IMAGE_ID, shoppingReceipt.getReceiptImageId());
         assertEquals(purchaseDate, shoppingReceipt.getPurchaseDate());
         assertEquals(STORE_NAME, shoppingReceipt.getStoreName());
+        assertEquals(DRAFT, shoppingReceipt.getStatus());
     }
 
     @Test
     void create_generatesADifferentIdOnEachCall() {
         LocalDate purchaseDate = LocalDate.now(CLOCK);
 
-        ShoppingReceipt first = ShoppingReceipt.create(CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME, CLOCK);
-        ShoppingReceipt second = ShoppingReceipt.create(CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME, CLOCK);
+        ShoppingReceipt first = ShoppingReceipt.createDraft(CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME, CLOCK);
+        ShoppingReceipt second = ShoppingReceipt.createDraft(CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME, CLOCK);
 
         assertNotEquals(first.getId(), second.getId());
     }
@@ -50,7 +52,7 @@ class ShoppingReceiptTest {
     void create_allowsNullStoreName() {
         LocalDate purchaseDate = LocalDate.now(CLOCK);
 
-        assertDoesNotThrow(() -> ShoppingReceipt.create(CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, null, CLOCK));
+        assertDoesNotThrow(() -> ShoppingReceipt.createDraft(CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, null, CLOCK));
     }
 
     @Test
@@ -58,7 +60,7 @@ class ShoppingReceiptTest {
         LocalDate futureDate = LocalDate.now(CLOCK).plusDays(1);
 
         Exception exception = assertThrows(InvalidShoppingReceiptException.class,
-                () -> ShoppingReceipt.create(CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, futureDate, STORE_NAME, CLOCK));
+                () -> ShoppingReceipt.createDraft(CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, futureDate, STORE_NAME, CLOCK));
         assertTrue(exception.getMessage().contains("purchase date cannot be later than the current date"));
     }
 
@@ -67,13 +69,13 @@ class ShoppingReceiptTest {
         LocalDate purchaseDate = LocalDate.now(CLOCK);
 
         assertThrows(InvalidShoppingReceiptException.class,
-                () -> ShoppingReceipt.create(null, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME, CLOCK));
+                () -> ShoppingReceipt.createDraft(null, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME, CLOCK));
         assertThrows(InvalidShoppingReceiptException.class,
-                () -> ShoppingReceipt.create(CREATOR_ID, null, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME, CLOCK));
+                () -> ShoppingReceipt.createDraft(CREATOR_ID, null, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME, CLOCK));
         assertThrows(InvalidShoppingReceiptException.class,
-                () -> ShoppingReceipt.create(CREATOR_ID, SPACE_ID, null, purchaseDate, STORE_NAME, CLOCK));
+                () -> ShoppingReceipt.createDraft(CREATOR_ID, SPACE_ID, null, purchaseDate, STORE_NAME, CLOCK));
         assertThrows(InvalidShoppingReceiptException.class,
-                () -> ShoppingReceipt.create(CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, null, STORE_NAME, CLOCK));
+                () -> ShoppingReceipt.createDraft(CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, null, STORE_NAME, CLOCK));
     }
 
     @Test
@@ -81,7 +83,7 @@ class ShoppingReceiptTest {
         ShoppingReceiptId id = ShoppingReceiptId.create();
         LocalDate purchaseDate = LocalDate.now(CLOCK);
 
-        ShoppingReceipt shoppingReceipt = ShoppingReceipt.reconstitute(id, CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME);
+        ShoppingReceipt shoppingReceipt = ShoppingReceipt.reconstitute(id, CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME, DRAFT);
 
         assertNotNull(shoppingReceipt);
         assertEquals(id, shoppingReceipt.getId());
@@ -90,6 +92,7 @@ class ShoppingReceiptTest {
         assertEquals(RECEIPT_IMAGE_ID, shoppingReceipt.getReceiptImageId());
         assertEquals(purchaseDate, shoppingReceipt.getPurchaseDate());
         assertEquals(STORE_NAME, shoppingReceipt.getStoreName());
+        assertEquals(DRAFT, shoppingReceipt.getStatus());
     }
 
     @Test
@@ -97,7 +100,7 @@ class ShoppingReceiptTest {
         ShoppingReceiptId id = ShoppingReceiptId.create();
         LocalDate futureDate = LocalDate.now(CLOCK).plusDays(1);
 
-        assertDoesNotThrow(() -> ShoppingReceipt.reconstitute(id, CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, futureDate, STORE_NAME));
+        assertDoesNotThrow(() -> ShoppingReceipt.reconstitute(id, CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, futureDate, STORE_NAME, DRAFT));
     }
 
     @Test
@@ -106,20 +109,20 @@ class ShoppingReceiptTest {
         LocalDate purchaseDate = LocalDate.now(CLOCK);
 
         assertThrows(InvalidShoppingReceiptException.class,
-                () -> ShoppingReceipt.reconstitute(null, CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME));
+                () -> ShoppingReceipt.reconstitute(null, CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME, DRAFT));
         assertThrows(InvalidShoppingReceiptException.class,
-                () -> ShoppingReceipt.reconstitute(id, null, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME));
+                () -> ShoppingReceipt.reconstitute(id, null, SPACE_ID, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME, DRAFT));
         assertThrows(InvalidShoppingReceiptException.class,
-                () -> ShoppingReceipt.reconstitute(id, CREATOR_ID, null, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME));
+                () -> ShoppingReceipt.reconstitute(id, CREATOR_ID, null, RECEIPT_IMAGE_ID, purchaseDate, STORE_NAME, DRAFT));
         assertThrows(InvalidShoppingReceiptException.class,
-                () -> ShoppingReceipt.reconstitute(id, CREATOR_ID, SPACE_ID, null, purchaseDate, STORE_NAME));
+                () -> ShoppingReceipt.reconstitute(id, CREATOR_ID, SPACE_ID, null, purchaseDate, STORE_NAME, DRAFT));
         assertThrows(InvalidShoppingReceiptException.class,
-                () -> ShoppingReceipt.reconstitute(id, CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, null, STORE_NAME));
+                () -> ShoppingReceipt.reconstitute(id, CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, null, STORE_NAME, DRAFT));
     }
 
     @Test
     void setters_updateMutableFields() {
-        ShoppingReceipt shoppingReceipt = ShoppingReceipt.create(CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, LocalDate.now(CLOCK), STORE_NAME, CLOCK);
+        ShoppingReceipt shoppingReceipt = ShoppingReceipt.createDraft(CREATOR_ID, SPACE_ID, RECEIPT_IMAGE_ID, LocalDate.now(CLOCK), STORE_NAME, CLOCK);
         ReceiptImageId newReceiptImageId = ReceiptImageId.create();
         LocalDate newPurchaseDate = LocalDate.now(CLOCK).minusDays(1);
 

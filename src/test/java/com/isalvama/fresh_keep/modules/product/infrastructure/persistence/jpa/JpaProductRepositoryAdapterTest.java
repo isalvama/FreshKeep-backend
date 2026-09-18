@@ -117,6 +117,8 @@ class JpaProductRepositoryAdapterTest {
             Product original = createProduct("Milk", BigDecimal.valueOf(1.5), "USD");
             adapter.save(original);
             jpaProductRepository.flush();
+            Instant initialLastUpdatedAt = jdbcTemplate.queryForObject(
+                    "SELECT last_updated_at FROM products WHERE id = ?", Instant.class, original.getId().value());
 
             UUID updatedStorageSpotId = UUID.randomUUID();
             insertStorageSpot(updatedStorageSpotId, "Pantry", "PANTRY", spaceId);
@@ -144,6 +146,9 @@ class JpaProductRepositoryAdapterTest {
             assertEquals(shoppingReceiptId, saved.getShoppingReceiptId());
             assertEquals(0, BigDecimal.valueOf(1.5).compareTo(saved.getPrice()));
             assertEquals(Currency.USD, saved.getCurrency());
+            Instant updatedLastUpdatedAt = jdbcTemplate.queryForObject(
+                    "SELECT last_updated_at FROM products WHERE id = ?", Instant.class, original.getId().value());
+            assertTrue(updatedLastUpdatedAt.isAfter(initialLastUpdatedAt));
         }
     }
 
@@ -376,6 +381,6 @@ class JpaProductRepositoryAdapterTest {
     }
 
     private void insertShoppingReceipt(UUID id) {
-        jdbcTemplate.update("INSERT INTO shopping_receipts (id) VALUES (?)", id);
+        jdbcTemplate.update("INSERT INTO shopping_receipts (id, status) VALUES (?, 'DRAFT')", id);
     }
 }
