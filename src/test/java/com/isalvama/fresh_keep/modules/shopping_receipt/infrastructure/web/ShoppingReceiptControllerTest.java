@@ -115,6 +115,7 @@ class ShoppingReceiptControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
+                          "shoppingReceiptId": "%s",
                           "receiptImageId": "%s",
                           "shoppingDate": "2026-09-01",
                           "storeName": "SuperMart",
@@ -122,7 +123,7 @@ class ShoppingReceiptControllerTest {
                           "allProducts": [%s],
                           "language": "es"
                         }
-                        """.formatted(UUID.randomUUID(), validProductJson(), validProductJson()));
+                        """.formatted(UUID.randomUUID(), UUID.randomUUID(), validProductJson(), validProductJson()));
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder validConfirmRequest() {

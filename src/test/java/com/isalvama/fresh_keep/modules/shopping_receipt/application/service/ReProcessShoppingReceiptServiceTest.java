@@ -9,9 +9,11 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.RectifiedReceiptDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ReceiptImage;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ShoppingReceipt;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ShoppingReceiptStatus;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.NonExistentReceiptImageException;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.AssetId;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ReceiptImageId;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ShoppingReceiptId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,6 +65,7 @@ class ReProcessShoppingReceiptServiceTest {
     private ReProcessShoppingReceiptService service;
 
     private final String receiptImageId = ReceiptImageId.create().toString();
+    private final String shoppingReceiptId = ShoppingReceiptId.create().toString();
     private final String spaceId = SpaceId.create().toString();
     private final String creatorId = UserId.create().toString();
     private final LocalDate shoppingDate = LocalDate.of(2026, 9, 5);
@@ -76,11 +79,21 @@ class ReProcessShoppingReceiptServiceTest {
             LocalDate.of(2026, 9, 20), "Yogurt", "fridge-id", "DAIRY", BigDecimal.valueOf(2.0), "USD", false);
 
     private final ReProcessShoppingReceiptCommand command = new ReProcessShoppingReceiptCommand(
-            receiptImageId, spaceId, creatorId, shoppingDate, storeName,
+            shoppingReceiptId, receiptImageId, spaceId, creatorId, shoppingDate, storeName,
             List.of(flaggedProductCommand), List.of(allProductCommand), language
     );
 
     private final ReceiptImage receiptImage = ReceiptImage.create(AssetId.of("shopping_receipts/receipts/abc123"), "image/jpeg");
+
+    private final ShoppingReceipt shoppingReceipt = ShoppingReceipt.reconstitute(
+            ShoppingReceiptId.from(shoppingReceiptId),
+            UserId.from(creatorId),
+            SpaceId.from(spaceId),
+            ReceiptImageId.from(receiptImageId),
+            shoppingDate,
+            storeName,
+            ShoppingReceiptStatus.DRAFT
+    );
 
     private final List<StorageSpotDto> storageSpots = List.of(StorageSpotDto.create("fridge-id", "Fridge", "FRIDGE"));
     private final CategoriesDto categories = new CategoriesDto(List.of("DAIRY"), List.of("USD"));
@@ -128,6 +141,7 @@ class ReProcessShoppingReceiptServiceTest {
         when(productCategoriesLookUpPort.getProductTypesAndMoneyCurrencyConstNames()).thenReturn(categories);
         when(languageResolver.resolve(any())).thenReturn(resolvedLanguage);
         when(receiptImageRepositoryPort.findById(ReceiptImageId.from(receiptImageId))).thenReturn(Optional.of(receiptImage));
+        when(shoppingReceiptRepositoryPort.getById(ShoppingReceiptId.from(shoppingReceiptId))).thenReturn(Optional.of(shoppingReceipt));
         when(imageStoragePort.retrieveUrl(receiptImage.getAssetId().toString())).thenReturn(imageUrl);
         when(imageStoragePort.fetchImageBytes(imageUrl)).thenReturn(imageBytes);
         when(aiShoppingReceiptProcessorPort.reprocess(any())).thenReturn(rawExtraction);
@@ -156,11 +170,11 @@ class ReProcessShoppingReceiptServiceTest {
 
         ShoppingReceiptResult result = service.execute(command);
 
-        verify(shoppingReceiptRepositoryPort).save(shoppingReceiptCaptor.capture());
+        verify(shoppingReceiptRepositoryPort).update(shoppingReceiptCaptor.capture());
         String expectedShoppingReceiptId = shoppingReceiptCaptor.getValue().getId().toString();
 
         assertEquals(expectedShoppingReceiptId, result.shoppingReceiptId());
-        assertEquals(dateRectifiedExtraction.purchaseDate(), result.shoppingDate());
+        assertEquals(shoppingDate, result.shoppingDate());
         assertEquals("SuperMart", result.storeName());
 
         assertEquals(1, result.products().size());
@@ -254,19 +268,19 @@ class ReProcessShoppingReceiptServiceTest {
     }
 
     @Test
-    void execute_persistsAShoppingReceiptWithTheRectifiedPurchaseDateAndStoreName() {
+    void execute_updatesTheExistingShoppingReceiptWithTheRequestedPurchaseDateAndStoreName() {
         stubHappyPath();
 
         service.execute(command);
 
         ArgumentCaptor<ShoppingReceipt> shoppingReceiptCaptor = ArgumentCaptor.forClass(ShoppingReceipt.class);
-        verify(shoppingReceiptRepositoryPort).save(shoppingReceiptCaptor.capture());
+        verify(shoppingReceiptRepositoryPort).update(shoppingReceiptCaptor.capture());
 
         ShoppingReceipt savedReceipt = shoppingReceiptCaptor.getValue();
         assertEquals(UserId.from(creatorId), savedReceipt.getCreatorId());
         assertEquals(SpaceId.from(spaceId), savedReceipt.getSpaceId());
-        assertEquals(receiptImage.getId(), savedReceipt.getReceiptImageId());
-        assertEquals(dateRectifiedExtraction.purchaseDate(), savedReceipt.getPurchaseDate());
-        assertEquals("SuperMart", savedReceipt.getStoreName());
+        assertEquals(ReceiptImageId.from(receiptImageId), savedReceipt.getReceiptImageId());
+        assertEquals(shoppingDate, savedReceipt.getPurchaseDate());
+        assertEquals(storeName, savedReceipt.getStoreName());
     }
 }

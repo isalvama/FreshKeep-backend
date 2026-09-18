@@ -25,6 +25,7 @@ public class ShoppingReceiptCommandMapper {
 
     public ReProcessShoppingReceiptCommand toReProcessShoppingReceiptCommand (String spaceId, ReProcessShoppingReceiptRequest request, String userId){
         return new ReProcessShoppingReceiptCommand(
+                request.shoppingReceiptId(),
                 request.receiptImageId(),
                 spaceId,
                 userId,
