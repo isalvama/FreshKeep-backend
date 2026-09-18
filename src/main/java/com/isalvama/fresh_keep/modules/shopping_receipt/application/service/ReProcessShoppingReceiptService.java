@@ -10,12 +10,13 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.*;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.ProcessReceiptToRectifyDto;
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.service.dto.RectifiedReceiptDto;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.InvalidShoppingReceiptException;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.NonExistentShoppingReceiptException;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ReceiptImage;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ShoppingReceipt;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.NonExistentReceiptImageException;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ReceiptImageId;
-import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
-import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
+import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ShoppingReceiptId;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,7 @@ public class ReProcessShoppingReceiptService implements ReProcessShoppingReceipt
 
     @Override
     public ShoppingReceiptResult execute (ReProcessShoppingReceiptCommand command) {
+
         List<StorageSpotDto> storageSpotDtos = spaceLookUpPort.getStorageSpotsBySpaceIdAndParticipantId(
                 GetStorageSpotsDto.create(command.spaceId(), command.creatorId())
         );
@@ -53,6 +55,12 @@ public class ReProcessShoppingReceiptService implements ReProcessShoppingReceipt
 
         String imageUrl = imageStoragePort.retrieveUrl(receiptImage.getAssetId().toString());
         byte[] imageBytes = imageStoragePort.fetchImageBytes(imageUrl);
+
+        ShoppingReceipt shoppingReceipt = shoppingReceiptRepositoryPort.getById(ShoppingReceiptId.from(command.shoppingReceiptId()))
+                .orElseThrow(() -> new NonExistentShoppingReceiptException("Shopping Receipt with id " + command.shoppingReceiptId() + " does not exist."));
+        if (!shoppingReceipt.getCreatorId().toString().equals(command.creatorId()) || !shoppingReceipt.getReceiptImageId().toString().equals(command.receiptImageId()) || !shoppingReceipt.getSpaceId().toString().equals(command.spaceId())) {
+            throw new InvalidShoppingReceiptException("The shopping receipt cannot be reprocessed in the requested context.");
+        }
 
         ReceiptExtraction extraction = aiShoppingReceiptProcessorPort.reprocess(new ReprocessShoppingReceiptWithFlaggedProductsDto(
                         imageBytes,
@@ -79,16 +87,8 @@ public class ReProcessShoppingReceiptService implements ReProcessShoppingReceipt
         );
         List<ProductExtraction> productExtractions = storageSpotResolver.resolve(rectifiedExtraction.productExtractions(), storageSpotDtos);
 
-        ShoppingReceipt shoppingReceipt = ShoppingReceipt.createDraft(
-                UserId.from(command.creatorId()),
-                SpaceId.from(command.spaceId()),
-                receiptImage.getId(),
-                rectifiedExtraction.purchaseDate(),
-                rectifiedExtraction.storeName(),
-                clock
-        );
-
-        shoppingReceiptRepositoryPort.save(shoppingReceipt);
+        shoppingReceipt.confirm(rectifiedExtraction.purchaseDate(), rectifiedExtraction.storeName());
+        shoppingReceiptRepositoryPort.update(shoppingReceipt);
 
         List<RegisteredProductDto> registeredProducts = productRegistrationPort.registerProducts(
                 productExtractions.stream().map(pe ->
