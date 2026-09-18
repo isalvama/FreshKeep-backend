@@ -99,7 +99,7 @@ class JwtTokenGeneratorAdapterTest {
     void isTokenValid_validation() {
         assertTrue(jwtTokenGeneratorAdapter.isTokenValid(token));
 
-        String tamperedToken = token.substring(0, token.length() - 1) + (token.endsWith("a") ? "b" : "a");
+        String tamperedToken = token + "tampered";
         assertFalse(jwtTokenGeneratorAdapter.isTokenValid(tamperedToken));
 
         assertFalse(jwtTokenGeneratorAdapter.isTokenValid("invalid.token.structure"));
@@ -110,4 +110,3 @@ class JwtTokenGeneratorAdapterTest {
         assertTrue(jwtTokenGeneratorAdapter.isTokenValid(token));
     }
 }
-

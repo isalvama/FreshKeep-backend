@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record ProcessNewShoppingReceiptResponse(
+        String shoppingReceiptId,
         String receiptImageId,
         List<SuggestedStorageSpotResponse> suggestedStorageSpots,
         LocalDate purchaseShoppingDate,

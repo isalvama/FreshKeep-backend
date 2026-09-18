@@ -12,6 +12,10 @@ import java.util.List;
 public record ReProcessShoppingReceiptRequest (
         @UUID
         @NotNull
+        String shoppingReceiptId,
+
+        @UUID
+        @NotNull
         String receiptImageId,
 
         @NotNull

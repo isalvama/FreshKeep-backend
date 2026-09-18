@@ -25,6 +25,7 @@ public class ShoppingReceiptCommandMapper {
 
     public ReProcessShoppingReceiptCommand toReProcessShoppingReceiptCommand (String spaceId, ReProcessShoppingReceiptRequest request, String userId){
         return new ReProcessShoppingReceiptCommand(
+                request.shoppingReceiptId(),
                 request.receiptImageId(),
                 spaceId,
                 userId,
@@ -38,6 +39,7 @@ public class ShoppingReceiptCommandMapper {
 
     public ConfirmShoppingReceiptCommand toConfirmShoppingReceiptCommand (String spaceId, ConfirmShoppingReceiptRequest request, String userId){
         return new ConfirmShoppingReceiptCommand(
+                request.shoppingReceiptId(),
                 request.receiptImageId(),
                 spaceId,
                 userId,
@@ -54,7 +56,8 @@ public class ShoppingReceiptCommandMapper {
                 request.suggestedStorageSpotId().toString(),
                 request.productType(),
                 request.priceAmount(),
-                request.currency()
+                request.currency(),
+                request.manuallyEditedExpirationDate()
         );
     }
 

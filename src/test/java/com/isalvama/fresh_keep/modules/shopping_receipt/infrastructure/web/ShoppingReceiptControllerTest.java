@@ -115,6 +115,7 @@ class ShoppingReceiptControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
+                          "shoppingReceiptId": "%s",
                           "receiptImageId": "%s",
                           "shoppingDate": "2026-09-01",
                           "storeName": "SuperMart",
@@ -122,7 +123,7 @@ class ShoppingReceiptControllerTest {
                           "allProducts": [%s],
                           "language": "es"
                         }
-                        """.formatted(UUID.randomUUID(), validProductJson(), validProductJson()));
+                        """.formatted(UUID.randomUUID(), UUID.randomUUID(), validProductJson(), validProductJson()));
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder validConfirmRequest() {
@@ -130,12 +131,13 @@ class ShoppingReceiptControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
+                          "shoppingReceiptId": "%s",
                           "receiptImageId": "%s",
                           "shoppingDate": "2026-09-01",
                           "storeName": "SuperMart",
                           "allProducts": [%s]
                         }
-                        """.formatted(UUID.randomUUID(), validProductJson()));
+                        """.formatted(UUID.randomUUID(), UUID.randomUUID(), validProductJson()));
     }
 
     private String validProductJson() {
@@ -146,7 +148,8 @@ class ShoppingReceiptControllerTest {
                   "suggestedStorageSpotId": "%s",
                   "productType": "DAIRY",
                   "priceAmount": 1.50,
-                  "currency": "USD"
+                  "currency": "USD",
+                  "manuallyEditedExpirationDate": false
                 }
                 """.formatted(UUID.randomUUID());
     }
@@ -154,12 +157,12 @@ class ShoppingReceiptControllerTest {
     @Test
     void processNewShoppingReceipt_returns201WithLocationAndMappedBodyOnSuccess() throws Exception {
         ProcessNewShoppingReceiptResult result = new ProcessNewShoppingReceiptResult(
-                "receipt-image-id", List.of(new SuggestedStorageSpotResult("fridge-id", "Fridge", "FRIDGE")),
+                "shopping-receipt-id", "receipt-image-id", List.of(new SuggestedStorageSpotResult("fridge-id", "Fridge", "FRIDGE")),
                 LocalDate.of(2026, 9, 1), "SuperMart", List.of(), List.of());
         when(processNewShoppingReceiptUseCase.execute(any())).thenReturn(result);
 
         ProcessNewShoppingReceiptResponse response = new ProcessNewShoppingReceiptResponse(
-                "receipt-image-id", List.of(new SuggestedStorageSpotResponse("fridge-id", "Fridge", "FRIDGE")),
+                "shopping-receipt-id", "receipt-image-id", List.of(new SuggestedStorageSpotResponse("fridge-id", "Fridge", "FRIDGE")),
                 LocalDate.of(2026, 9, 1), "SuperMart", List.of(), List.of());
         when(mapper.toResponse(result)).thenReturn(response);
 
@@ -178,10 +181,10 @@ class ShoppingReceiptControllerTest {
     @Test
     void processNewShoppingReceipt_passesTheSpaceIdFromThePathAndUserIdFromThePrincipalToTheUseCase() throws Exception {
         ProcessNewShoppingReceiptResult result = new ProcessNewShoppingReceiptResult(
-                "receipt-image-id", List.of(), LocalDate.now(), "SuperMart", List.of(), List.of());
+                "shopping-receipt-id", "receipt-image-id", List.of(), LocalDate.now(), "SuperMart", List.of(), List.of());
         when(processNewShoppingReceiptUseCase.execute(any())).thenReturn(result);
         when(mapper.toResponse((ProcessNewShoppingReceiptResult) any())).thenReturn(
-                new ProcessNewShoppingReceiptResponse("receipt-image-id", List.of(), LocalDate.now(), "SuperMart", List.of(), List.of()));
+                new ProcessNewShoppingReceiptResponse("shopping-receipt-id", "receipt-image-id", List.of(), LocalDate.now(), "SuperMart", List.of(), List.of()));
 
         mockMvc.perform(multipart(BASE_URL.formatted(SPACE_ID))
                         .file(validFile())

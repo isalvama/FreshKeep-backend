@@ -30,6 +30,9 @@ public record ProductRequest(
         BigDecimal priceAmount,
 
         @Size(max = 20)
-        String currency
+        String currency,
+
+        @NotNull
+        Boolean manuallyEditedExpirationDate
 ) {
 }
