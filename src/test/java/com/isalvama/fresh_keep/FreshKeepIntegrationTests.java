@@ -16,6 +16,7 @@ import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.Jwt
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.JpaSpaceSpringDataRepository;
 import com.isalvama.fresh_keep.modules.product.infrastructure.web.dto.request.DeleteProductsRequest;
 import com.isalvama.fresh_keep.modules.product.infrastructure.web.dto.request.MoveProductRequest;
+import com.isalvama.fresh_keep.modules.product.infrastructure.web.dto.request.UpdateProductRequest;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.request.CreateSpaceRequest;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.request.StorageSpotRequest;
 import org.junit.jupiter.api.Assumptions;
@@ -1092,6 +1093,97 @@ public class FreshKeepIntegrationTests {
                         "SELECT actual_storage_spot_id, expiration_date FROM products WHERE id = ?", productId);
                 assertEquals(newStorageSpotId, persistedProduct.get("actual_storage_spot_id"));
                 assertEquals(newExpirationDate, ((java.sql.Date) persistedProduct.get("expiration_date")).toLocalDate());
+            }
+        }
+
+        @Nested
+        @DisplayName("PATCH " + API_PRODUCTS + "/{id}")
+        class UpdateProduct {
+
+            @Test
+            void shouldUpdateProductAndReturnTheUpdatedValues() throws Exception {
+                UUID productId = insertProduct(storageSpotId);
+                LocalDate newExpirationDate = LocalDate.of(2026, 10, 1);
+
+                mockMvc.perform(MockMvcRequestBuilders.patch(API_PRODUCTS + "/" + productId)
+                                .header("Authorization", "Bearer " + userToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new UpdateProductRequest(
+                                        "Updated Milk", newExpirationDate, "FRUITS",
+                                        BigDecimal.valueOf(2.75), "EUR"))))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.productId").value(productId.toString()))
+                        .andExpect(jsonPath("$.name").value("Updated Milk"))
+                        .andExpect(jsonPath("$.expirationDate").value(newExpirationDate.toString()))
+                        .andExpect(jsonPath("$.productType").value("FRUITS"))
+                        .andExpect(jsonPath("$.amount").value(2.75))
+                        .andExpect(jsonPath("$.currency").value("Euro"));
+
+                Map<String, Object> persistedProduct = jdbcTemplate.queryForMap(
+                        "SELECT name, expiration_date, product_type, price, currency FROM products WHERE id = ?", productId);
+                assertEquals("Updated Milk", persistedProduct.get("name"));
+                assertEquals(newExpirationDate, ((java.sql.Date) persistedProduct.get("expiration_date")).toLocalDate());
+                assertEquals("FRUITS", persistedProduct.get("product_type"));
+                assertEquals(0, BigDecimal.valueOf(2.75).compareTo((BigDecimal) persistedProduct.get("price")));
+                assertEquals("EUR", persistedProduct.get("currency").toString());
+            }
+
+            @Test
+            void shouldPreserveCurrencyWhenOnlyAmountIsUpdated() throws Exception {
+                UUID productId = insertProduct(storageSpotId);
+
+                mockMvc.perform(MockMvcRequestBuilders.patch(API_PRODUCTS + "/" + productId)
+                                .header("Authorization", "Bearer " + userToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new UpdateProductRequest(
+                                        null, null, null, BigDecimal.valueOf(2.25), null))))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.amount").value(2.25))
+                        .andExpect(jsonPath("$.currency").value("United States Dollar"));
+
+                Map<String, Object> persistedProduct = jdbcTemplate.queryForMap(
+                        "SELECT price, currency FROM products WHERE id = ?", productId);
+                assertEquals(0, BigDecimal.valueOf(2.25).compareTo((BigDecimal) persistedProduct.get("price")));
+                assertEquals("USD", persistedProduct.get("currency").toString());
+            }
+
+            @Test
+            void shouldReturn400WhenProductDoesNotExist() throws Exception {
+                mockMvc.perform(MockMvcRequestBuilders.patch(API_PRODUCTS + "/" + UUID.randomUUID())
+                                .header("Authorization", "Bearer " + userToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new UpdateProductRequest(
+                                        "Updated Milk", null, null, null, null))))
+                        .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.title").value("Business Rule Error"));
+            }
+
+            @Test
+            void shouldReturn409WhenAuthenticatedUserIsNotAParticipant() throws Exception {
+                UUID productId = insertProduct(storageSpotId);
+                String otherUserToken = registerAndLogin("other-product-user@email.com", PASSWORD);
+
+                mockMvc.perform(MockMvcRequestBuilders.patch(API_PRODUCTS + "/" + productId)
+                                .header("Authorization", "Bearer " + otherUserToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new UpdateProductRequest(
+                                        "Should Not Update", null, null, null, null))))
+                        .andExpect(status().isConflict());
+
+                Map<String, Object> persistedProduct = jdbcTemplate.queryForMap(
+                        "SELECT name FROM products WHERE id = ?", productId);
+                assertEquals("Milk", persistedProduct.get("name"));
+            }
+
+            @Test
+            void shouldReturn401WhenNotAuthenticated() throws Exception {
+                UUID productId = insertProduct(storageSpotId);
+
+                mockMvc.perform(MockMvcRequestBuilders.patch(API_PRODUCTS + "/" + productId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new UpdateProductRequest(
+                                        "Should Not Update", null, null, null, null))))
+                        .andExpect(status().isUnauthorized());
             }
         }
 

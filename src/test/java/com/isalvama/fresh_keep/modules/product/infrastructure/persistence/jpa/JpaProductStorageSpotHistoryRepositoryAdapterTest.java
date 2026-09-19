@@ -85,7 +85,6 @@ class JpaProductStorageSpotHistoryRepositoryAdapterTest {
                 ShoppingReceiptId.of(shoppingReceiptId),
                 Money.from(BigDecimal.valueOf(1.5), "USD")
         );
-        product.setActualStorageSpotId(StorageSpotId.of(storageSpotId));
         productRepositoryAdapter.saveAll(List.of(product));
         return product;
     }
