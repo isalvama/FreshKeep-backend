@@ -44,8 +44,8 @@ public class JpaProductRepositoryAdapter implements ProductRepositoryPort {
                                     product.getExpirationDate(),
                                     product.getActualStorageSpotId().value(),
                                     product.getProductType(),
-                                    product.getPrice().amount().value(),
-                                    product.getPrice().currency()
+                                    product.getPrice() == null ? null : product.getPrice().amount().value(),
+                                    product.getPrice() == null ? null : product.getPrice().currency()
                             );
                             jpaProductRepository.save(entity);
                             return entity;

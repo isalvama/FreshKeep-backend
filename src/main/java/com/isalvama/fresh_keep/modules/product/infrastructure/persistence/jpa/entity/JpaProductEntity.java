@@ -53,11 +53,11 @@ public class JpaProductEntity implements Persistable<UUID> {
     @JdbcTypeCode(SqlTypes.UUID)
     private UUID shoppingReceiptId;
 
-    @Column(name = "price", updatable = false)
+    @Column(name = "price")
     private BigDecimal price;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "currency", updatable = false, length = 20)
+    @Column(name = "currency", length = 20)
     private Currency currency;
 
     @CreationTimestamp

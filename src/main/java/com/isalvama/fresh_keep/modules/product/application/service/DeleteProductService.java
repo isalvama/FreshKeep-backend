@@ -31,7 +31,7 @@ public class DeleteProductService implements DeleteProductUseCase {
         boolean isUserParticipant = spaceParticipancyLookUpPort.isParticipant(command.userId(), product.getActualStorageSpotId().toString());
 
         if (!isUserParticipant){
-            throw new SpaceNotAccessibleException("User with id " + command.userId() + " is not a participant of the Space with id " + command);
+            throw new SpaceNotAccessibleException("User with id " + command.userId() + " is not a participant of the storage spot with id " + product.getActualStorageSpotId().toString());
         }
 
         productRepositoryPort.delete(product, clock);

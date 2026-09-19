@@ -24,8 +24,16 @@ public record Money (Amount amount, Currency currency){
         return this.currency.getSymbol();
     }
 
+    public BigDecimal getAmountValue(){
+        return this.amount.value();
+    }
+
     public static Money from (BigDecimal amount, String currencyConstName){
-        return new Money(Amount.of(amount), Currency.valueOf(currencyConstName));
+        return new Money(Amount.of(amount), Currency.getValueOf(currencyConstName));
+    }
+
+    public static Money from (Amount amount, Currency currency){
+        return new Money(amount, currency);
     }
 
     public static Money from (BigDecimal amount, Currency currency){

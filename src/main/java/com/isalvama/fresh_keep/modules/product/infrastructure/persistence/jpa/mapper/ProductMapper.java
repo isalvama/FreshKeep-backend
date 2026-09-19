@@ -22,8 +22,8 @@ public class ProductMapper {
                 .actualStorageSpotId(product.getActualStorageSpotId().value())
                 .productType(product.getProductType())
                 .shoppingReceiptId(product.getShoppingReceiptId().value())
-                .price(product.getPrice().amount().value())
-                .currency(product.getPrice().currency())
+                .price(product.getPrice() == null ? null : product.getPrice().amount().value())
+                .currency(product.getPrice() == null ? null : product.getPrice().currency())
                 .build();
     }
 
@@ -32,6 +32,7 @@ public class ProductMapper {
                         ProductId.of(entity.getId()),
                         ProductName.from(entity.getName()),
                 entity.getExpirationDate(),
+                StorageSpotId.of(entity.getSuggestedStorageSpotId()),
                 StorageSpotId.of(entity.getActualStorageSpotId()),
                         entity.getProductType(),
                         ShoppingReceiptId.of(entity.getShoppingReceiptId()),

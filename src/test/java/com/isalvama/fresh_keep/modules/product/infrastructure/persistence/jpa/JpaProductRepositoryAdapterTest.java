@@ -86,7 +86,6 @@ class JpaProductRepositoryAdapterTest {
                 ShoppingReceiptId.of(shoppingReceiptId),
                 priceAmount != null ? Money.from(priceAmount, currency) : null
         );
-        product.setActualStorageSpotId(StorageSpotId.of(storageSpotId));
         return product;
     }
 
@@ -127,11 +126,12 @@ class JpaProductRepositoryAdapterTest {
                     ProductName.from("Updated Milk"),
                     LocalDate.now().plusDays(14),
                     StorageSpotId.of(UUID.randomUUID()),
+                    StorageSpotId.of(updatedStorageSpotId),
                     ProductType.PANTRY,
                     ShoppingReceiptId.of(UUID.randomUUID()),
                     Money.from(BigDecimal.valueOf(9.99), "EUR")
             );
-            updated.setActualStorageSpotId(StorageSpotId.of(updatedStorageSpotId));
+            updated.updateStorageSpot(StorageSpotId.of(updatedStorageSpotId), updated.getExpirationDate());
 
             adapter.save(updated);
             jpaProductRepository.flush();
@@ -187,8 +187,6 @@ class JpaProductRepositoryAdapterTest {
                     ShoppingReceiptId.create(),
                     Money.from(BigDecimal.valueOf(1.5), "USD")
             );
-            invalidProduct.setActualStorageSpotId(StorageSpotId.of(storageSpotId));
-
             Exception exception = assertThrows(ProductPersistenceException.class,
                     () -> adapter.saveAll(List.of(invalidProduct)));
 
@@ -209,6 +207,22 @@ class JpaProductRepositoryAdapterTest {
             assertTrue(found.isPresent());
             assertEquals(milk.getId(), found.get().getId());
             assertEquals("Milk", found.get().getName().value());
+        }
+
+        @Test
+        void shouldReconstituteSuggestedAndActualStorageSpotsSeparately() {
+            UUID actualStorageSpotId = UUID.randomUUID();
+            insertStorageSpot(actualStorageSpotId, "Pantry", "PANTRY", spaceId);
+            Product milk = createProduct("Milk", BigDecimal.valueOf(1.5), "USD");
+            milk.updateStorageSpot(StorageSpotId.of(actualStorageSpotId), milk.getExpirationDate());
+            adapter.save(milk);
+            jpaProductRepository.flush();
+            entityManager.clear();
+
+            Product found = adapter.findById(milk.getId()).orElseThrow();
+
+            assertEquals(StorageSpotId.of(storageSpotId), found.getSuggestedStorageSpotId());
+            assertEquals(StorageSpotId.of(actualStorageSpotId), found.getActualStorageSpotId());
         }
 
         @Test
