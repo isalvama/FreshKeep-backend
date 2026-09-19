@@ -11,10 +11,10 @@ CREATE TABLE space_invitation
     uses_count      INT NOT NULL DEFAULT 0,
     CONSTRAINT fk_space_invitation_space_id
         FOREIGN KEY (space_id)
-            REFERENCES space (id)
+            REFERENCES spaces (id)
             ON DELETE CASCADE,
     CONSTRAINT fk_space_invitation_created_by
         FOREIGN KEY (created_by)
-            REFERENCES user (id)
-            ON DELETE CASCADE,
+            REFERENCES users (id)
+            ON DELETE CASCADE
 );

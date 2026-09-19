@@ -9,7 +9,7 @@ import com.isalvama.fresh_keep.modules.space.domain.model.value_object.Token;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,7 +19,7 @@ class SpaceInvitationTest {
     private static final Token TOKEN = Token.create();
     private static final SpaceId SPACE_ID = SpaceId.create();
     private static final UserId CREATOR_ID = UserId.create();
-    private static final LocalDate EXPIRES_AT = LocalDate.now().plusDays(7);
+    private static final LocalDateTime EXPIRES_AT = LocalDateTime.now().plusDays(7);
 
     @Test
     void constructor_createsInvitationWhenRequiredValuesAreValid() {
@@ -49,13 +49,27 @@ class SpaceInvitationTest {
     void createWithoutMaxCount_createsActiveInvitationWithNoUsageLimit() {
         SpaceInvitation invitation = validInvitation();
 
-        assertDoesNotThrow(() -> invitation.createWithoutMaxCount(SPACE_ID, CREATOR_ID, EXPIRES_AT));
+        SpaceInvitation created = invitation.createWithoutMaxCount(SPACE_ID, CREATOR_ID, EXPIRES_AT);
+
+        assertNotNull(created.getId());
+        assertNotNull(created.getToken());
+        assertEquals(SPACE_ID, created.getSpaceId());
+        assertEquals(CREATOR_ID, created.getUserCreatorId());
+        assertEquals(EXPIRES_AT, created.getExpiresAt());
+        assertTrue(created.getIsActive());
+        assertNull(created.getMaxUses());
+        assertEquals(0, created.getUsesCount().value());
     }
 
     @Test
     void reconstitute_createsInvitationWithNoUsageLimit() {
-        assertDoesNotThrow(() -> validInvitation().reconstitute(
-                ID, TOKEN, SPACE_ID, CREATOR_ID, EXPIRES_AT, true, null, Count.of(0)));
+        SpaceInvitation reconstituted = validInvitation().reconstitute(
+                ID, TOKEN, SPACE_ID, CREATOR_ID, EXPIRES_AT, true, null, Count.of(0));
+
+        assertEquals(ID, reconstituted.getId());
+        assertEquals(TOKEN, reconstituted.getToken());
+        assertEquals(EXPIRES_AT, reconstituted.getExpiresAt());
+        assertNull(reconstituted.getMaxUses());
     }
 
     @Test
