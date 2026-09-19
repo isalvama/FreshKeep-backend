@@ -9,7 +9,9 @@ import com.isalvama.fresh_keep.modules.space.domain.model.value_object.Token;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -49,13 +51,14 @@ class SpaceInvitationTest {
     void createWithoutMaxCount_createsActiveInvitationWithNoUsageLimit() {
         SpaceInvitation invitation = validInvitation();
 
-        SpaceInvitation created = invitation.createWithoutMaxCount(SPACE_ID, CREATOR_ID, EXPIRES_AT);
+        SpaceInvitation created = invitation.createWithoutMaxCount(
+                SPACE_ID, CREATOR_ID, Clock.fixed(EXPIRES_AT.toInstant(ZoneOffset.UTC), ZoneOffset.UTC));
 
         assertNotNull(created.getId());
         assertNotNull(created.getToken());
         assertEquals(SPACE_ID, created.getSpaceId());
         assertEquals(CREATOR_ID, created.getUserCreatorId());
-        assertEquals(EXPIRES_AT, created.getExpiresAt());
+        assertEquals(EXPIRES_AT.plusHours(24), created.getExpiresAt());
         assertTrue(created.getIsActive());
         assertNull(created.getMaxUses());
         assertEquals(0, created.getUsesCount().value());
