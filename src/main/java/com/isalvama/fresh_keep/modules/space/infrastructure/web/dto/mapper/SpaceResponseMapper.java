@@ -1,8 +1,10 @@
 package com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.mapper;
 
+import com.isalvama.fresh_keep.modules.space.application.port.in.dto.CreateSpaceInvitationResult;
 import com.isalvama.fresh_keep.modules.space.application.port.in.dto.GetSpaceOverviewResult;
 import com.isalvama.fresh_keep.modules.space.application.port.in.dto.SpaceProductResult;
 import com.isalvama.fresh_keep.modules.space.application.port.in.dto.SpaceResult;
+import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.response.CreateSpaceInvitationResponse;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.response.SpaceOverviewResponse;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.response.SpaceProductResponse;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.response.SpaceResponse;
@@ -45,6 +47,17 @@ public class SpaceResponseMapper {
                 result.productType(),
                 result.priceAmount(),
                 result.currency()
+        );
+    }
+
+    public CreateSpaceInvitationResponse toResponse (CreateSpaceInvitationResult result){
+        return new CreateSpaceInvitationResponse(
+                result.id(),
+                result.token(),
+                result.spaceId(),
+                result.userCreatorId(),
+                result.expiresAt(),
+                result.isActive()
         );
     }
 }

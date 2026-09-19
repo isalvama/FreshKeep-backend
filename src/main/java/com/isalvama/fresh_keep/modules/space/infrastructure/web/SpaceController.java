@@ -1,15 +1,19 @@
 package com.isalvama.fresh_keep.modules.space.infrastructure.web;
 
+import com.isalvama.fresh_keep.modules.space.application.port.in.CreateSpaceInvitationUseCase;
 import com.isalvama.fresh_keep.modules.space.application.port.in.CreateSpaceUseCase;
 import com.isalvama.fresh_keep.modules.space.application.port.in.GetSpaceOverviewUseCase;
 import com.isalvama.fresh_keep.modules.space.application.port.in.GetSpacesByParticipantIdUseCase;
 import com.isalvama.fresh_keep.modules.space.application.port.in.command.CreateSpaceCommand;
+import com.isalvama.fresh_keep.modules.space.application.port.in.command.CreateSpaceInvitationCommand;
 import com.isalvama.fresh_keep.modules.space.application.port.in.command.GetSpaceOverviewCommand;
+import com.isalvama.fresh_keep.modules.space.application.port.in.dto.CreateSpaceInvitationResult;
 import com.isalvama.fresh_keep.modules.space.application.port.in.dto.GetSpaceOverviewResult;
 import com.isalvama.fresh_keep.modules.space.application.port.in.dto.SpaceResult;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.mapper.CreateSpaceCommandMapper;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.mapper.SpaceResponseMapper;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.request.CreateSpaceRequest;
+import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.response.CreateSpaceInvitationResponse;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.response.SpaceOverviewResponse;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.response.SpaceResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,6 +40,7 @@ public class SpaceController {
     private final CreateSpaceUseCase createSpaceUseCase;
     private final GetSpacesByParticipantIdUseCase getSpacesByParticipantIdUseCase;
     private final GetSpaceOverviewUseCase getSpaceOverviewUseCase;
+    private final CreateSpaceInvitationUseCase createSpaceInvitationUseCase;
 
     @PostMapping
     @PreAuthorize("hasRole('USER')")
@@ -82,5 +87,23 @@ public class SpaceController {
         SpaceOverviewResponse response = mapper.toResponse(result);
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{spaceId}/invitations")
+    @PreAuthorize("hasRole('USER')")
+    @Operation(summary = "Create an invitation to join the space")
+    public ResponseEntity<CreateSpaceInvitationResponse> createInvitation(
+            @AuthenticationPrincipal(expression = "userId") String userId,
+            @PathVariable(name = "spaceId") @UUID String spaceId) {
+
+        CreateSpaceInvitationResult result = createSpaceInvitationUseCase.execute(new CreateSpaceInvitationCommand(spaceId, userId));
+
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(result.id())
+                .toUri();
+
+        return ResponseEntity.created(location).body(mapper.toResponse(result));
     }
 }
