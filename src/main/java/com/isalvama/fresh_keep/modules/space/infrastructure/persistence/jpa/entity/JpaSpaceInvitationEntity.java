@@ -31,11 +31,11 @@ public class JpaSpaceInvitationEntity {
 
     @Column(name = "space_id", updatable = false, nullable = false)
     @JdbcTypeCode(SqlTypes.UUID)
-    private UUID space_id;
+    private UUID spaceId;
 
-    @Column(name = "user_creator_id", updatable = false, nullable = false)
+    @Column(name = "created_by", updatable = false, nullable = false)
     @JdbcTypeCode(SqlTypes.UUID)
-    private UUID user_creator_id;
+    private UUID userCreatorId;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)

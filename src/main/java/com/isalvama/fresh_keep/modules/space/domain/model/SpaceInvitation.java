@@ -7,21 +7,23 @@ import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceInvitationId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.Token;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
+import lombok.Getter;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
+@Getter
 public class SpaceInvitation {
     private final SpaceInvitationId id;
     private final Token token;
     private final SpaceId spaceId;
     private final UserId userCreatorId;
-    private LocalDate expiresAt;
+    private LocalDateTime expiresAt;
     private Boolean isActive;
     private Count maxUses;
     private Count usesCount;
 
 
-    public SpaceInvitation(SpaceInvitationId id, Token token, SpaceId spaceId, UserId userCreatorId, LocalDate expiresAt, Boolean isActive, Count usesCount) {
+    public SpaceInvitation(SpaceInvitationId id, Token token, SpaceId spaceId, UserId userCreatorId, LocalDateTime expiresAt, Boolean isActive, Count usesCount) {
         this.id = validateNotNull(id, "id");
         this.token = validateNotNull(token, "token");
         this.spaceId = validateNotNull(spaceId, "spaceId");
@@ -31,7 +33,7 @@ public class SpaceInvitation {
         this.usesCount = validateNotNull(usesCount, "usesCount");
     }
 
-    public SpaceInvitation createWithoutMaxCount (SpaceId spaceId, UserId userCreatorId, LocalDate expiresAt){
+    public SpaceInvitation createWithoutMaxCount (SpaceId spaceId, UserId userCreatorId, LocalDateTime expiresAt){
         return new SpaceInvitation(
                 SpaceInvitationId.create(),
                 Token.create(),
@@ -43,7 +45,7 @@ public class SpaceInvitation {
         );
     }
 
-    public SpaceInvitation reconstitute (SpaceInvitationId id, Token token, SpaceId spaceId, UserId userCreatorId, LocalDate expiresAt, Boolean isActive, Count maxUses, Count usesCount){
+    public SpaceInvitation reconstitute (SpaceInvitationId id, Token token, SpaceId spaceId, UserId userCreatorId, LocalDateTime expiresAt, Boolean isActive, Count maxUses, Count usesCount){
         if (maxUses != null && usesCount.value() > maxUses.value()){
             throw new InvalidSpaceInvitationException("maxUses cannot be greater than usesCount");
         }
