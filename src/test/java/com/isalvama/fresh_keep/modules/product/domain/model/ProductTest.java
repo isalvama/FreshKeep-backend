@@ -2,6 +2,8 @@ package com.isalvama.fresh_keep.modules.product.domain.model;
 
 import com.isalvama.fresh_keep.modules.product.domain.exception.InvalidProductException;
 import com.isalvama.fresh_keep.modules.product.domain.model.value_object.Money;
+import com.isalvama.fresh_keep.modules.product.domain.model.value_object.Amount;
+import com.isalvama.fresh_keep.modules.product.domain.model.value_object.ProductId;
 import com.isalvama.fresh_keep.modules.product.domain.model.value_object.ProductName;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ShoppingReceiptId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotId;
@@ -29,6 +31,7 @@ class ProductTest {
         assertEquals(NAME, product.getName());
         assertEquals(EXPIRATION_DATE, product.getExpirationDate());
         assertEquals(SUGGESTED_STORAGE_SPOT_ID, product.getSuggestedStorageSpotId());
+        assertEquals(SUGGESTED_STORAGE_SPOT_ID, product.getActualStorageSpotId());
         assertEquals(PRODUCT_TYPE, product.getProductType());
         assertEquals(SHOPPING_RECEIPT_ID, product.getShoppingReceiptId());
         assertEquals(PRICE, product.getPrice());
@@ -40,6 +43,18 @@ class ProductTest {
         Product second = Product.create(NAME, EXPIRATION_DATE, SUGGESTED_STORAGE_SPOT_ID, PRODUCT_TYPE, SHOPPING_RECEIPT_ID, PRICE);
 
         assertNotEquals(first.getId(), second.getId());
+    }
+
+    @Test
+    void reconstitute_preservesActualStorageSpotWhenItDiffersFromSuggestedSpot() {
+        StorageSpotId actualStorageSpotId = StorageSpotId.create();
+
+        Product product = Product.reconstitute(
+                ProductId.create(), NAME, EXPIRATION_DATE, SUGGESTED_STORAGE_SPOT_ID,
+                actualStorageSpotId, PRODUCT_TYPE, SHOPPING_RECEIPT_ID, PRICE);
+
+        assertEquals(SUGGESTED_STORAGE_SPOT_ID, product.getSuggestedStorageSpotId());
+        assertEquals(actualStorageSpotId, product.getActualStorageSpotId());
     }
 
     @Test
@@ -62,17 +77,23 @@ class ProductTest {
     }
 
     @Test
+    void update_combinesPartialPriceChangesBeforeReplacingThePrice() {
+        Product product = Product.create(NAME, EXPIRATION_DATE, SUGGESTED_STORAGE_SPOT_ID, PRODUCT_TYPE, SHOPPING_RECEIPT_ID, PRICE);
+
+        product.update(null, null, null, Amount.of(BigDecimal.valueOf(3.75)), null);
+
+        assertEquals(Money.from(BigDecimal.valueOf(3.75), "EUR"), product.getPrice());
+    }
+
+    @Test
     void setters_updateMutableFields() {
         Product product = Product.create(NAME, EXPIRATION_DATE, SUGGESTED_STORAGE_SPOT_ID, PRODUCT_TYPE, SHOPPING_RECEIPT_ID, PRICE);
         StorageSpotId actualStorageSpotId = StorageSpotId.create();
         LocalDate newExpirationDate = EXPIRATION_DATE.plusDays(1);
 
-        product.setActualStorageSpotId(actualStorageSpotId);
-        product.setExpirationDate(newExpirationDate);
-        product.setProductType(ProductType.FRUITS);
+        product.updateStorageSpot(actualStorageSpotId, newExpirationDate);
 
         assertEquals(actualStorageSpotId, product.getActualStorageSpotId());
         assertEquals(newExpirationDate, product.getExpirationDate());
-        assertEquals(ProductType.FRUITS, product.getProductType());
     }
 }
