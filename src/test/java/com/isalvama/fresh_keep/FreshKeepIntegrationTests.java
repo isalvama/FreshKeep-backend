@@ -744,6 +744,85 @@ public class FreshKeepIntegrationTests {
         }
 
         @Nested
+        @DisplayName("POST " + API_SPACES + "/{spaceId}/invitations")
+        class CreateSpaceInvitation {
+
+            private UUID invitationSpaceId;
+
+            @BeforeEach
+            void createInvitationSpace() throws Exception {
+                ResultActions creation = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validRequest())));
+
+                invitationSpaceId = UUID.fromString(
+                        com.jayway.jsonpath.JsonPath.read(creation.andReturn().getResponse().getContentAsString(), "$.id"));
+            }
+
+            @Test
+            void shouldReturn201AndPersistInvitationForSpaceParticipant() throws Exception {
+                ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(
+                                API_SPACES + "/" + invitationSpaceId + "/invitations")
+                        .header("Authorization", "Bearer " + userToken));
+
+                result.andExpect(status().isCreated())
+                        .andExpect(header().string("Location", containsString(
+                                API_SPACES + "/" + invitationSpaceId + "/invitations/")))
+                        .andExpect(jsonPath("$.id").exists())
+                        .andExpect(jsonPath("$.token").exists())
+                        .andExpect(jsonPath("$.spaceId").value(invitationSpaceId.toString()))
+                        .andExpect(jsonPath("$.userCreatorId").value(userId))
+                        .andExpect(jsonPath("$.expiresAt").exists())
+                        .andExpect(jsonPath("$.isActive").value(true));
+
+                String response = result.andReturn().getResponse().getContentAsString();
+                String invitationId = com.jayway.jsonpath.JsonPath.read(response, "$.id");
+                String token = com.jayway.jsonpath.JsonPath.read(response, "$.token");
+                Map<String, Object> persistedInvitation = jdbcTemplate.queryForMap(
+                        "SELECT id, token, space_id, created_by, is_active, uses_count FROM space_invitation WHERE id = ?",
+                        UUID.fromString(invitationId));
+
+                assertEquals(UUID.fromString(invitationId), persistedInvitation.get("id"));
+                assertEquals(token, persistedInvitation.get("token"));
+                assertEquals(invitationSpaceId, persistedInvitation.get("space_id"));
+                assertEquals(UUID.fromString(userId), persistedInvitation.get("created_by"));
+                assertEquals(true, persistedInvitation.get("is_active"));
+                assertEquals(0, persistedInvitation.get("uses_count"));
+            }
+
+            @Test
+            void shouldReturn409WhenAuthenticatedUserIsNotAParticipant() throws Exception {
+                String otherUserEmail = "inv-other@email.com";
+                mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new AuthRequest(otherUserEmail, PASSWORD))))
+                        .andExpect(status().isCreated());
+
+                ResultActions login = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new AuthRequest(otherUserEmail, PASSWORD))));
+                String otherUserToken = com.jayway.jsonpath.JsonPath.read(
+                        login.andReturn().getResponse().getContentAsString(), "$.jwtString");
+
+                mockMvc.perform(MockMvcRequestBuilders.post(
+                                API_SPACES + "/" + invitationSpaceId + "/invitations")
+                        .header("Authorization", "Bearer " + otherUserToken))
+                        .andExpect(status().isConflict());
+
+                assertEquals(0, jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM space_invitation WHERE space_id = ?", Integer.class, invitationSpaceId));
+            }
+
+            @Test
+            void shouldReturn401WhenNotAuthenticated() throws Exception {
+                mockMvc.perform(MockMvcRequestBuilders.post(
+                                API_SPACES + "/" + invitationSpaceId + "/invitations"))
+                        .andExpect(status().isUnauthorized());
+            }
+        }
+
+        @Nested
         class GetSpacesByParticipantId {
 
             private String user2Token;
