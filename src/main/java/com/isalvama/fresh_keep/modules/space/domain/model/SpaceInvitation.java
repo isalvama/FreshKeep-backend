@@ -9,10 +9,13 @@ import com.isalvama.fresh_keep.modules.space.domain.model.value_object.Token;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 import lombok.Getter;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Getter
 public class SpaceInvitation {
+    private static final int LIFE_SPAN_HOURS = 24;
+
     private final SpaceInvitationId id;
     private final Token token;
     private final SpaceId spaceId;
@@ -33,19 +36,19 @@ public class SpaceInvitation {
         this.usesCount = validateNotNull(usesCount, "usesCount");
     }
 
-    public SpaceInvitation createWithoutMaxCount (SpaceId spaceId, UserId userCreatorId, LocalDateTime expiresAt){
+    public static SpaceInvitation createWithoutMaxCount (SpaceId spaceId, UserId userCreatorId, Clock clock){
         return new SpaceInvitation(
                 SpaceInvitationId.create(),
                 Token.create(),
                 spaceId,
                 userCreatorId,
-                expiresAt,
+                LocalDateTime.now(clock).plusHours(LIFE_SPAN_HOURS),
                 true,
                 Count.of(0)
         );
     }
 
-    public SpaceInvitation reconstitute (SpaceInvitationId id, Token token, SpaceId spaceId, UserId userCreatorId, LocalDateTime expiresAt, Boolean isActive, Count maxUses, Count usesCount){
+    public static SpaceInvitation reconstitute (SpaceInvitationId id, Token token, SpaceId spaceId, UserId userCreatorId, LocalDateTime expiresAt, Boolean isActive, Count maxUses, Count usesCount){
         if (maxUses != null && usesCount.value() > maxUses.value()){
             throw new InvalidSpaceInvitationException("maxUses cannot be greater than usesCount");
         }
