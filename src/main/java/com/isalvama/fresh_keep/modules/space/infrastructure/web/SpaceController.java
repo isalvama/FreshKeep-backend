@@ -1,24 +1,26 @@
 package com.isalvama.fresh_keep.modules.space.infrastructure.web;
 
-import com.isalvama.fresh_keep.modules.space.application.port.in.CreateSpaceInvitationUseCase;
-import com.isalvama.fresh_keep.modules.space.application.port.in.CreateSpaceUseCase;
-import com.isalvama.fresh_keep.modules.space.application.port.in.GetSpaceOverviewUseCase;
-import com.isalvama.fresh_keep.modules.space.application.port.in.GetSpacesByParticipantIdUseCase;
+import com.isalvama.fresh_keep.modules.space.application.port.in.*;
 import com.isalvama.fresh_keep.modules.space.application.port.in.command.CreateSpaceCommand;
 import com.isalvama.fresh_keep.modules.space.application.port.in.command.CreateSpaceInvitationCommand;
 import com.isalvama.fresh_keep.modules.space.application.port.in.command.GetSpaceOverviewCommand;
+import com.isalvama.fresh_keep.modules.space.application.port.in.command.JoinSpaceByInvitationCommand;
 import com.isalvama.fresh_keep.modules.space.application.port.in.dto.CreateSpaceInvitationResult;
 import com.isalvama.fresh_keep.modules.space.application.port.in.dto.GetSpaceOverviewResult;
+import com.isalvama.fresh_keep.modules.space.application.port.in.dto.JoinSpaceByInvitationResult;
 import com.isalvama.fresh_keep.modules.space.application.port.in.dto.SpaceResult;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.mapper.CreateSpaceCommandMapper;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.mapper.SpaceResponseMapper;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.request.CreateSpaceRequest;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.response.CreateSpaceInvitationResponse;
+import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.response.JoinSpaceByInvitationResponse;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.response.SpaceOverviewResponse;
 import com.isalvama.fresh_keep.modules.space.infrastructure.web.dto.response.SpaceResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.validator.constraints.UUID;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +43,7 @@ public class SpaceController {
     private final GetSpacesByParticipantIdUseCase getSpacesByParticipantIdUseCase;
     private final GetSpaceOverviewUseCase getSpaceOverviewUseCase;
     private final CreateSpaceInvitationUseCase createSpaceInvitationUseCase;
+    private final JoinSpaceByInvitationUseCase joinSpaceByInvitationUseCase;
 
     @PostMapping
     @PreAuthorize("hasRole('USER')")
@@ -105,5 +108,17 @@ public class SpaceController {
                 .toUri();
 
         return ResponseEntity.created(location).body(mapper.toResponse(result));
+    }
+
+    @PostMapping("/invitations/{token}/join")
+    @PreAuthorize("hasRole('USER')")
+    @Operation(summary = "Use a space invitation and join its space")
+    public ResponseEntity<JoinSpaceByInvitationResponse> useInvitation(
+            @AuthenticationPrincipal(expression = "userId") String userId,
+            @PathVariable(name = "token") @NotNull @NotBlank String token) {
+
+        JoinSpaceByInvitationResult result = joinSpaceByInvitationUseCase.execute(new JoinSpaceByInvitationCommand(userId, token));
+
+        return ResponseEntity.ok(new JoinSpaceByInvitationResponse(result.spaceId()));
     }
 }

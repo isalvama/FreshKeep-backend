@@ -823,6 +823,81 @@ public class FreshKeepIntegrationTests {
         }
 
         @Nested
+        @DisplayName("POST " + API_SPACES + "/invitations/{token}/join")
+        class UseSpaceInvitation {
+
+            private UUID invitationSpaceId;
+            private String invitationToken;
+            private String otherUserToken;
+            private String otherUserId;
+
+            @BeforeEach
+            void createInvitationAndSecondUser() throws Exception {
+                ResultActions creation = mockMvc.perform(MockMvcRequestBuilders.post(API_SPACES)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validRequest())));
+                invitationSpaceId = UUID.fromString(
+                        com.jayway.jsonpath.JsonPath.read(
+                                creation.andReturn().getResponse().getContentAsString(), "$.id"));
+
+                ResultActions invitationCreation = mockMvc.perform(MockMvcRequestBuilders.post(
+                                API_SPACES + "/" + invitationSpaceId + "/invitations")
+                        .header("Authorization", "Bearer " + userToken));
+                invitationToken = com.jayway.jsonpath.JsonPath.read(
+                        invitationCreation.andReturn().getResponse().getContentAsString(), "$.token");
+
+                String otherUserEmail = "join-other@email.com";
+                mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/register/user")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(new AuthRequest(otherUserEmail, PASSWORD))))
+                        .andExpect(status().isCreated());
+
+                ResultActions login = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new AuthRequest(otherUserEmail, PASSWORD))));
+                String loginResponse = login.andReturn().getResponse().getContentAsString();
+                otherUserToken = com.jayway.jsonpath.JsonPath.read(loginResponse, "$.jwtString");
+                otherUserId = jwtTokenGeneratorAdapter.extractCustomUserPrincipal(otherUserToken).userId();
+            }
+
+            @Test
+            void shouldReturn200AndAddAuthenticatedUserToSpace() throws Exception {
+                mockMvc.perform(MockMvcRequestBuilders.post(
+                                API_SPACES + "/invitations/" + invitationToken + "/join")
+                        .header("Authorization", "Bearer " + otherUserToken))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.spaceId").value(invitationSpaceId.toString()));
+
+                assertEquals(1, jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM spaces_participants WHERE space_id = ? AND participant_id = ?",
+                        Integer.class, invitationSpaceId, UUID.fromString(otherUserId)));
+                assertEquals(1, jdbcTemplate.queryForObject(
+                        "SELECT uses_count FROM space_invitation WHERE token = ?",
+                        Integer.class, invitationToken));
+            }
+
+            @Test
+            void shouldReturn409WhenAuthenticatedUserIsAlreadyAParticipant() throws Exception {
+                mockMvc.perform(MockMvcRequestBuilders.post(
+                                API_SPACES + "/invitations/" + invitationToken + "/join")
+                        .header("Authorization", "Bearer " + userToken))
+                        .andExpect(status().isConflict());
+
+                assertEquals(0, jdbcTemplate.queryForObject(
+                        "SELECT uses_count FROM space_invitation WHERE token = ?",
+                        Integer.class, invitationToken));
+            }
+
+            @Test
+            void shouldReturn401WhenNotAuthenticated() throws Exception {
+                mockMvc.perform(MockMvcRequestBuilders.post(
+                                API_SPACES + "/invitations/" + invitationToken + "/join"))
+                        .andExpect(status().isUnauthorized());
+            }
+        }
+
+        @Nested
         class GetSpacesByParticipantId {
 
             private String user2Token;
