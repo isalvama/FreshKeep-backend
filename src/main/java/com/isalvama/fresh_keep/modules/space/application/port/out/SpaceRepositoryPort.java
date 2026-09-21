@@ -18,4 +18,5 @@ public interface SpaceRepositoryPort {
     Set<String> findAccessible(String userId, List<StorageSpotId> storageSpotIds);
     Optional<Space> getById(SpaceId spaceId);
     List<StorageSpot> findStorageSpotsByIds(Set<StorageSpotId> storageSpotIds);
+    void addParticipant (UserId userid, SpaceId spaceId);
     }
