@@ -24,7 +24,7 @@ public class RegisterUserService implements RegisterUserUseCase {
     public void execute(RegisterUserCommand command) {
 
         if (userRepositoryPort.findByAccountId(UUID.fromString(command.accountId())).isPresent()){
-            log.error("User already exists for account with id {}, skipping.",command.accountId());
+            log.error("User already exists for account with id {}, skipping.", command.accountId());
             return;
         }
 

@@ -6,6 +6,7 @@ import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import com.isalvama.fresh_keep.shared.domain.Role;
 import lombok.Getter;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Getter
@@ -22,7 +23,7 @@ public class Account {
         this.id = validateNotNull(id, "id");
         this.email = validateNotNull(email, "email");
         this.passwordHash = validateNotNull(passwordHash, "passwordHash");
-        this.roles = validateNotNull(roles, "roles");
+        this.roles = new HashSet<>(validateNotNull(roles, "roles"));
     }
 
     public static Account createUser(Email email, String passwordHash){
@@ -54,6 +55,12 @@ public class Account {
 
     public boolean hasRole(Role role) {
         return this.roles.contains(role);
+    }
+
+    public void addRole (Role role) {
+        if (role == null) throw new InvalidAccountException("cannot add a null role to an account.");
+        if (this.roles.contains(role)) throw new InvalidAccountException("cannot add a role to an account that already has it.");
+        this.roles.add(role);
     }
 
     private static <T> T validateNotNull(T obj, String fieldName) {
