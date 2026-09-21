@@ -36,11 +36,12 @@ CREATE TABLE spaces_participants
 (
     participant_id UUID,
     space_id       UUID NOT NULL,
+    joined_at      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     PRIMARY KEY (participant_id, space_id),
     CONSTRAINT fk_spaces_participants_participant
         FOREIGN KEY (participant_id)
             REFERENCES users (id)
-            ON DELETE SET NULL,
+            ON DELETE CASCADE,
     CONSTRAINT fk_spaces_participants_space
         FOREIGN KEY (space_id)
             REFERENCES spaces (id)

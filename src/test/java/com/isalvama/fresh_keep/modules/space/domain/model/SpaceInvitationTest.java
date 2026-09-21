@@ -2,6 +2,7 @@ package com.isalvama.fresh_keep.modules.space.domain.model;
 
 import com.isalvama.fresh_keep.modules.space.domain.exception.InvalidSpaceException;
 import com.isalvama.fresh_keep.modules.space.domain.exception.InvalidSpaceInvitationException;
+import com.isalvama.fresh_keep.modules.space.domain.exception.ExpiredSpaceInvitationException;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.Count;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceInvitationId;
@@ -87,7 +88,61 @@ class SpaceInvitationTest {
                 ID, TOKEN, SPACE_ID, CREATOR_ID, EXPIRES_AT, true, Count.of(1), Count.of(2)));
     }
 
+    @Test
+    void use_incrementsUsageCountWhenInvitationIsActiveAndHasNoLimit() {
+        SpaceInvitation invitation = validInvitation();
+
+        invitation.use(clockAt(LocalDateTime.now()));
+
+        assertEquals(1, invitation.getUsesCount().value());
+    }
+
+    @Test
+    void use_incrementsUsageCountWhenInvitationHasRemainingUses() {
+        SpaceInvitation invitation = SpaceInvitation.reconstitute(
+                ID, TOKEN, SPACE_ID, CREATOR_ID, EXPIRES_AT, true, Count.of(2), Count.of(1));
+
+        invitation.use(clockAt(LocalDateTime.now()));
+
+        assertEquals(2, invitation.getUsesCount().value());
+    }
+
+    @Test
+    void use_throwsWhenInvitationIsExpired() {
+        SpaceInvitation invitation = SpaceInvitation.reconstitute(
+                ID, TOKEN, SPACE_ID, CREATOR_ID, LocalDateTime.now().minusSeconds(1), true,
+                null, Count.of(0));
+
+        assertThrows(ExpiredSpaceInvitationException.class,
+                () -> invitation.use(clockAt(LocalDateTime.now())));
+        assertEquals(0, invitation.getUsesCount().value());
+    }
+
+    @Test
+    void use_throwsWhenInvitationIsInactive() {
+        SpaceInvitation invitation = SpaceInvitation.reconstitute(
+                ID, TOKEN, SPACE_ID, CREATOR_ID, EXPIRES_AT, false, null, Count.of(0));
+
+        assertThrows(ExpiredSpaceInvitationException.class,
+                () -> invitation.use(clockAt(LocalDateTime.now())));
+        assertEquals(0, invitation.getUsesCount().value());
+    }
+
+    @Test
+    void use_throwsWhenInvitationHasReachedItsUsageLimit() {
+        SpaceInvitation invitation = SpaceInvitation.reconstitute(
+                ID, TOKEN, SPACE_ID, CREATOR_ID, EXPIRES_AT, true, Count.of(2), Count.of(2));
+
+        assertThrows(ExpiredSpaceInvitationException.class,
+                () -> invitation.use(clockAt(LocalDateTime.now())));
+        assertEquals(2, invitation.getUsesCount().value());
+    }
+
     private SpaceInvitation validInvitation() {
         return new SpaceInvitation(ID, TOKEN, SPACE_ID, CREATOR_ID, EXPIRES_AT, true, Count.of(0));
+    }
+
+    private Clock clockAt(LocalDateTime time) {
+        return Clock.fixed(time.toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
     }
 }

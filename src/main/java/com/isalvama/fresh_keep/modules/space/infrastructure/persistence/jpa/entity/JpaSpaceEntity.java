@@ -8,6 +8,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -38,14 +39,9 @@ public class JpaSpaceEntity {
     @OneToMany(mappedBy = "space", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Set<JpaStorageSpotEntity> storageSpots;
 
-    @ElementCollection
-    @CollectionTable(
-            name = "spaces_participants",
-            joinColumns = @JoinColumn(name = "space_id")
-    )
-    @Column(name = "participant_id")
-    @JdbcTypeCode(SqlTypes.UUID)
-    private Set<UUID> participantIds;
+    @OneToMany(mappedBy = "space", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<JpaSpaceParticipantEntity> participants = new HashSet<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false, nullable = false)

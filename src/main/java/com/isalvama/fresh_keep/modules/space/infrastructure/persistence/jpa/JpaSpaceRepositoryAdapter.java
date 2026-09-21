@@ -1,5 +1,6 @@
 package com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa;
 
+import com.isalvama.fresh_keep.modules.product.infrastructure.exception.ProductPersistenceException;
 import com.isalvama.fresh_keep.modules.space.application.port.out.SpaceRepositoryPort;
 import com.isalvama.fresh_keep.modules.space.domain.model.Space;
 import com.isalvama.fresh_keep.modules.space.domain.model.StorageSpot;
@@ -10,11 +11,13 @@ import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.enti
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaStorageSpotEntity;
 import com.isalvama.fresh_keep.modules.space.infrastructure.exception.SpacePersistenceException;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.mapper.SpaceMapper;
+import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.mapper.SpaceParticipantMapper;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Repository;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -25,12 +28,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JpaSpaceRepositoryAdapter implements SpaceRepositoryPort {
     private final JpaSpaceSpringDataRepository spaceSpringDataRepository;
+    private final JpaSpaceParticipantSpringDataRepository spaceParticipantSpringDataRepository;
     private final SpaceMapper spaceMapper;
+    private final SpaceParticipantMapper spaceParticipantMapper;
+    private final Clock clock;
 
     @Override
     public void save (Space space){
         try {
-            spaceSpringDataRepository.save(spaceMapper.toEntity(space));
+            spaceSpringDataRepository.save(spaceMapper.toEntity(space, clock));
         } catch (DataAccessException e) {
             throw new SpacePersistenceException(
                     "Failed to persist space with id " + space.getId().toString() + ": " + e.getMessage());
@@ -63,6 +69,9 @@ public class JpaSpaceRepositoryAdapter implements SpaceRepositoryPort {
 
     @Override
     public Set<String> findAccessible(String userId, List<StorageSpotId> storageSpotIds) {
+        if (storageSpotIds.isEmpty()){
+            return Set.of();
+        }
         List<UUID> ids = storageSpotIds.stream().map(StorageSpotId::value).toList();
         Set<UUID> resultantIds = spaceSpringDataRepository.findAccessible(UUID.fromString(userId), ids);
         return resultantIds.stream().map(UUID::toString).collect(Collectors.toSet());
@@ -70,7 +79,7 @@ public class JpaSpaceRepositoryAdapter implements SpaceRepositoryPort {
 
     @Override
     public Optional<Space> getById(SpaceId spaceId) {
-        return spaceSpringDataRepository.findById(spaceId.value()).map(spaceMapper::toDomain);
+        return spaceSpringDataRepository.findByIdWithRelations(spaceId.value()).map(spaceMapper::toDomain);
     }
 
     @Override
@@ -80,5 +89,16 @@ public class JpaSpaceRepositoryAdapter implements SpaceRepositoryPort {
         return entities.stream()
                 .map(e -> StorageSpot.reconstitute(StorageSpotId.of(e.getId()), StorageSpotName.from(e.getName()), e.getType()))
                 .toList();
+    }
+
+    @Override
+    public void addParticipant(UserId userId, SpaceId spaceId) {
+        try {
+            JpaSpaceEntity spaceEntity = spaceSpringDataRepository.findById(spaceId.value())
+                    .orElseThrow(() -> new ProductPersistenceException("Failed to save participant with id " + userId.toString() + " in space with id " + spaceId + " because the space was not found."));
+            spaceParticipantSpringDataRepository.save(spaceParticipantMapper.toEntity(spaceEntity, userId, clock));
+        } catch (DataAccessException e){
+            throw new ProductPersistenceException("Failed to save participant with id " + userId.toString() + " in space with id " + spaceId + ". " + e.getMessage());
+        }
     }
 }

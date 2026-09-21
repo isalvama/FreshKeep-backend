@@ -14,6 +14,10 @@ public record Count(Integer value) {
         }
     }
 
+    public Count add (){
+        return Count.of(Math.addExact(value, 1));
+    }
+
     public static Count of (Integer value){
         return new Count(value);
     }

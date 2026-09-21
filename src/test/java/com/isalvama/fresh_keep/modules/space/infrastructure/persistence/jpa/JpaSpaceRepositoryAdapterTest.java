@@ -11,6 +11,7 @@ import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSp
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotName;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaSpaceEntity;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.mapper.SpaceMapper;
+import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.mapper.SpaceParticipantMapper;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.mapper.StorageSpotsMapper;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +20,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.testcontainers.junit.jupiter.Container;
@@ -27,6 +30,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -39,8 +43,17 @@ import static org.junit.jupiter.api.Assertions.*;
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({SpaceMapper.class, StorageSpotsMapper.class, JpaSpaceRepositoryAdapter.class})
+@Import({JpaSpaceRepositoryAdapterTest.TestConfig.class, SpaceMapper.class, SpaceParticipantMapper.class,
+        StorageSpotsMapper.class, JpaSpaceRepositoryAdapter.class})
 class JpaSpaceRepositoryAdapterTest {
+
+    @TestConfiguration
+    static class TestConfig {
+        @Bean
+        Clock clock() {
+            return Clock.systemUTC();
+        }
+    }
 
     @BeforeEach
     void setUp(){
@@ -113,8 +126,11 @@ class JpaSpaceRepositoryAdapterTest {
             assertEquals("Main Freezer", saved.getStorageSpots().iterator().next().getName());
             assertEquals(StorageSpotType.FREEZER, saved.getStorageSpots().iterator().next().getType());
 
-            assertEquals(2, saved.getParticipantIds().size());
-            assertTrue(saved.getParticipantIds().contains(creatorUserId.value()));
+            assertEquals(2, saved.getParticipants().size());
+            assertTrue(saved.getParticipants().stream()
+                    .anyMatch(participant -> participant.getId().getParticipantId().equals(creatorUserId.value())));
+            assertTrue(saved.getParticipants().stream()
+                    .allMatch(participant -> participant.getJoinedAt() != null));
 
             assertNotNull(saved.getCreatedAt());
             assertTrue(saved.getCreatedAt().isAfter(Instant.now().minus(2, ChronoUnit.MINUTES)));
