@@ -8,6 +8,7 @@ import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceName
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotId;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotName;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaSpaceEntity;
+import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaSpaceParticipantEntity;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaStorageSpotEntity;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,6 +31,9 @@ class SpaceMapperTest {
 
     @Mock
     private StorageSpotsMapper storageSpotsMapper;
+
+    @Mock
+    private SpaceParticipantMapper spaceParticipantMapper;
 
     @InjectMocks
     private SpaceMapper spaceMapper;
@@ -52,8 +58,8 @@ class SpaceMapperTest {
                 .emoji("🏠")
                 .creatorId(creatorId)
                 .storageSpots(Set.of(spotEntity))
-                .participantIds(Set.of(creatorId))
                 .build();
+        entity.setParticipants(Set.of(new JpaSpaceParticipantEntity(entity, creatorId, java.time.Instant.now())));
 
         Space domain = spaceMapper.toDomain(entity);
 
@@ -83,8 +89,11 @@ class SpaceMapperTest {
                 .emoji("🏠")
                 .creatorId(creatorId)
                 .storageSpots(Set.of(spotEntity))
-                .participantIds(Set.of(creatorId, otherParticipantId))
                 .build();
+        entity.setParticipants(Set.of(
+                new JpaSpaceParticipantEntity(entity, creatorId, java.time.Instant.now()),
+                new JpaSpaceParticipantEntity(entity, otherParticipantId, java.time.Instant.now())
+        ));
 
         Space domain = spaceMapper.toDomain(entity);
 
@@ -112,8 +121,11 @@ class SpaceMapperTest {
         when(storageSpotsMapper.toEntity(spot)).thenReturn(mappedSpotEntity);
 
         Space space = Space.create(SpaceName.from("Kitchen"), Emoji.from("🏠"), Set.of(spot), creatorId);
+        when(spaceParticipantMapper.toEntities(any(), eq(Set.of(creatorId)), any()))
+                .thenAnswer(invocation -> Set.of(new JpaSpaceParticipantEntity(
+                        invocation.<JpaSpaceEntity>getArgument(0), creatorId.value(), java.time.Instant.now())));
 
-        JpaSpaceEntity entity = spaceMapper.toEntity(space);
+        JpaSpaceEntity entity = spaceMapper.toEntity(space, java.time.Clock.systemUTC());
 
         assertEquals(space.getId().value(), entity.getId());
         assertEquals("Kitchen", entity.getName());
@@ -122,6 +134,7 @@ class SpaceMapperTest {
         assertEquals(1, entity.getStorageSpots().size());
         assertTrue(entity.getStorageSpots().contains(mappedSpotEntity));
         assertSame(entity, mappedSpotEntity.getSpace());
-        assertEquals(Set.of(creatorId.value()), entity.getParticipantIds());
+        assertEquals(1, entity.getParticipants().size());
+        assertEquals(creatorId.value(), entity.getParticipants().iterator().next().getId().getParticipantId());
     }
 }
