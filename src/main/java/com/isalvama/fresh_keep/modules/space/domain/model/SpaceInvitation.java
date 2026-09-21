@@ -1,5 +1,6 @@
 package com.isalvama.fresh_keep.modules.space.domain.model;
 
+import com.isalvama.fresh_keep.modules.space.domain.exception.ExpiredSpaceInvitationException;
 import com.isalvama.fresh_keep.modules.space.domain.exception.InvalidSpaceException;
 import com.isalvama.fresh_keep.modules.space.domain.exception.InvalidSpaceInvitationException;
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.Count;
@@ -64,6 +65,50 @@ public class SpaceInvitation {
         invitation.setMaxUses(maxUses);
         return invitation;
     }
+
+
+    public void use(Clock clock){
+        if (isExpired(clock)){
+            throw new ExpiredSpaceInvitationException(
+                    "The Space Invitation with ID '%s' and token '%s' has expired."
+                            .formatted(this.id.toString(), this.token.toString())
+            );
+        }
+
+        if (!isActive()){
+            throw new ExpiredSpaceInvitationException(
+                    "The Space Invitation with ID '%s' and token '%s' is no longer active."
+                            .formatted(this.id.toString(), this.token.toString())
+            );
+        }
+
+        if (canNotAddUseCount()){
+            throw new ExpiredSpaceInvitationException(
+                    "The Space Invitation with ID '%s' and token '%s' has reached its usage limit."
+                            .formatted(this.id.toString(), this.token.toString())
+            );
+        }
+
+        this.usesCount = this.usesCount.add();
+    }
+
+
+
+
+    private boolean isExpired (Clock clock){
+        return LocalDateTime.now(clock).isAfter(this.expiresAt);
+    }
+
+    private boolean isActive (){
+        return this.isActive;
+    }
+
+    private boolean canNotAddUseCount (){
+        if (this.maxUses == null) return false;
+        return this.usesCount.value() >= this.maxUses.value();
+    }
+
+
 
     private void setMaxUses(Count maxUses){
         this.maxUses = maxUses;

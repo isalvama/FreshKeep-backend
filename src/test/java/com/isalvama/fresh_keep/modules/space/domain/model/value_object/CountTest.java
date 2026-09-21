@@ -28,4 +28,20 @@ class CountTest {
         assertThrows(InvalidInvitationCountException.class,
                 () -> Count.of(-1));
     }
+
+    @Test
+    void add_returnsCountWithValueIncrementedByOne() {
+        Count count = Count.of(2);
+
+        Count result = count.add();
+
+        assertEquals(3, result.value());
+        assertEquals(2, count.value());
+    }
+
+    @Test
+    void add_throwsWhenValueWouldOverflow() {
+        assertThrows(ArithmeticException.class,
+                () -> Count.of(Integer.MAX_VALUE).add());
+    }
 }
