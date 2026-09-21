@@ -49,7 +49,7 @@ public class JpaShoppingReceiptRepositoryAdapter implements ShoppingReceiptRepos
     @Override
     public Optional<LocalDate> getShoppingDate(ShoppingReceiptId shoppingReceiptId) {
         Optional<Instant> shoppingDate = jpaRepository.getShoppingDateById(shoppingReceiptId.value());
-        return shoppingDate.map(instant -> LocalDate.ofInstant(instant, ZoneId.systemDefault()));
+        return shoppingDate.map(instant -> LocalDate.ofInstant(instant, ZoneOffset.UTC));
     }
 
     @Override

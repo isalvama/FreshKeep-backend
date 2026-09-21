@@ -152,7 +152,7 @@ class JpaShoppingReceiptRepositoryAdapterTest {
 
             Optional<LocalDate> result = adapter.getShoppingDate(ShoppingReceiptId.from(id));
 
-            assertEquals(Optional.of(LocalDate.ofInstant(shoppingDate, ZoneId.systemDefault())), result);
+            assertEquals(Optional.of(LocalDate.ofInstant(shoppingDate, ZoneOffset.UTC)), result);
         }
 
         @Test
