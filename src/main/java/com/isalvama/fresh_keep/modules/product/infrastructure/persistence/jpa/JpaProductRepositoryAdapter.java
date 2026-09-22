@@ -8,6 +8,7 @@ import com.isalvama.fresh_keep.modules.product.domain.model.value_object.Product
 import com.isalvama.fresh_keep.modules.product.infrastructure.exception.ProductPersistenceException;
 import com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa.entity.JpaProductEntity;
 import com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa.mapper.ProductMapper;
+import com.isalvama.fresh_keep.modules.space.infrastructure.exception.SpacePersistenceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -37,21 +38,26 @@ public class JpaProductRepositoryAdapter implements ProductRepositoryPort {
 
     @Override
     public void save(Product product) {
-        jpaProductRepository.findById(product.getId().value())
-                .map(entity -> {
-                            entity.updateProfile(
-                                    product.getName().value(),
-                                    product.getExpirationDate(),
-                                    product.getActualStorageSpotId().value(),
-                                    product.getProductType(),
-                                    product.getPrice() == null ? null : product.getPrice().amount().value(),
-                                    product.getPrice() == null ? null : product.getPrice().currency()
-                            );
-                            jpaProductRepository.save(entity);
-                            return entity;
-                        }
-                )
-                .orElseGet(() -> jpaProductRepository.save(mapper.toEntity(product)));
+        try {
+            jpaProductRepository.findById(product.getId().value())
+                    .map(entity -> {
+                                entity.updateProfile(
+                                        product.getName().value(),
+                                        product.getExpirationDate(),
+                                        product.getActualStorageSpotId().value(),
+                                        product.getProductType(),
+                                        product.getPrice() == null ? null : product.getPrice().amount().value(),
+                                        product.getPrice() == null ? null : product.getPrice().currency()
+                                );
+                                jpaProductRepository.save(entity);
+                                return entity;
+                            }
+                    )
+                    .orElseGet(() -> jpaProductRepository.save(mapper.toEntity(product)));
+        } catch (DataAccessException e) {
+            throw new ProductPersistenceException(
+                    "Failed to retrieve product data with id " + product.getId().toString() + ": " + e.getMessage());
+        }
     }
 
     @Override
