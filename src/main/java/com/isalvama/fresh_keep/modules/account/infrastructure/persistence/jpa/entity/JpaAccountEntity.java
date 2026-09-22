@@ -47,4 +47,11 @@ public class JpaAccountEntity {
 
     @Column(name = "last_log_in", nullable = true)
     private Instant lastLogIn;
+
+
+    public void update (String email, String passwordHash, Set<Role> roles){
+        this.email = email;
+        this.passwordHash = passwordHash;
+        this.roles = roles;
+    }
 }

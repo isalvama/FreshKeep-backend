@@ -3,9 +3,9 @@ package com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa;
 import com.isalvama.fresh_keep.modules.account.application.port.out.AccountRepositoryPort;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
+import com.isalvama.fresh_keep.modules.account.infrastructure.exception.AccountPersistenceException;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.entity.JpaAccountEntity;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.mapper.AccountMapper;
-import com.isalvama.fresh_keep.modules.space.infrastructure.exception.SpacePersistenceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Repository;
@@ -24,7 +24,7 @@ public class JpaAccountRepositoryAdapter implements AccountRepositoryPort {
         try {
         return accountSpringDataRepository.findByEmail(email).map(accountMapper::toDomain);
         } catch (DataAccessException e) {
-            throw new SpacePersistenceException(
+            throw new AccountPersistenceException(
                     "Failed to retrieve account data with email " + email + ": " + e.getMessage());
         }
     }
@@ -32,10 +32,20 @@ public class JpaAccountRepositoryAdapter implements AccountRepositoryPort {
     @Override
     public Account save(Account account) {
         try {
-        JpaAccountEntity savedEntity = accountSpringDataRepository.save(accountMapper.toEntity(account));
-        return accountMapper.toDomain(savedEntity);
+            JpaAccountEntity savedEntity = accountSpringDataRepository.findById(account.getId().value())
+                    .map(entity -> {
+                        entity.update(
+                                account.getEmail().value(),
+                                account.getPasswordHash(),
+                                account.getRoles()
+                        );
+                        accountSpringDataRepository.save(entity);
+                        return entity;
+                    })
+                    .orElseGet(() -> accountSpringDataRepository.save(accountMapper.toEntity(account)));
+            return accountMapper.toDomain(savedEntity);
         } catch (DataAccessException e) {
-            throw new SpacePersistenceException(
+            throw new AccountPersistenceException(
                     "Failed to retrieve account data with id " + account.getId().toString() + ": " + e.getMessage());
         }
     }
@@ -45,7 +55,7 @@ public class JpaAccountRepositoryAdapter implements AccountRepositoryPort {
         try {
             accountSpringDataRepository.updateLastLogIn(id.value(), now);
         } catch (DataAccessException e) {
-            throw new SpacePersistenceException(
+            throw new AccountPersistenceException(
                     "Failed to persist space with id " + id + ": " + e.getMessage());
         }
     }
