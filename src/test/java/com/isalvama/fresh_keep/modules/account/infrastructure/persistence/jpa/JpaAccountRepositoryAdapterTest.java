@@ -42,7 +42,7 @@ class JpaAccountRepositoryAdapterTest {
     private AccountSpringDataRepository springRepository;
 
     @Test
-    @DisplayName("Should update last login timestamp in database")
+    @DisplayName("Should save a new account in the database")
     void saveAccount_Success() {
         // 1. GIVEN:
         UUID id = UUID.randomUUID();
@@ -70,6 +70,51 @@ class JpaAccountRepositoryAdapterTest {
         assertTrue(created.getCreatedAt().isBefore(Instant.now()));
 
         assertNull(created.getLastLogIn());
+    }
+
+    @Test
+    @DisplayName("Should update an existing account without replacing its audit fields")
+    void saveExistingAccount_UpdatesAccountData() {
+        UUID id = UUID.randomUUID();
+        Instant initialLogin = Instant.now().minus(1, ChronoUnit.DAYS);
+
+        Account initialAccount = Account.reconstitute(
+                AccountId.of(id),
+                Email.of("old@example.com"),
+                "old-hash",
+                Set.of(Role.USER));
+
+        adapter.save(initialAccount);
+        springRepository.flush();
+
+        JpaAccountEntity persistedBeforeUpdate = springRepository.findById(id).orElseThrow();
+        Instant createdAt = persistedBeforeUpdate.getCreatedAt();
+        persistedBeforeUpdate.setLastLogIn(initialLogin);
+        springRepository.saveAndFlush(persistedBeforeUpdate);
+
+        Account updatedAccount = Account.reconstitute(
+                AccountId.of(id),
+                Email.of("new@example.com"),
+                "new-hash",
+                Set.of(Role.USER, Role.ADMIN));
+
+        Account savedAccount = adapter.save(updatedAccount);
+        springRepository.flush();
+
+        JpaAccountEntity persistedAfterUpdate = springRepository.findById(id).orElseThrow();
+
+        assertEquals(id, savedAccount.getId().value());
+        assertEquals("new@example.com", savedAccount.getEmail().value());
+        assertEquals("new-hash", savedAccount.getPasswordHash());
+        assertEquals(Set.of(Role.USER, Role.ADMIN), savedAccount.getRoles());
+
+        assertEquals(id, persistedAfterUpdate.getId());
+        assertEquals("new@example.com", persistedAfterUpdate.getEmail());
+        assertEquals("new-hash", persistedAfterUpdate.getPasswordHash());
+        assertEquals(Set.of(Role.USER, Role.ADMIN), persistedAfterUpdate.getRoles());
+        assertEquals(createdAt, persistedAfterUpdate.getCreatedAt());
+        assertEquals(initialLogin.truncatedTo(ChronoUnit.MILLIS),
+                persistedAfterUpdate.getLastLogIn().truncatedTo(ChronoUnit.MILLIS));
     }
 
     @Test

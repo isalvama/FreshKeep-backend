@@ -5,7 +5,7 @@ import com.isalvama.fresh_keep.modules.account.application.port.out.PasswordHash
 import com.isalvama.fresh_keep.modules.account.application.port.out.dto.ResolvedEntities;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
-import com.isalvama.fresh_keep.modules.account.infrastructure.event.UserAccountEventPublisherAdapter;
+import com.isalvama.fresh_keep.modules.account.infrastructure.event.AccountEventPublisherAdapter;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.AuthenticationAdapter;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.exception.AdminProvisioningPendingException;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.JwtAuthenticationFilter;
@@ -64,7 +64,7 @@ class IdentityResolverServiceIntegrationTest {
     private JwtTokenGeneratorPort jwtTokenGeneratorPort;
 
     @MockitoBean
-    private UserAccountEventPublisherAdapter accountEventPublisherAdapter;
+    private AccountEventPublisherAdapter accountEventPublisherAdapter;
 
     @MockitoBean
     private AuthenticationAdapter authenticationAdapter;
