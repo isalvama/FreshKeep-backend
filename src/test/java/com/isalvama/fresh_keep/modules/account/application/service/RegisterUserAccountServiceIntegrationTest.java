@@ -5,8 +5,9 @@ import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterUserA
 import com.isalvama.fresh_keep.modules.account.application.port.out.AccountRepositoryPort;
 import com.isalvama.fresh_keep.modules.account.application.port.out.JwtTokenGeneratorPort;
 import com.isalvama.fresh_keep.modules.account.application.port.out.PasswordHasherPort;
+import com.isalvama.fresh_keep.modules.account.domain.event.UserAccountRegisteredEvent;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
-import com.isalvama.fresh_keep.modules.account.infrastructure.event.UserAccountEventPublisherAdapter;
+import com.isalvama.fresh_keep.modules.account.infrastructure.event.AccountEventPublisherAdapter;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.AuthenticationAdapter;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.JwtAuthenticationFilter;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.JpaSpaceRepositoryAdapter;
@@ -62,7 +63,7 @@ import static org.mockito.Mockito.when;
     private JwtTokenGeneratorPort jwtTokenGeneratorPort;
 
     @MockitoBean
-    private UserAccountEventPublisherAdapter accountEventPublisherAdapter;
+    private AccountEventPublisherAdapter accountEventPublisherAdapter;
 
     @MockitoBean
     private AuthenticationAdapter authenticationAdapter;
@@ -81,7 +82,7 @@ import static org.mockito.Mockito.when;
             String email = "test@email.com";
             when(passwordHasherPort.hash(any())).thenReturn("hashed_password");
             doThrow(new RuntimeException("Messaging system down"))
-                    .when(accountEventPublisherAdapter).publish(any());
+                    .when(accountEventPublisherAdapter).publish(any(UserAccountRegisteredEvent.class));
             RegisterUserAccountCommand command = new RegisterUserAccountCommand(
                     email, "password123"
             );
