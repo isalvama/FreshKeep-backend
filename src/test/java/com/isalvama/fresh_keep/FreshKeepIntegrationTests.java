@@ -87,6 +87,7 @@ public class FreshKeepIntegrationTests {
     private static final String API_AUTH = "/api/v1/auth";
     private static final String API_SPACES = "/api/v1/spaces";
     private static final String API_PRODUCTS = "/api/v1/products";
+    private static final String API_ADMIN = "/api/v1/admin";
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -464,6 +465,91 @@ public class FreshKeepIntegrationTests {
                             .andExpect(jsonPath("$.detail", containsString("Invalid email or password")));
                 }
             }
+        }
+    }
+
+    @Nested
+    @DisplayName(API_ADMIN)
+    class Admin {
+
+        private static final String ADMIN_EMAIL = "products-admin@email.com";
+        private static final String ADMIN_PASSWORD = "Password1";
+
+        @Autowired
+        private MockMvc mockMvc;
+
+        @Autowired
+        private JwtTokenGeneratorAdapter jwtTokenGeneratorAdapter;
+
+        private String adminToken;
+        private UUID storageSpotId;
+        private UUID shoppingReceiptId;
+
+        @BeforeEach
+        void setUp() {
+            jdbcTemplate.update("DELETE FROM product_storage_spot_history");
+            jdbcTemplate.update("DELETE FROM products");
+            jdbcTemplate.update("DELETE FROM shopping_receipts");
+
+            Account admin = Account.createAdmin(Email.of(ADMIN_EMAIL), ADMIN_PASSWORD);
+            adminToken = jwtTokenGeneratorAdapter
+                    .generateToken(admin, ResolvedEntities.constitute(null, UUID.randomUUID().toString()))
+                    .token();
+
+            UUID spaceId = UUID.randomUUID();
+            storageSpotId = UUID.randomUUID();
+            shoppingReceiptId = UUID.randomUUID();
+            jdbcTemplate.update("INSERT INTO spaces (id, name, emoji) VALUES (?, ?, ?)",
+                    spaceId, "Admin test space", "🏠");
+            jdbcTemplate.update(
+                    "INSERT INTO storage_spots (id, name, storage_spot_type, space_id) VALUES (?, ?, ?, ?)",
+                    storageSpotId, "Admin fridge", "FRIDGE", spaceId);
+            jdbcTemplate.update("INSERT INTO shopping_receipts (id, status) VALUES (?, 'DRAFT')", shoppingReceiptId);
+        }
+
+        @Test
+        void getProducts_returnsPersistedProductsUsingRequestedSortAndPagination() throws Exception {
+            UUID milkId = insertProduct("Milk", "DAIRY", LocalDate.of(2026, 9, 20));
+            UUID appleId = insertProduct("Apple", "FRUITS", LocalDate.of(2026, 9, 10));
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/products")
+                            .param("sort", "NAME_ASC")
+                            .param("page", "1")
+                            .param("size", "10")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(2)))
+                    .andExpect(jsonPath("$[0].id").value(appleId.toString()))
+                    .andExpect(jsonPath("$[0].name").value("Apple"))
+                    .andExpect(jsonPath("$[0].productType").value("FRUITS"))
+                    .andExpect(jsonPath("$[1].id").value(milkId.toString()))
+                    .andExpect(jsonPath("$[1].name").value("Milk"))
+                    .andExpect(jsonPath("$[1].productType").value("DAIRY"));
+        }
+
+        @Test
+        void getProductTypes_returnsProductTypesSortedByExistingProductCount() throws Exception {
+            insertProduct("Apple", "FRUITS", LocalDate.of(2026, 9, 10));
+            insertProduct("Pear", "FRUITS", LocalDate.of(2026, 9, 11));
+            insertProduct("Milk", "DAIRY", LocalDate.of(2026, 9, 12));
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/product-types")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(2)))
+                    .andExpect(jsonPath("$[0].productType").value("FRUITS"))
+                    .andExpect(jsonPath("$[0].productCount").value(2))
+                    .andExpect(jsonPath("$[1].productType").value("DAIRY"))
+                    .andExpect(jsonPath("$[1].productCount").value(1));
+        }
+
+        private UUID insertProduct(String name, String productType, LocalDate expirationDate) {
+            UUID productId = UUID.randomUUID();
+            jdbcTemplate.update(
+                    "INSERT INTO products (id, name, expiration_date, suggested_storage_spot_id, actual_storage_spot_id, product_type, shopping_receipt_id) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    productId, name, expirationDate, storageSpotId, storageSpotId, productType, shoppingReceiptId);
+            return productId;
         }
     }
 

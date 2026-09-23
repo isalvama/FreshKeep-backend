@@ -1,6 +1,9 @@
 package com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jdbc;
 
+import com.isalvama.fresh_keep.modules.admin.domain.criteria.ProductSortType;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductQueryDto;
+import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductTypeCountDto;
+import com.isalvama.fresh_keep.modules.product.domain.model.ProductType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -110,6 +113,88 @@ class ProductQueryAdapterTest {
 
         assertEquals(1, result.size());
         assertEquals("Milk", result.getFirst().name());
+    }
+
+    @Test
+    void getAllProducts_sortsByRequestedSortType() {
+        UUID appleId = UUID.randomUUID();
+        UUID milkId = UUID.randomUUID();
+        UUID breadId = UUID.randomUUID();
+
+        insertProduct(appleId, "Apple", LocalDate.of(2026, 9, 20), storageSpotId, "FRUITS", shoppingReceiptId, BigDecimal.valueOf(3.0), "USD");
+        insertProduct(milkId, "Milk", LocalDate.of(2026, 9, 10), storageSpotId, "DAIRY", shoppingReceiptId, BigDecimal.valueOf(1.5), "USD");
+        insertProduct(breadId, "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", shoppingReceiptId, BigDecimal.valueOf(1.0), "USD");
+
+        List<ProductQueryDto> result = adapter.getAllProducts(ProductSortType.PRICE_DESC, 0, 10, null);
+
+        assertEquals(List.of(appleId, milkId, breadId), result.stream().map(ProductQueryDto::id).toList());
+    }
+
+    @Test
+    void getAllProducts_doesNotReturnDeletedProducts() {
+        UUID activeProductId = UUID.randomUUID();
+        UUID deletedProductId = UUID.randomUUID();
+        insertProduct(activeProductId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", shoppingReceiptId, null, null);
+        insertProduct(deletedProductId, "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", shoppingReceiptId, null, null);
+        jdbcTemplate.update("UPDATE products SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?", deletedProductId);
+
+        List<ProductQueryDto> result = adapter.getAllProducts(ProductSortType.NAME_ASC, 0, 10, null);
+
+        assertEquals(List.of(activeProductId), result.stream().map(ProductQueryDto::id).toList());
+    }
+
+    @Test
+    void getAllProducts_filtersByProductType() {
+        UUID dairyProductId = UUID.randomUUID();
+        UUID bakeryProductId = UUID.randomUUID();
+        insertProduct(dairyProductId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", shoppingReceiptId, null, null);
+        insertProduct(bakeryProductId, "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", shoppingReceiptId, null, null);
+
+        List<ProductQueryDto> result = adapter.getAllProducts(ProductSortType.NAME_ASC, 0, 10, ProductType.DAIRY);
+
+        assertEquals(List.of(dairyProductId), result.stream().map(ProductQueryDto::id).toList());
+    }
+
+    @Test
+    void getAllProducts_appliesLimitAndOffsetAfterSorting() {
+        UUID appleId = UUID.randomUUID();
+        UUID breadId = UUID.randomUUID();
+        UUID milkId = UUID.randomUUID();
+        insertProduct(milkId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", shoppingReceiptId, null, null);
+        insertProduct(breadId, "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", shoppingReceiptId, null, null);
+        insertProduct(appleId, "Apple", LocalDate.of(2026, 9, 10), storageSpotId, "FRUITS", shoppingReceiptId, null, null);
+
+        List<ProductQueryDto> result = adapter.getAllProducts(ProductSortType.NAME_ASC, 1, 1, null);
+
+        assertEquals(List.of(breadId), result.stream().map(ProductQueryDto::id).toList());
+    }
+
+    @Test
+    void getProductTypesByCount_returnsTypesSortedDescendingByProductCount() {
+        insertProduct(UUID.randomUUID(), "Apple", LocalDate.of(2026, 9, 20), storageSpotId, "FRUITS", shoppingReceiptId, null, null);
+        insertProduct(UUID.randomUUID(), "Pear", LocalDate.of(2026, 9, 21), storageSpotId, "FRUITS", shoppingReceiptId, null, null);
+        insertProduct(UUID.randomUUID(), "Banana", LocalDate.of(2026, 9, 22), storageSpotId, "FRUITS", shoppingReceiptId, null, null);
+        insertProduct(UUID.randomUUID(), "Milk", LocalDate.of(2026, 9, 10), storageSpotId, "DAIRY", shoppingReceiptId, null, null);
+        insertProduct(UUID.randomUUID(), "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", shoppingReceiptId, null, null);
+        insertProduct(UUID.randomUUID(), "Cake", LocalDate.of(2026, 9, 16), storageSpotId, "BAKERY", shoppingReceiptId, null, null);
+
+        List<ProductTypeCountDto> result = adapter.getProductTypesByCount();
+
+        assertEquals(List.of("FRUITS", "BAKERY", "DAIRY"), result.stream().map(ProductTypeCountDto::productType).toList());
+        assertEquals(List.of(3L, 2L, 1L), result.stream().map(ProductTypeCountDto::productCount).toList());
+    }
+
+    @Test
+    void getProductTypesByCount_ignoresDeletedProducts() {
+        UUID activeProductId = UUID.randomUUID();
+        UUID deletedProductId = UUID.randomUUID();
+        insertProduct(activeProductId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", shoppingReceiptId, null, null);
+        insertProduct(deletedProductId, "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", shoppingReceiptId, null, null);
+        jdbcTemplate.update("UPDATE products SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?", deletedProductId);
+
+        List<ProductTypeCountDto> result = adapter.getProductTypesByCount();
+
+        assertEquals(List.of("DAIRY"), result.stream().map(ProductTypeCountDto::productType).toList());
     }
 
     private void insertSpace(UUID id, String name, String emoji) {
