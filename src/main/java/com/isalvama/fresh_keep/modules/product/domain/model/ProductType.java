@@ -26,7 +26,7 @@ public enum ProductType {
 
     public static ProductType getValueOf(String productTypeName) {
         try {
-            return ProductType.valueOf(productTypeName);
+            return ProductType.valueOf(productTypeName.toUpperCase());
         } catch (IllegalArgumentException e){
             throw new InvalidProductTypeException(productTypeName + "does not match any ProductType constant name.");
         }
