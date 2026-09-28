@@ -6,6 +6,9 @@ public record GetProductsCommand(
         ProductSortType sort,
         Integer size,
         Integer page,
-        String productType
+        String productType,
+        String creatorId,
+        String shoppingReceiptId,
+        Boolean isDeleted
 ) {
 }
