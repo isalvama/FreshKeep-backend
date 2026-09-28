@@ -6,13 +6,14 @@ import com.isalvama.fresh_keep.shared.infrastructure.web.validation.EnumValue;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
+import org.hibernate.validator.constraints.UUID;
 import org.springframework.web.bind.annotation.RequestParam;
 
 public record ProductFilterRequest(
         @RequestParam(defaultValue = ProductSortType.DEFAULT_SORT_VALUE)
         ProductSortType sort,
 
-        @Positive @Max(100)
+        @Positive @Max(40)
         Integer size,
 
         @Min(0)
@@ -20,7 +21,19 @@ public record ProductFilterRequest(
 
         @RequestParam(required = false)
         @EnumValue(enumClass = ProductType.class, message = "Type is an invalid ProductType")
-        String productType
+        String productType,
+
+        @RequestParam(required = false)
+        @UUID
+        String creatorId,
+
+        @RequestParam(required = false)
+        @UUID
+        String shoppingReceiptId,
+
+        @RequestParam(required = false)
+        Boolean isDeleted
+
 ) {
     public ProductFilterRequest {
         if (size == null) size = 30;
