@@ -29,4 +29,8 @@ public record Pagination(int offset, int limit) {
     private static int calculateOffset(int page, int size){
         return (page - 1) * size;
     }
+
+    public int page() {
+        return offset / limit + 1;
+    }
 }
