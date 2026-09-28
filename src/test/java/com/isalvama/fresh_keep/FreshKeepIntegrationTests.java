@@ -52,9 +52,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -482,6 +484,7 @@ public class FreshKeepIntegrationTests {
         private JwtTokenGeneratorAdapter jwtTokenGeneratorAdapter;
 
         private String adminToken;
+        private UUID spaceId;
         private UUID storageSpotId;
         private UUID shoppingReceiptId;
 
@@ -496,7 +499,7 @@ public class FreshKeepIntegrationTests {
                     .generateToken(admin, ResolvedEntities.constitute(null, UUID.randomUUID().toString()))
                     .token();
 
-            UUID spaceId = UUID.randomUUID();
+            spaceId = UUID.randomUUID();
             storageSpotId = UUID.randomUUID();
             shoppingReceiptId = UUID.randomUUID();
             jdbcTemplate.update("INSERT INTO spaces (id, name, emoji) VALUES (?, ?, ?)",
@@ -541,6 +544,200 @@ public class FreshKeepIntegrationTests {
                     .andExpect(jsonPath("$[0].productCount").value(2))
                     .andExpect(jsonPath("$[1].productType").value("DAIRY"))
                     .andExpect(jsonPath("$[1].productCount").value(1));
+        }
+
+        @Test
+        void getUserRegistrations_returnsDailyRegistrationCountsWithinDateRange() throws Exception {
+            insertUser(LocalDate.of(2026, 1, 10));
+            insertUser(LocalDate.of(2026, 1, 10));
+            insertUser(LocalDate.of(2026, 1, 11));
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/users/registrations")
+                            .param("from", "2026-01-10")
+                            .param("to", "2026-01-11")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(2)))
+                    .andExpect(jsonPath("$[0].date").value("2026-01-10"))
+                    .andExpect(jsonPath("$[0].count").value(2))
+                    .andExpect(jsonPath("$[1].date").value("2026-01-11"))
+                    .andExpect(jsonPath("$[1].count").value(1));
+        }
+
+        @Test
+        void getTickets_returnsDailyCountsForEveryoneAndOptionalUser() throws Exception {
+            UUID firstUserId = insertUser(LocalDate.of(2026, 2, 10));
+            UUID secondUserId = insertUser(LocalDate.of(2026, 2, 10));
+            insertTicket(firstUserId, LocalDate.of(2026, 2, 10));
+            insertTicket(firstUserId, LocalDate.of(2026, 2, 10));
+            insertTicket(secondUserId, LocalDate.of(2026, 2, 11));
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/tickets")
+                            .param("from", "2026-02-10")
+                            .param("to", "2026-02-11")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].date").value("2026-02-10"))
+                    .andExpect(jsonPath("$[0].count").value(2))
+                    .andExpect(jsonPath("$[1].date").value("2026-02-11"))
+                    .andExpect(jsonPath("$[1].count").value(1));
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/tickets")
+                            .param("from", "2026-02-10")
+                            .param("to", "2026-02-11")
+                            .param("userId", firstUserId.toString())
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(1)))
+                    .andExpect(jsonPath("$[0].date").value("2026-02-10"))
+                    .andExpect(jsonPath("$[0].count").value(2));
+        }
+
+        @Test
+        void getProducts_returnsDailyCountsForEveryoneAndOptionalUser() throws Exception {
+            UUID firstUserId = insertUser(LocalDate.of(2026, 3, 10));
+            UUID secondUserId = insertUser(LocalDate.of(2026, 3, 10));
+            UUID firstTicketId = insertTicket(firstUserId, LocalDate.of(2026, 3, 10));
+            UUID secondTicketId = insertTicket(secondUserId, LocalDate.of(2026, 3, 11));
+            insertMetricProduct(firstTicketId, LocalDate.of(2026, 3, 10), "Milk");
+            insertMetricProduct(firstTicketId, LocalDate.of(2026, 3, 10), "Cheese");
+            insertMetricProduct(secondTicketId, LocalDate.of(2026, 3, 11), "Apple");
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/products")
+                            .param("from", "2026-03-10")
+                            .param("to", "2026-03-11")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].date").value("2026-03-10"))
+                    .andExpect(jsonPath("$[0].count").value(2))
+                    .andExpect(jsonPath("$[1].date").value("2026-03-11"))
+                    .andExpect(jsonPath("$[1].count").value(1));
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/products")
+                            .param("from", "2026-03-10")
+                            .param("to", "2026-03-11")
+                            .param("creatorId", firstUserId.toString())
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(1)))
+                    .andExpect(jsonPath("$[0].date").value("2026-03-10"))
+                    .andExpect(jsonPath("$[0].count").value(2));
+        }
+
+        @Test
+        void getProduct_returnsCompleteProductDetails() throws Exception {
+            UUID userId = insertUser(LocalDate.of(2026, 3, 10));
+            UUID receiptId = insertTicket(userId, LocalDate.of(2026, 3, 10));
+            UUID productId = insertMetricProduct(receiptId, LocalDate.of(2026, 3, 10), "Milk");
+            jdbcTemplate.update("UPDATE users SET username = ? WHERE id = ?", "product-owner", userId);
+            jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Fresh Store", receiptId);
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/products/" + productId)
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(productId.toString()))
+                    .andExpect(jsonPath("$.name").value("Milk"))
+                    .andExpect(jsonPath("$.productType").value("OTHER"))
+                    .andExpect(jsonPath("$.actualStorageSpotId").value(storageSpotId.toString()))
+                    .andExpect(jsonPath("$.creatorId").value(userId.toString()))
+                    .andExpect(jsonPath("$.creatorUsername").value("product-owner"))
+                    .andExpect(jsonPath("$.spaceId").value(spaceId.toString()))
+                    .andExpect(jsonPath("$.storeName").value("Fresh Store"))
+                    .andExpect(jsonPath("$.shoppingReceiptId").value(receiptId.toString()))
+                    .andExpect(jsonPath("$.price").value(1.5))
+                    .andExpect(jsonPath("$.currency").value("USD"));
+        }
+
+        @Test
+        void getReceiptDailySummary_returnsReceiptCountsByPurchaseDate() throws Exception {
+            UUID userId = insertUser(LocalDate.of(2026, 4, 10));
+            UUID firstReceiptId = insertTicket(userId, LocalDate.of(2026, 4, 10));
+            UUID secondReceiptId = insertTicket(userId, LocalDate.of(2026, 4, 10));
+            insertMetricProduct(firstReceiptId, LocalDate.of(2026, 4, 10), "Milk");
+            insertMetricProduct(secondReceiptId, LocalDate.of(2026, 4, 10), "Apple");
+
+             mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/shopping-receipts/daily-summary")
+                             .param("from", "2026-04-10")
+                             .param("to", "2026-04-10")
+                             .param("creatorId", userId.toString())
+                             .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(1)))
+                    .andExpect(jsonPath("$[0].date").value("2026-04-10"))
+                    .andExpect(jsonPath("$[0].totalReceipts").value(2));
+        }
+
+        @Test
+        void getReceipts_returnsReceiptSummariesForDateRange() throws Exception {
+            UUID userId = insertUser(LocalDate.of(2026, 5, 10));
+            UUID firstReceiptId = insertTicket(userId, LocalDate.of(2026, 5, 10));
+            UUID secondReceiptId = insertTicket(userId, LocalDate.of(2026, 5, 11));
+            jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Alpha", firstReceiptId);
+            jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Beta", secondReceiptId);
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/receipts")
+                            .param("from", "2026-05-10")
+                            .param("to", "2026-05-11")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(2)))
+                    .andExpect(jsonPath("$[0].id").value(secondReceiptId.toString()))
+                    .andExpect(jsonPath("$[1].id").value(firstReceiptId.toString()));
+        }
+
+        @Test
+        void getReceipt_returnsExpandedCreatorSpaceAndProducts() throws Exception {
+            UUID userId = insertUser(LocalDate.of(2026, 6, 10));
+            jdbcTemplate.update("UPDATE users SET username = ? WHERE id = ?", "receipt-owner", userId);
+            UUID receiptId = insertTicket(userId, LocalDate.of(2026, 6, 10));
+            jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Fresh Store", receiptId);
+            insertMetricProduct(receiptId, LocalDate.of(2026, 6, 10), "Milk");
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/receipts/" + receiptId)
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(receiptId.toString()))
+                    .andExpect(jsonPath("$.creatorId").value(userId.toString()))
+                    .andExpect(jsonPath("$.creatorUsername").value("receipt-owner"))
+                    .andExpect(jsonPath("$.creatorEmail").exists())
+                    .andExpect(jsonPath("$.spaceId").value(spaceId.toString()))
+                    .andExpect(jsonPath("$.spaceName").value("Admin test space"))
+                    .andExpect(jsonPath("$.storeName").value("Fresh Store"))
+                    .andExpect(jsonPath("$.products", hasSize(1)))
+                    .andExpect(jsonPath("$.products[0].name").value("Milk"));
+        }
+
+        private UUID insertUser(LocalDate createdDate) {
+            UUID accountId = UUID.randomUUID();
+            UUID userId = UUID.randomUUID();
+            String suffix = UUID.randomUUID().toString().substring(0, 8);
+            Timestamp createdAt = Timestamp.valueOf(createdDate.atStartOfDay().plusHours(12));
+            jdbcTemplate.update(
+                    "INSERT INTO accounts (id, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
+                    accountId, "metrics-" + suffix + "@email.com", "hash", createdAt);
+            jdbcTemplate.update(
+                    "INSERT INTO users (id, account_id, email, created_at) VALUES (?, ?, ?, ?)",
+                    userId, accountId, "metrics-" + suffix + "@email.com", createdAt);
+            return userId;
+        }
+
+        private UUID insertTicket(UUID creatorId, LocalDate createdDate) {
+            UUID ticketId = UUID.randomUUID();
+            Timestamp createdAt = Timestamp.valueOf(createdDate.atStartOfDay().plusHours(12));
+            jdbcTemplate.update(
+                    "INSERT INTO shopping_receipts (id, creator_id, space_id, created_at, purchase_date, status) VALUES (?, ?, ?, ?, ?, 'DRAFT')",
+                    ticketId, creatorId, spaceId, createdAt, createdAt);
+            return ticketId;
+        }
+
+        private UUID insertMetricProduct(UUID ticketId, LocalDate createdDate, String name) {
+            Timestamp createdAt = Timestamp.valueOf(createdDate.atStartOfDay().plusHours(12));
+            UUID productId = UUID.randomUUID();
+            jdbcTemplate.update(
+                    "INSERT INTO products (id, name, expiration_date, suggested_storage_spot_id, actual_storage_spot_id, product_type, shopping_receipt_id, created_at) " +
+                            "VALUES (?, ?, ?, ?, ?, 'OTHER', ?, ?)",
+                    productId, name, createdDate.plusDays(7), storageSpotId, storageSpotId, ticketId, createdAt);
+            return productId;
         }
 
         private UUID insertProduct(String name, String productType, LocalDate expirationDate) {
