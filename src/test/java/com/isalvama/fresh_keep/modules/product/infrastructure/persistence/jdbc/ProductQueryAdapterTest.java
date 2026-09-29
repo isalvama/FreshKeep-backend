@@ -1,6 +1,8 @@
 package com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jdbc;
 
 import com.isalvama.fresh_keep.modules.admin.domain.criteria.ProductSortType;
+import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.GetAllProductsDto;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc.QueryAppender;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductQueryDto;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductTypeCountDto;
 import com.isalvama.fresh_keep.modules.product.domain.model.ProductType;
@@ -27,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({ProductQueryAdapter.class, ProductQueryResultSetExtractor.class})
+@Import({ProductQueryAdapter.class, ProductQueryResultSetExtractor.class, QueryAppender.class})
 class ProductQueryAdapterTest {
 
     @Container
@@ -125,7 +127,7 @@ class ProductQueryAdapterTest {
         insertProduct(milkId, "Milk", LocalDate.of(2026, 9, 10), storageSpotId, "DAIRY", shoppingReceiptId, BigDecimal.valueOf(1.5), "USD");
         insertProduct(breadId, "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", shoppingReceiptId, BigDecimal.valueOf(1.0), "USD");
 
-        List<ProductQueryDto> result = adapter.getAllProducts(ProductSortType.PRICE_DESC, 0, 10, null);
+        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.PRICE_DESC, 0, 10, null, null, null));
 
         assertEquals(List.of(appleId, milkId, breadId), result.stream().map(ProductQueryDto::id).toList());
     }
@@ -138,7 +140,7 @@ class ProductQueryAdapterTest {
         insertProduct(deletedProductId, "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", shoppingReceiptId, null, null);
         jdbcTemplate.update("UPDATE products SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?", deletedProductId);
 
-        List<ProductQueryDto> result = adapter.getAllProducts(ProductSortType.NAME_ASC, 0, 10, null);
+        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, null, null));
 
         assertEquals(List.of(activeProductId), result.stream().map(ProductQueryDto::id).toList());
     }
@@ -150,7 +152,7 @@ class ProductQueryAdapterTest {
         insertProduct(dairyProductId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", shoppingReceiptId, null, null);
         insertProduct(bakeryProductId, "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", shoppingReceiptId, null, null);
 
-        List<ProductQueryDto> result = adapter.getAllProducts(ProductSortType.NAME_ASC, 0, 10, ProductType.DAIRY);
+        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, ProductType.DAIRY, null, null));
 
         assertEquals(List.of(dairyProductId), result.stream().map(ProductQueryDto::id).toList());
     }
@@ -164,7 +166,7 @@ class ProductQueryAdapterTest {
         insertProduct(breadId, "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", shoppingReceiptId, null, null);
         insertProduct(appleId, "Apple", LocalDate.of(2026, 9, 10), storageSpotId, "FRUITS", shoppingReceiptId, null, null);
 
-        List<ProductQueryDto> result = adapter.getAllProducts(ProductSortType.NAME_ASC, 1, 1, null);
+        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 1, 1, null, null, null));
 
         assertEquals(List.of(breadId), result.stream().map(ProductQueryDto::id).toList());
     }

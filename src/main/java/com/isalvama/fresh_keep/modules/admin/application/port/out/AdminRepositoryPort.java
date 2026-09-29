@@ -6,6 +6,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface AdminRepositoryPort {
+
     Optional<Admin> findByEmail(String email);
 
     Optional<Admin> findByAccountId(UUID accountId);

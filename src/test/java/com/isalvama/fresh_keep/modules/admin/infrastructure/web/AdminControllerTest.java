@@ -2,11 +2,13 @@ package com.isalvama.fresh_keep.modules.admin.infrastructure.web;
 
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.CustomUserPrincipal;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.token.JwtAuthenticationFilter;
-import com.isalvama.fresh_keep.modules.admin.application.port.in.GetProductTypesUseCase;
 import com.isalvama.fresh_keep.modules.admin.application.port.in.GetProductsUseCase;
+import com.isalvama.fresh_keep.modules.admin.application.port.in.GetShoppingReceiptsUseCase;
+import com.isalvama.fresh_keep.modules.admin.application.port.in.GetUsersUseCase;
+import com.isalvama.fresh_keep.modules.admin.application.port.in.result.ProductResult;
+import com.isalvama.fresh_keep.modules.admin.application.port.in.result.ProductTypeCountResult;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.web.dto.mapper.AdminResponseMapper;
 import com.isalvama.fresh_keep.modules.admin.domain.criteria.ProductSortType;
-import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductQueryDto;
-import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductTypeCountDto;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         excludeFilters = @org.springframework.context.annotation.ComponentScan.Filter(
                 type = org.springframework.context.annotation.FilterType.ASSIGNABLE_TYPE,
                 classes = JwtAuthenticationFilter.class))
-@Import(AdminControllerTest.MethodSecurityConfig.class)
+@Import({AdminControllerTest.MethodSecurityConfig.class, AdminResponseMapper.class})
 class AdminControllerTest {
 
     @EnableMethodSecurity
@@ -65,14 +67,17 @@ class AdminControllerTest {
     private GetProductsUseCase getProductsUseCase;
 
     @MockitoBean
-    private GetProductTypesUseCase getProductTypesUseCase;
+    private GetShoppingReceiptsUseCase getAdminReceiptsUseCase;
+
+    @MockitoBean
+    private GetUsersUseCase getRegisteredUsersUseCase;
 
     @Test
     void getProducts_returnsMappedProductsAndPassesFiltersToUseCase() throws Exception {
         UUID productId = UUID.randomUUID();
         UUID storageSpotId = UUID.randomUUID();
         UUID receiptId = UUID.randomUUID();
-        when(getProductsUseCase.execute(any())).thenReturn(List.of(new ProductQueryDto(
+        when(getProductsUseCase.getProducts(any())).thenReturn(List.of(new ProductResult(
                 productId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId,
                 "DAIRY", receiptId, BigDecimal.valueOf(1.50), "USD")));
 
@@ -94,7 +99,7 @@ class AdminControllerTest {
 
         ArgumentCaptor<com.isalvama.fresh_keep.modules.admin.application.command.GetProductsCommand> captor =
                 ArgumentCaptor.forClass(com.isalvama.fresh_keep.modules.admin.application.command.GetProductsCommand.class);
-        verify(getProductsUseCase).execute(captor.capture());
+        verify(getProductsUseCase).getProducts(captor.capture());
         assertEquals(ProductSortType.NAME_DESC, captor.getValue().sort());
         assertEquals(10, captor.getValue().size());
         assertEquals(3, captor.getValue().page());
@@ -103,9 +108,9 @@ class AdminControllerTest {
 
     @Test
     void getProductTypes_returnsMappedCounts() throws Exception {
-        when(getProductTypesUseCase.execute()).thenReturn(List.of(
-                new ProductTypeCountDto("DAIRY", 8),
-                new ProductTypeCountDto("FRUITS", 5)));
+        when(getProductsUseCase.getProductTypes()).thenReturn(List.of(
+                new ProductTypeCountResult("DAIRY", 8),
+                new ProductTypeCountResult("FRUITS", 5)));
 
         mockMvc.perform(get("/api/v1/admin/product-types").with(asAdmin()))
                 .andExpect(status().isOk())
@@ -114,7 +119,7 @@ class AdminControllerTest {
                 .andExpect(jsonPath("$[1].productType").value("FRUITS"))
                 .andExpect(jsonPath("$[1].productCount").value(5));
 
-        verify(getProductTypesUseCase).execute();
+        verify(getProductsUseCase).getProductTypes();
     }
 
     @Test
@@ -122,7 +127,7 @@ class AdminControllerTest {
         mockMvc.perform(get("/api/v1/admin/products").with(asUser()))
                 .andExpect(status().isForbidden());
 
-        verify(getProductsUseCase, never()).execute(any());
+        verify(getProductsUseCase, never()).getProducts(any());
     }
 
     private RequestPostProcessor asAdmin() {
