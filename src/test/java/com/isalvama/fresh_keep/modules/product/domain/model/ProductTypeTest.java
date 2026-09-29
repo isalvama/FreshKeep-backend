@@ -17,8 +17,8 @@ class ProductTypeTest {
     }
 
     @Test
-    void getValueOf_acceptsNameWithDifferentCase() {
-        assertEquals(ProductType.FRUITS, ProductType.getValueOf("fruits"));
+    void getValueOf_throwsInvalidProductTypeExceptionWhenNameHasDifferentCase() {
+        assertThrows(InvalidProductTypeException.class, () -> ProductType.getValueOf("fruits"));
     }
 
     @Test

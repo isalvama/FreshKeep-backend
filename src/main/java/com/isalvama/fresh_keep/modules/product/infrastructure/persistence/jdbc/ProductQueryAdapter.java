@@ -51,7 +51,6 @@ public class ProductQueryAdapter implements ProductQueryPort {
                    p.actual_storage_spot_id as actual_storage_spot_id, p.product_type as product_type,
                    p.shopping_receipt_id as shopping_receipt_id, p.price as price, p.currency as currency
             FROM products p
-            LEFT JOIN shopping_receipts sr ON sr.id = p.shopping_receipt_id
             WHERE p.deleted_at IS NULL
             """;
 
@@ -91,8 +90,9 @@ public class ProductQueryAdapter implements ProductQueryPort {
         StringBuilder sql = new StringBuilder(ALL_PRODUCTS_QUERY);
 
         if (dto.creatorId() != null) {
-            sql.append(" AND sr.creator_id = :creatorId");
-            parameters.addValue("creatorId", UUID.fromString(dto.creatorId()));
+            sql.append("JOIN shopping_receipts sr ON p.shopping_receipt_id = sr.id\n" +
+                    "            WHERE sr.creator_id = :creatorId");
+            parameters.addValue("creatorId", dto.creatorId());
         }
 
         if (dto.productType() != null) {
@@ -102,7 +102,7 @@ public class ProductQueryAdapter implements ProductQueryPort {
         }
 
         if (dto.shoppingReceiptId() != null) {
-            QueryAppenderResult result = appender.append(sql, parameters, "p", UUID.fromString(dto.shoppingReceiptId()), "shoppingReceiptId", "shopping_receipt_id");
+            QueryAppenderResult result = appender.append(sql, parameters, "p", dto.shoppingReceiptId(), "shoppingReceiptId", "shopping_receipt_id");
             sql = result.query();
             parameters = result.parameters();
         }

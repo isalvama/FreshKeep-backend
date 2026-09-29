@@ -67,7 +67,7 @@ public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
         List<ReceiptDetailDto> receipts = jdbcTemplate.query("""
                 SELECT sr.id, sr.creator_id, u.username AS creator_username, u.email AS creator_email,
                        sr.space_id, s.name AS space_name, sr.store_name, sr.purchase_date, sr.created_at,
-                       sr.receipt_image_id, ri.asset_id AS receipt_image_asset_id, ri.mime_type AS receipt_image_mime_type
+                       sr.receipt_image_id, ri.assetId AS receipt_image_asset_id, ri.mime_type AS receipt_image_mime_type
                 FROM shopping_receipts sr
                 LEFT JOIN users u ON u.id = sr.creator_id
                 LEFT JOIN spaces s ON s.id = sr.space_id

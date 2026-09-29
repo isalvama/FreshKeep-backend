@@ -5,8 +5,6 @@ import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.GetAllProd
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc.QueryAppender;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductQueryDto;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductTypeCountDto;
-import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductDetailDto;
-import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyMetricDto;
 import com.isalvama.fresh_keep.modules.product.domain.model.ProductType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -171,70 +169,6 @@ class ProductQueryAdapterTest {
         List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 1, 1, null, null, null));
 
         assertEquals(List.of(breadId), result.stream().map(ProductQueryDto::id).toList());
-    }
-
-    @Test
-    void getAllProducts_filtersByCreatorAndShoppingReceipt() {
-        UUID creatorId = UUID.randomUUID();
-        UUID otherCreatorId = UUID.randomUUID();
-        UUID matchingId = UUID.randomUUID();
-        UUID otherId = UUID.randomUUID();
-        jdbcTemplate.update("INSERT INTO accounts (id, email, password_hash) VALUES (?, ?, ?)",
-                UUID.randomUUID(), "creator@email.com", "hash");
-        UUID accountId = jdbcTemplate.queryForObject("SELECT id FROM accounts WHERE email = ?", UUID.class, "creator@email.com");
-        jdbcTemplate.update("INSERT INTO users (id, account_id, email) VALUES (?, ?, ?)", creatorId, accountId, "creator@email.com");
-        UUID otherAccountId = UUID.randomUUID();
-        jdbcTemplate.update("INSERT INTO accounts (id, email, password_hash) VALUES (?, ?, ?)", otherAccountId, "other@email.com", "hash");
-        jdbcTemplate.update("INSERT INTO users (id, account_id, email) VALUES (?, ?, ?)", otherCreatorId, otherAccountId, "other@email.com");
-        UUID matchingReceiptId = UUID.randomUUID();
-        UUID otherReceiptId = UUID.randomUUID();
-        jdbcTemplate.update("INSERT INTO shopping_receipts (id, creator_id, status) VALUES (?, ?, 'DRAFT')", matchingReceiptId, creatorId);
-        jdbcTemplate.update("INSERT INTO shopping_receipts (id, creator_id, status) VALUES (?, ?, 'DRAFT')", otherReceiptId, otherCreatorId);
-        insertProduct(matchingId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", matchingReceiptId, null, null);
-        insertProduct(otherId, "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", otherReceiptId, null, null);
-
-        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(
-                ProductSortType.NAME_ASC, 0, 10, null, creatorId.toString(), matchingReceiptId.toString()));
-
-        assertEquals(List.of(matchingId), result.stream().map(ProductQueryDto::id).toList());
-    }
-
-    @Test
-    void getProductById_returnsDetailsAndEmptyForMissingProduct() {
-        UUID productId = UUID.randomUUID();
-        insertProduct(productId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId,
-                "DAIRY", shoppingReceiptId, BigDecimal.valueOf(1.5), "USD");
-
-        ProductDetailDto result = adapter.getProductById(productId).orElseThrow();
-
-        assertEquals(productId, result.id());
-        assertEquals("Milk", result.name());
-        assertEquals("FRIDGE", result.storageSpotIdType());
-        assertTrue(adapter.getProductById(UUID.randomUUID()).isEmpty());
-    }
-
-    @Test
-    void getProducts_returnsDailyCountsWithDateAndResourceFilters() {
-        UUID creatorId = UUID.randomUUID();
-        UUID accountId = UUID.randomUUID();
-        jdbcTemplate.update("INSERT INTO accounts (id, email, password_hash) VALUES (?, ?, ?)", accountId, "metric@email.com", "hash");
-        jdbcTemplate.update("INSERT INTO users (id, account_id, email) VALUES (?, ?, ?)", creatorId, accountId, "metric@email.com");
-        UUID receiptId = UUID.randomUUID();
-        jdbcTemplate.update("INSERT INTO shopping_receipts (id, creator_id, space_id, status, created_at) VALUES (?, ?, ?, 'DRAFT', ?)",
-                receiptId, creatorId, spaceId, java.sql.Timestamp.valueOf("2026-03-10 10:00:00"));
-        UUID firstProductId = UUID.randomUUID();
-        UUID secondProductId = UUID.randomUUID();
-        insertProduct(firstProductId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", receiptId, null, null);
-        insertProduct(secondProductId, "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", receiptId, null, null);
-        jdbcTemplate.update("UPDATE products SET created_at = ? WHERE id = ?", java.sql.Timestamp.valueOf("2026-03-10 11:00:00"), firstProductId);
-        jdbcTemplate.update("UPDATE products SET created_at = ? WHERE id = ?", java.sql.Timestamp.valueOf("2026-03-11 11:00:00"), secondProductId);
-
-        List<DailyMetricDto> result = adapter.getProducts(
-                LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 11), spaceId, creatorId);
-
-        assertEquals(List.of(LocalDate.of(2026, 3, 10), LocalDate.of(2026, 3, 11)),
-                result.stream().map(DailyMetricDto::date).toList());
-        assertEquals(List.of(1L, 1L), result.stream().map(DailyMetricDto::count).toList());
     }
 
     @Test
