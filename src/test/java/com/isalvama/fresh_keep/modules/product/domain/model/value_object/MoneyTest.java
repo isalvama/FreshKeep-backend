@@ -1,6 +1,7 @@
 package com.isalvama.fresh_keep.modules.product.domain.model.value_object;
 
 import com.isalvama.fresh_keep.modules.product.domain.exception.InvalidMoneyException;
+import com.isalvama.fresh_keep.modules.product.domain.exception.InvalidCurrencyException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -44,8 +45,8 @@ class MoneyTest {
     }
 
     @Test
-    void from_throwsIllegalArgumentExceptionWhenCurrencyNameIsUnknown() {
-        assertThrows(IllegalArgumentException.class, () -> Money.from(BigDecimal.ONE, "XYZ"));
+    void from_throwsInvalidCurrencyExceptionWhenCurrencyNameIsUnknown() {
+        assertThrows(InvalidCurrencyException.class, () -> Money.from(BigDecimal.ONE, "XYZ"));
     }
 
     @Test

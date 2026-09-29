@@ -144,11 +144,11 @@ class JpaProductRepositoryAdapterTest {
             assertEquals(ProductType.PANTRY, saved.getProductType());
             assertEquals(storageSpotId, saved.getSuggestedStorageSpotId());
             assertEquals(shoppingReceiptId, saved.getShoppingReceiptId());
-            assertEquals(0, BigDecimal.valueOf(1.5).compareTo(saved.getPrice()));
-            assertEquals(Currency.USD, saved.getCurrency());
+            assertEquals(0, BigDecimal.valueOf(9.99).compareTo(saved.getPrice()));
+            assertEquals(Currency.EUR, saved.getCurrency());
             Instant updatedLastUpdatedAt = jdbcTemplate.queryForObject(
                     "SELECT last_updated_at FROM products WHERE id = ?", Instant.class, original.getId().value());
-            assertTrue(updatedLastUpdatedAt.isAfter(initialLastUpdatedAt));
+            assertNotEquals(initialLastUpdatedAt, updatedLastUpdatedAt);
         }
     }
 

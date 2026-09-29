@@ -174,7 +174,7 @@ class ReProcessShoppingReceiptServiceTest {
         String expectedShoppingReceiptId = shoppingReceiptCaptor.getValue().getId().toString();
 
         assertEquals(expectedShoppingReceiptId, result.shoppingReceiptId());
-        assertEquals(shoppingDate, result.shoppingDate());
+        assertEquals(dateRectifiedExtraction.purchaseDate(), result.shoppingDate());
         assertEquals("SuperMart", result.storeName());
 
         assertEquals(1, result.products().size());
@@ -280,7 +280,7 @@ class ReProcessShoppingReceiptServiceTest {
         assertEquals(UserId.from(creatorId), savedReceipt.getCreatorId());
         assertEquals(SpaceId.from(spaceId), savedReceipt.getSpaceId());
         assertEquals(ReceiptImageId.from(receiptImageId), savedReceipt.getReceiptImageId());
-        assertEquals(shoppingDate, savedReceipt.getPurchaseDate());
+        assertEquals(dateRectifiedExtraction.purchaseDate(), savedReceipt.getPurchaseDate());
         assertEquals(storeName, savedReceipt.getStoreName());
     }
 }

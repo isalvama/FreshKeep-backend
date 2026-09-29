@@ -572,25 +572,25 @@ public class FreshKeepIntegrationTests {
             insertTicket(firstUserId, LocalDate.of(2026, 2, 10));
             insertTicket(secondUserId, LocalDate.of(2026, 2, 11));
 
-            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/tickets")
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/shopping-receipts")
                             .param("from", "2026-02-10")
                             .param("to", "2026-02-11")
                             .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].date").value("2026-02-10"))
-                    .andExpect(jsonPath("$[0].count").value(2))
+                    .andExpect(jsonPath("$[0].totalReceipts").value(2))
                     .andExpect(jsonPath("$[1].date").value("2026-02-11"))
-                    .andExpect(jsonPath("$[1].count").value(1));
+                    .andExpect(jsonPath("$[1].totalReceipts").value(1));
 
-            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/tickets")
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/shopping-receipts")
                             .param("from", "2026-02-10")
                             .param("to", "2026-02-11")
-                            .param("userId", firstUserId.toString())
+                            .param("creatorId", firstUserId.toString())
                             .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
                     .andExpect(jsonPath("$[0].date").value("2026-02-10"))
-                    .andExpect(jsonPath("$[0].count").value(2));
+                    .andExpect(jsonPath("$[0].totalReceipts").value(2));
         }
 
         @Test
@@ -656,7 +656,7 @@ public class FreshKeepIntegrationTests {
             insertMetricProduct(firstReceiptId, LocalDate.of(2026, 4, 10), "Milk");
             insertMetricProduct(secondReceiptId, LocalDate.of(2026, 4, 10), "Apple");
 
-             mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/shopping-receipts/daily-summary")
+             mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/shopping-receipts")
                              .param("from", "2026-04-10")
                              .param("to", "2026-04-10")
                              .param("creatorId", userId.toString())
@@ -675,7 +675,7 @@ public class FreshKeepIntegrationTests {
             jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Alpha", firstReceiptId);
             jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Beta", secondReceiptId);
 
-            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/receipts")
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/shopping-receipts")
                             .param("from", "2026-05-10")
                             .param("to", "2026-05-11")
                             .header("Authorization", "Bearer " + adminToken))
@@ -693,7 +693,7 @@ public class FreshKeepIntegrationTests {
             jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Fresh Store", receiptId);
             insertMetricProduct(receiptId, LocalDate.of(2026, 6, 10), "Milk");
 
-            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/receipts/" + receiptId)
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/shopping-receipts/" + receiptId)
                             .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(receiptId.toString()))
@@ -734,8 +734,8 @@ public class FreshKeepIntegrationTests {
             Timestamp createdAt = Timestamp.valueOf(createdDate.atStartOfDay().plusHours(12));
             UUID productId = UUID.randomUUID();
             jdbcTemplate.update(
-                    "INSERT INTO products (id, name, expiration_date, suggested_storage_spot_id, actual_storage_spot_id, product_type, shopping_receipt_id, created_at) " +
-                            "VALUES (?, ?, ?, ?, ?, 'OTHER', ?, ?)",
+                    "INSERT INTO products (id, name, expiration_date, suggested_storage_spot_id, actual_storage_spot_id, product_type, shopping_receipt_id, price, currency, created_at) " +
+                            "VALUES (?, ?, ?, ?, ?, 'OTHER', ?, 1.50, 'USD', ?)",
                     productId, name, createdDate.plusDays(7), storageSpotId, storageSpotId, ticketId, createdAt);
             return productId;
         }

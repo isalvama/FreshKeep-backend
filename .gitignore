@@ -35,3 +35,8 @@ build/
 ### Local test fixtures (personal receipt photos - never commit these) ###
 src/test/resources/receipts/*
 !src/test/resources/receipts/.gitkeep
+
+### Environment secrets (never commit these) ###
+.env
+.env.*
+!.env.example
