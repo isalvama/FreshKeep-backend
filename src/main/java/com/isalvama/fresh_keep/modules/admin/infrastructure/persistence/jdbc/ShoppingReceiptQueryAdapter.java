@@ -5,6 +5,7 @@ import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyRecei
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptDetailDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptProductDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptSummaryDto;
+import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptsPageDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -41,24 +42,42 @@ public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
     }
 
     @Override
-    public List<ReceiptSummaryDto> findReceipts(LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
-        MapSqlParameterSource parameters = new MapSqlParameterSource();
+    public ReceiptsPageDto findReceipts(LocalDate from, LocalDate to, UUID spaceId, UUID creatorId,
+                                        int offset, int limit) {
+        MapSqlParameterSource parameters = new MapSqlParameterSource()
+                .addValue("limit", limit)
+                .addValue("offset", offset);
+        // The product count skips deleted products, like the admin products list.
         StringBuilder query = new StringBuilder("""
-                SELECT sr.id, sr.creator_id, sr.space_id, sr.store_name,
-                       sr.purchase_date, sr.created_at
+                SELECT sr.id, sr.creator_id, u.email AS creator_email, u.username AS creator_username,
+                       sr.space_id, s.name AS space_name, sr.store_name, sr.purchase_date, sr.created_at,
+                       (SELECT COUNT(*) FROM products p
+                        WHERE p.shopping_receipt_id = sr.id AND p.deleted_at IS NULL) AS product_count,
+                       COUNT(*) OVER() AS total_elements
                 FROM shopping_receipts sr
+                LEFT JOIN users u ON u.id = sr.creator_id
+                LEFT JOIN spaces s ON s.id = sr.space_id
                 WHERE 1 = 1
                 """);
         appendFilters(query, parameters, from, to, spaceId, creatorId);
-        query.append(" ORDER BY sr.created_at DESC, sr.id ASC");
-        return jdbcTemplate.query(query.toString(), parameters, (rs, rowNum) ->
-                new ReceiptSummaryDto(
-                        rs.getObject("id", UUID.class),
-                        rs.getObject("creator_id", UUID.class),
-                        rs.getObject("space_id", UUID.class),
-                        rs.getString("store_name"),
-                        rs.getObject("purchase_date", Timestamp.class).toInstant().atZone(java.time.ZoneOffset.UTC).toLocalDate(),
-                        rs.getObject("created_at", Timestamp.class).toInstant()));
+        query.append(" ORDER BY sr.purchase_date DESC, sr.created_at DESC, sr.id ASC LIMIT :limit OFFSET :offset");
+        List<ReceiptSummaryRow> rows = jdbcTemplate.query(query.toString(), parameters, (rs, rowNum) ->
+                new ReceiptSummaryRow(
+                        new ReceiptSummaryDto(
+                                rs.getObject("id", UUID.class),
+                                rs.getObject("creator_id", UUID.class),
+                                rs.getString("creator_email"),
+                                rs.getString("creator_username"),
+                                rs.getObject("space_id", UUID.class),
+                                rs.getString("space_name"),
+                                rs.getString("store_name"),
+                                rs.getObject("purchase_date", Timestamp.class).toInstant().atZone(java.time.ZoneOffset.UTC).toLocalDate(),
+                                rs.getObject("created_at", Timestamp.class).toInstant(),
+                                rs.getLong("product_count")),
+                        rs.getLong("total_elements")));
+
+        long totalElements = rows.isEmpty() ? 0 : rows.getFirst().totalElements();
+        return new ReceiptsPageDto(rows.stream().map(ReceiptSummaryRow::receipt).toList(), totalElements);
     }
 
     @Override
@@ -92,7 +111,7 @@ public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
         ReceiptDetailDto receipt = receipts.getFirst();
         List<ReceiptProductDto> products = jdbcTemplate.query("""
                 SELECT p.id, p.name, p.expiration_date, p.actual_storage_spot_id,
-                       p.product_type, p.price, p.currency
+                       p.product_type, p.price, p.currency, p.deleted_at IS NOT NULL AS deleted
                 FROM products p
                 WHERE p.shopping_receipt_id = :receiptId
                 ORDER BY p.created_at ASC, p.id ASC
@@ -103,7 +122,8 @@ public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
                 rs.getObject("actual_storage_spot_id", UUID.class),
                 rs.getString("product_type"),
                 rs.getBigDecimal("price"),
-                rs.getString("currency")));
+                rs.getString("currency"),
+                rs.getBoolean("deleted")));
 
         return Optional.of(new ReceiptDetailDto(
                 receipt.id(), receipt.creatorId(), receipt.creatorUsername(), receipt.creatorEmail(),
@@ -130,5 +150,8 @@ public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
             query.append(" AND sr.creator_id = :creatorId");
             parameters.addValue("creatorId", creatorId);
         }
+    }
+
+    private record ReceiptSummaryRow(ReceiptSummaryDto receipt, long totalElements) {
     }
 }

@@ -1,7 +1,9 @@
 package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc;
 
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptDetailDto;
+import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptProductDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptSummaryDto;
+import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptsPageDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,7 +63,7 @@ class ShoppingReceiptQueryAdapterTest {
         UUID last = insertReceipt(aliceId, kitchenId, SEP_10.plusDays(2), SEP_10.plusDays(2));
         UUID after = insertReceipt(aliceId, kitchenId, SEP_10.plusDays(3), SEP_10.plusDays(1));
 
-        List<UUID> ids = ids(adapter.findReceipts(SEP_10, SEP_10.plusDays(2), null, null));
+        List<UUID> ids = ids(adapter.findReceipts(SEP_10, SEP_10.plusDays(2), null, null, 0, 40).content());
 
         assertEquals(2, ids.size());
         assertTrue(ids.containsAll(List.of(first, last)));
@@ -75,7 +77,7 @@ class ShoppingReceiptQueryAdapterTest {
         UUID kitchenReceipt = insertReceipt(aliceId, kitchenId, SEP_10, SEP_10);
         insertReceipt(aliceId, garageId, SEP_10, SEP_10);
 
-        assertEquals(List.of(kitchenReceipt), ids(adapter.findReceipts(SEP_10, SEP_10, kitchenId, null)));
+        assertEquals(List.of(kitchenReceipt), ids(adapter.findReceipts(SEP_10, SEP_10, kitchenId, null, 0, 40).content()));
     }
 
     @Test
@@ -84,7 +86,7 @@ class ShoppingReceiptQueryAdapterTest {
         UUID aliceReceipt = insertReceipt(aliceId, kitchenId, SEP_10, SEP_10);
         insertReceipt(bobId, kitchenId, SEP_10, SEP_10);
 
-        assertEquals(List.of(aliceReceipt), ids(adapter.findReceipts(SEP_10, SEP_10, null, aliceId)));
+        assertEquals(List.of(aliceReceipt), ids(adapter.findReceipts(SEP_10, SEP_10, null, aliceId, 0, 40).content()));
     }
 
     @Test
@@ -92,13 +94,82 @@ class ShoppingReceiptQueryAdapterTest {
         UUID receiptId = insertReceipt(aliceId, kitchenId, SEP_10, SEP_10.plusDays(1));
         jdbcTemplate.update("UPDATE shopping_receipts SET store_name = 'SuperMart' WHERE id = ?", receiptId);
 
-        ReceiptSummaryDto receipt = adapter.findReceipts(SEP_10, SEP_10, null, null).getFirst();
+        ReceiptSummaryDto receipt = adapter.findReceipts(SEP_10, SEP_10, null, null, 0, 40).content().getFirst();
 
         assertEquals(aliceId, receipt.creatorId());
         assertEquals(kitchenId, receipt.spaceId());
         assertEquals("SuperMart", receipt.storeName());
         assertNotNull(receipt.purchaseDate());
         assertNotNull(receipt.createdAt());
+    }
+
+    @Test
+    void findReceipts_ordersByPurchaseDateThenUploadThenId() {
+        UUID oldest = insertReceipt(aliceId, kitchenId, SEP_10, SEP_10.plusDays(9));
+        UUID newestPurchase = insertReceipt(aliceId, kitchenId, SEP_10.plusDays(2), SEP_10.plusDays(2));
+        UUID sameDayEarlierUpload = insertReceipt(aliceId, kitchenId, SEP_10.plusDays(1), SEP_10.plusDays(1));
+        UUID sameDayLaterUpload = insertReceipt(aliceId, kitchenId, SEP_10.plusDays(1), SEP_10.plusDays(3));
+
+        List<UUID> ids = ids(adapter.findReceipts(SEP_10, SEP_10.plusDays(2), null, null, 0, 40).content());
+
+        assertEquals(List.of(newestPurchase, sameDayLaterUpload, sameDayEarlierUpload, oldest), ids);
+    }
+
+    @Test
+    void findReceipts_pagesAndCountsEveryMatch() {
+        for (int day = 0; day < 5; day++) {
+            insertReceipt(aliceId, kitchenId, SEP_10.plusDays(day), SEP_10.plusDays(day));
+        }
+
+        ReceiptsPageDto first = adapter.findReceipts(SEP_10, SEP_10.plusDays(4), null, null, 0, 2);
+        ReceiptsPageDto last = adapter.findReceipts(SEP_10, SEP_10.plusDays(4), null, null, 4, 2);
+        ReceiptsPageDto pastTheEnd = adapter.findReceipts(SEP_10, SEP_10.plusDays(4), null, null, 6, 2);
+
+        assertEquals(2, first.content().size());
+        assertEquals(5, first.totalElements());
+        assertEquals(1, last.content().size());
+        assertEquals(5, last.totalElements());
+        // Like /admin/users: no rows, so no total.
+        assertEquals(List.of(), pastTheEnd.content());
+        assertEquals(0, pastTheEnd.totalElements());
+    }
+
+    @Test
+    void findReceipts_joinsCreatorAndSpaceNames() {
+        insertReceipt(aliceId, kitchenId, SEP_10, SEP_10);
+
+        ReceiptSummaryDto receipt = adapter.findReceipts(SEP_10, SEP_10, null, null, 0, 40).content().getFirst();
+
+        assertEquals("alice@email.com", receipt.creatorEmail());
+        assertEquals("alice", receipt.creatorUsername());
+        assertEquals("Kitchen", receipt.spaceName());
+    }
+
+    @Test
+    void findReceipts_leavesNamesNullWithoutCreatorOrSpace() {
+        insertReceipt(null, null, SEP_10, SEP_10);
+
+        ReceiptSummaryDto receipt = adapter.findReceipts(SEP_10, SEP_10, null, null, 0, 40).content().getFirst();
+
+        assertNull(receipt.creatorId());
+        assertNull(receipt.creatorEmail());
+        assertNull(receipt.creatorUsername());
+        assertNull(receipt.spaceId());
+        assertNull(receipt.spaceName());
+    }
+
+    @Test
+    void findReceipts_countsOnlyNonDeletedProducts() {
+        UUID withProducts = insertReceipt(aliceId, kitchenId, SEP_10, SEP_10.plusDays(1));
+        insertReceipt(aliceId, kitchenId, SEP_10, SEP_10);
+        insertProduct(withProducts, "Milk", 1);
+        insertProduct(withProducts, "Bread", 2);
+        UUID deleted = insertProduct(withProducts, "Cheese", 3);
+        jdbcTemplate.update("UPDATE products SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?", deleted);
+
+        List<ReceiptSummaryDto> receipts = adapter.findReceipts(SEP_10, SEP_10, null, null, 0, 40).content();
+
+        assertEquals(List.of(2L, 0L), receipts.stream().map(ReceiptSummaryDto::productCount).toList());
     }
 
     @Test
@@ -112,11 +183,11 @@ class ShoppingReceiptQueryAdapterTest {
         assertEquals("alice@email.com", receipt.creatorEmail());
         assertEquals("alice", receipt.creatorUsername());
         assertEquals("Kitchen", receipt.spaceName());
-        assertEquals(List.of(milkId, breadId), receipt.products().stream().map(p -> p.id()).toList());
+        assertEquals(List.of(milkId, breadId), receipt.products().stream().map(ReceiptProductDto::id).toList());
     }
 
     @Test
-    void findReceiptById_includesDeletedProducts() {
+    void findReceiptById_includesDeletedProductsFlagged() {
         UUID receiptId = insertReceipt(aliceId, kitchenId, SEP_10, SEP_10);
         UUID milkId = insertProduct(receiptId, "Milk", 1);
         UUID breadId = insertProduct(receiptId, "Bread", 2);
@@ -124,7 +195,8 @@ class ShoppingReceiptQueryAdapterTest {
 
         ReceiptDetailDto receipt = adapter.findReceiptById(receiptId).orElseThrow();
 
-        assertEquals(List.of(milkId, breadId), receipt.products().stream().map(p -> p.id()).toList());
+        assertEquals(List.of(milkId, breadId), receipt.products().stream().map(ReceiptProductDto::id).toList());
+        assertEquals(List.of(false, true), receipt.products().stream().map(ReceiptProductDto::deleted).toList());
     }
 
     @Test

@@ -11,6 +11,7 @@ public record ReceiptProductDto(
         UUID actualStorageSpotId,
         String productType,
         BigDecimal price,
-        String currency
+        String currency,
+        boolean deleted
 ) {
 }

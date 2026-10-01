@@ -32,7 +32,9 @@ public class GetShoppingReceiptsService implements GetShoppingReceiptsUseCase {
     @Override
     @Transactional(readOnly = true)
     public List<ReceiptSummaryResult> getShoppingReceipts(GetShoppingReceiptsCommand command) {
-        return receiptQueryPort.findReceipts(command.from(), command.to(), command.spaceId(), command.userId()).stream()
+        // TEMPORARY (backend SPEC 02 step 2): the whole range, as before; step 3 pages it.
+        return receiptQueryPort.findReceipts(command.from(), command.to(), command.spaceId(), command.userId(),
+                        0, Integer.MAX_VALUE).content().stream()
                 .map(receipt -> new ReceiptSummaryResult(
                         receipt.id(), receipt.creatorId(), receipt.spaceId(), receipt.storeName(),
                         receipt.purchaseDate(), receipt.createdAt()))
