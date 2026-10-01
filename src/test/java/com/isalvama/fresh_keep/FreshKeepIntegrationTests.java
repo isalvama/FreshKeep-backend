@@ -663,6 +663,49 @@ public class FreshKeepIntegrationTests {
         }
 
         @Test
+        void getProducts_filtersByCreator() throws Exception {
+            UUID firstUserId = insertUser(LocalDate.of(2026, 3, 10));
+            UUID secondUserId = insertUser(LocalDate.of(2026, 3, 10));
+            UUID firstTicketId = insertTicket(firstUserId, LocalDate.of(2026, 3, 10));
+            UUID secondTicketId = insertTicket(secondUserId, LocalDate.of(2026, 3, 11));
+            UUID cheeseId = insertMetricProduct(firstTicketId, LocalDate.of(2026, 3, 10), "Cheese");
+            UUID milkId = insertMetricProduct(firstTicketId, LocalDate.of(2026, 3, 10), "Milk");
+            insertMetricProduct(secondTicketId, LocalDate.of(2026, 3, 11), "Apple");
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/products")
+                            .param("creatorId", firstUserId.toString())
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(2)))
+                    .andExpect(jsonPath("$[0].id").value(cheeseId.toString()))
+                    .andExpect(jsonPath("$[1].id").value(milkId.toString()));
+        }
+
+        @Test
+        void getProducts_filtersByShoppingReceipt() throws Exception {
+            UUID userId = insertUser(LocalDate.of(2026, 3, 10));
+            UUID ticketId = insertTicket(userId, LocalDate.of(2026, 3, 10));
+            UUID milkId = insertMetricProduct(ticketId, LocalDate.of(2026, 3, 10), "Milk");
+            insertProduct("Apple", "FRUITS", LocalDate.of(2026, 9, 10));
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/products")
+                            .param("shoppingReceiptId", ticketId.toString())
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(1)))
+                    .andExpect(jsonPath("$[0].id").value(milkId.toString()))
+                    .andExpect(jsonPath("$[0].shoppingReceiptId").value(ticketId.toString()));
+        }
+
+        @Test
+        void getProducts_returns400ForMalformedCreatorId() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/products")
+                            .param("creatorId", "abc")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
         void getProductTypes_returnsProductTypesSortedByExistingProductCount() throws Exception {
             insertProduct("Apple", "FRUITS", LocalDate.of(2026, 9, 10));
             insertProduct("Pear", "FRUITS", LocalDate.of(2026, 9, 11));

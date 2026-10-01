@@ -36,6 +36,8 @@ public record ProductFilterRequest(
 
 ) {
     public ProductFilterRequest {
+        // @RequestParam defaults don't apply to @ModelAttribute records.
+        if (sort == null) sort = ProductSortType.NAME_ASC;
         if (size == null) size = 30;
         if (page == null) page = 0;
     }
