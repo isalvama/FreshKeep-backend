@@ -1,6 +1,9 @@
 package com.isalvama.fresh_keep;
 
+import com.isalvama.fresh_keep.modules.account.application.command.RegisterAdminAccountCommand;
+import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterAdminAccountUseCase;
 import com.isalvama.fresh_keep.modules.account.application.port.out.dto.ResolvedEntities;
+import com.isalvama.fresh_keep.modules.admin.application.port.out.AdminRepositoryPort;
 import com.isalvama.fresh_keep.modules.account.application.service.RegisterUserAccountService;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.AccountSpringDataRepository;
 import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.AuthRequest;
@@ -130,6 +133,12 @@ public class FreshKeepIntegrationTests {
 
         @Autowired
         private RegisterUserAccountService registerUserAccountService;
+
+        @Autowired
+        private RegisterAdminAccountUseCase registerAdminAccountUseCase;
+
+        @Autowired
+        private AdminRepositoryPort adminRepositoryPort;
 
         @Autowired
         private JpaSpaceSpringDataRepository spaceSpringDataRepository;
@@ -465,6 +474,61 @@ public class FreshKeepIntegrationTests {
                             .andExpect(jsonPath("$.title", containsString("Unauthorized Error")))
                             .andExpect(jsonPath("$.detail", containsString("Invalid Credentials Error")))
                             .andExpect(jsonPath("$.detail", containsString("Invalid email or password")));
+                }
+
+                @DisplayName("should return 200 with a token carrying ROLE_ADMIN and the provisioned adminId when an admin logs in")
+                @Test
+                void shouldReturn200WithAdminIdClaimWhenAdminLogsIn() throws Exception {
+                    String adminEmail = "login-admin@email.com";
+                    String accountId = registerAdminAccountUseCase.execute(RegisterAdminAccountCommand.builder()
+                            .email(adminEmail)
+                            .rawPassword(PASSWORD)
+                            .build()).accountId();
+
+                    ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new AuthRequest(adminEmail, PASSWORD))));
+
+                    result.andExpect(status().isOk())
+                            .andExpect(jsonPath("$.email").value(adminEmail))
+                            .andExpect(jsonPath("$.jwtString").exists());
+
+                    String resultToken = com.jayway.jsonpath.JsonPath.read(
+                            result.andReturn().getResponse().getContentAsString(), "$.jwtString");
+                    CustomUserPrincipal principal = jwtTokenGeneratorAdapter.extractCustomUserPrincipal(resultToken);
+
+                    UUID provisionedAdminId = adminRepositoryPort.findByAccountId(UUID.fromString(accountId))
+                            .orElseThrow().getId().value();
+                    assertEquals(provisionedAdminId.toString(), principal.adminId());
+                    assertNull(principal.userId());
+                    assertThat(principal.getAuthorities())
+                            .extracting(GrantedAuthority::getAuthority)
+                            .containsExactly("ROLE_ADMIN");
+                }
+
+                @DisplayName("should return 200 with both userId and adminId claims when a user promoted to admin logs in")
+                @Test
+                void shouldReturn200WithUserIdAndAdminIdClaimsWhenPromotedUserLogsIn() throws Exception {
+                    registerAdminAccountUseCase.execute(RegisterAdminAccountCommand.builder()
+                            .email(EMAIL)
+                            .rawPassword("ignoredPassword")
+                            .build());
+
+                    ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(REQUEST)));
+
+                    result.andExpect(status().isOk());
+
+                    String resultToken = com.jayway.jsonpath.JsonPath.read(
+                            result.andReturn().getResponse().getContentAsString(), "$.jwtString");
+                    CustomUserPrincipal principal = jwtTokenGeneratorAdapter.extractCustomUserPrincipal(resultToken);
+
+                    assertNotNull(principal.userId());
+                    assertNotNull(principal.adminId());
+                    assertThat(principal.getAuthorities())
+                            .extracting(GrantedAuthority::getAuthority)
+                            .containsExactlyInAnyOrder("ROLE_USER", "ROLE_ADMIN");
                 }
             }
         }
