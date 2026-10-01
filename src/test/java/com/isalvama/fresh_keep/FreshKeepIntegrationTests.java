@@ -85,7 +85,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "jwt.expiration=3600000",
         "cloudinary.cloud_name=test-cloud",
         "cloudinary.api_key=test-api-key",
-        "cloudinary.api_secret=test-api-secret"
+        "cloudinary.api_secret=test-api-secret",
+        "cors.allowed-origins=http://localhost:5050"
 })
 @AutoConfigureMockMvc
 public class FreshKeepIntegrationTests {
@@ -531,6 +532,73 @@ public class FreshKeepIntegrationTests {
                             .containsExactlyInAnyOrder("ROLE_USER", "ROLE_ADMIN");
                 }
             }
+        }
+    }
+
+    @Nested
+    @DisplayName("CORS")
+    class Cors {
+
+        private static final String ALLOWED_ORIGIN = "http://localhost:5050";
+        private static final String DISALLOWED_ORIGIN = "http://evil.example.com";
+
+        @Autowired
+        private MockMvc mockMvc;
+
+        @Autowired
+        private JwtTokenGeneratorAdapter jwtTokenGeneratorAdapter;
+
+        private String adminToken;
+
+        @BeforeEach
+        void setUp() {
+            Account admin = Account.createAdmin(Email.of("cors-admin@email.com"), "Password1");
+            adminToken = jwtTokenGeneratorAdapter
+                    .generateToken(admin, ResolvedEntities.constitute(null, UUID.randomUUID().toString()))
+                    .token();
+        }
+
+        private MockHttpServletRequestBuilder preflight(String origin) {
+            return MockMvcRequestBuilders.options(API_ADMIN + "/users")
+                    .header("Origin", origin)
+                    .header("Access-Control-Request-Method", "GET")
+                    .header("Access-Control-Request-Headers", "Authorization");
+        }
+
+        @DisplayName("should return 200 with CORS headers on a preflight from an allowed origin")
+        @Test
+        void shouldAllowPreflightFromAllowedOrigin() throws Exception {
+            mockMvc.perform(preflight(ALLOWED_ORIGIN))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Access-Control-Allow-Origin", ALLOWED_ORIGIN))
+                    .andExpect(header().string("Access-Control-Allow-Headers", containsStringIgnoringCase("Authorization")));
+        }
+
+        @DisplayName("should return 403 without CORS headers on a preflight from a disallowed origin")
+        @Test
+        void shouldRejectPreflightFromDisallowedOrigin() throws Exception {
+            mockMvc.perform(preflight(DISALLOWED_ORIGIN))
+                    .andExpect(status().isForbidden())
+                    .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+        }
+
+        @DisplayName("should return 200 with the CORS header on an authenticated admin GET from an allowed origin")
+        @Test
+        void shouldAllowAuthenticatedRequestFromAllowedOrigin() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/product-types")
+                            .header("Origin", ALLOWED_ORIGIN)
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Access-Control-Allow-Origin", ALLOWED_ORIGIN));
+        }
+
+        @DisplayName("should behave as before for requests without an Origin header")
+        @Test
+        void shouldNotAffectRequestsWithoutOrigin() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/product-types")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
         }
     }
 
