@@ -7,9 +7,13 @@ import java.util.UUID;
 public record ShoppingReceiptSummaryResponse(
         UUID id,
         UUID creatorId,
+        String creatorEmail,
+        String creatorUsername,
         UUID spaceId,
+        String spaceName,
         String storeName,
         LocalDate purchaseDate,
-        Instant createdAt
+        Instant createdAt,
+        long productCount
 ) {
 }

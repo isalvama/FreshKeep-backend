@@ -29,6 +29,7 @@ import com.isalvama.fresh_keep.modules.admin.infrastructure.web.dto.response.Reg
 import com.isalvama.fresh_keep.modules.admin.infrastructure.web.dto.response.UserDetailsResponse;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.RegisteredUserDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.in.result.PageResult;
+import com.isalvama.fresh_keep.modules.admin.application.port.in.result.ReceiptSummaryResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -162,15 +163,16 @@ public class AdminController {
     @GetMapping("/shopping-receipts")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Retrieve shopping receipts")
-    public ResponseEntity<List<ShoppingReceiptSummaryResponse>> getShoppingReceipts(
+    public ResponseEntity<PageResponse<ShoppingReceiptSummaryResponse>> getShoppingReceipts(
             @Valid @ModelAttribute ShoppingReceiptsFilterRequest filterRequest) {
-        // TEMPORARY (backend SPEC 02 step 3): the first 30; step 4 returns the page.
-        List<ShoppingReceiptSummaryResponse> content = getShoppingReceiptsUseCase.getShoppingReceipts(new GetShoppingReceiptsCommand(
-                        filterRequest.from(), filterRequest.to(), filterRequest.spaceId(), filterRequest.userId(),
-                        null, null)).content().stream()
+        PageResult<ReceiptSummaryResult> result = getShoppingReceiptsUseCase.getShoppingReceipts(
+                new GetShoppingReceiptsCommand(filterRequest.from(), filterRequest.to(), filterRequest.spaceId(),
+                        filterRequest.userId(), filterRequest.page(), filterRequest.size()));
+        List<ShoppingReceiptSummaryResponse> content = result.content().stream()
                 .map(adminResponseMapper::toShoppingReceiptSummaryResponse)
                 .toList();
-        return ResponseEntity.ok(content);
+        return ResponseEntity.ok(new PageResponse<>(content, result.page(), result.size(),
+                result.totalElements(), result.totalPages()));
     }
 
     @GetMapping("/shopping-receipts/{id}")

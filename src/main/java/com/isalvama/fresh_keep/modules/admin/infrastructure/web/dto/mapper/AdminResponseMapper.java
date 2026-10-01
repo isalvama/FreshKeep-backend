@@ -40,8 +40,9 @@ public class AdminResponseMapper {
     }
 
     public ShoppingReceiptSummaryResponse toShoppingReceiptSummaryResponse(ReceiptSummaryResult summary) {
-        return new ShoppingReceiptSummaryResponse(summary.id(), summary.creatorId(), summary.spaceId(),
-                summary.storeName(), summary.purchaseDate(), summary.createdAt());
+        return new ShoppingReceiptSummaryResponse(summary.id(), summary.creatorId(), summary.creatorEmail(),
+                summary.creatorUsername(), summary.spaceId(), summary.spaceName(), summary.storeName(),
+                summary.purchaseDate(), summary.createdAt(), summary.productCount());
     }
 
     public ShoppingReceiptDetailResponse toShoppingReceiptDetailResponse(ReceiptDetailResult detail) {
@@ -56,7 +57,8 @@ public class AdminResponseMapper {
 
     public ReceiptProductResponse toReceiptProductResponse(ReceiptDetailResult.ProductResult product) {
         return new ReceiptProductResponse(product.id(), product.name(), product.expirationDate(),
-                product.actualStorageSpotId(), product.productType(), product.price(), product.currency());
+                product.actualStorageSpotId(), product.productType(), product.price(), product.currency(),
+                product.deleted());
     }
 
     public ProductInfoResponse toProductInfoResponse(ProductResult product) {
