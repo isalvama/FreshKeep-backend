@@ -853,15 +853,78 @@ public class FreshKeepIntegrationTests {
             UUID secondReceiptId = insertTicket(userId, LocalDate.of(2026, 5, 11));
             jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Alpha", firstReceiptId);
             jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Beta", secondReceiptId);
+            // Usernames are unique, and this class doesn't clear users between tests.
+            jdbcTemplate.update("UPDATE users SET username = ? WHERE id = ?", "receipts-list-owner", userId);
+            String email = jdbcTemplate.queryForObject("SELECT email FROM users WHERE id = ?", String.class, userId);
+            insertMetricProduct(firstReceiptId, LocalDate.of(2026, 5, 10), "Milk");
+            insertMetricProduct(firstReceiptId, LocalDate.of(2026, 5, 10), "Bread");
 
             mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/shopping-receipts")
                             .param("from", "2026-05-10")
                             .param("to", "2026-05-11")
                             .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$", hasSize(2)))
-                    .andExpect(jsonPath("$[0].id").value(secondReceiptId.toString()))
-                    .andExpect(jsonPath("$[1].id").value(firstReceiptId.toString()));
+                    .andExpect(jsonPath("$.page").value(1))
+                    .andExpect(jsonPath("$.size").value(30))
+                    .andExpect(jsonPath("$.totalElements").value(2))
+                    .andExpect(jsonPath("$.totalPages").value(1))
+                    .andExpect(jsonPath("$.content", hasSize(2)))
+                    // Newest purchase first.
+                    .andExpect(jsonPath("$.content[0].id").value(secondReceiptId.toString()))
+                    .andExpect(jsonPath("$.content[0].productCount").value(0))
+                    .andExpect(jsonPath("$.content[1].id").value(firstReceiptId.toString()))
+                    .andExpect(jsonPath("$.content[1].storeName").value("Alpha"))
+                    .andExpect(jsonPath("$.content[1].creatorId").value(userId.toString()))
+                    .andExpect(jsonPath("$.content[1].creatorEmail").value(email))
+                    .andExpect(jsonPath("$.content[1].creatorUsername").value("receipts-list-owner"))
+                    .andExpect(jsonPath("$.content[1].spaceId").value(spaceId.toString()))
+                    .andExpect(jsonPath("$.content[1].spaceName").value("Admin test space"))
+                    .andExpect(jsonPath("$.content[1].purchaseDate").value("2026-05-10"))
+                    .andExpect(jsonPath("$.content[1].productCount").value(2));
+        }
+
+        @Test
+        void getReceipts_pagesWithTotal() throws Exception {
+            UUID userId = insertUser(LocalDate.of(2026, 5, 10));
+            UUID newest = insertTicket(userId, LocalDate.of(2026, 5, 12));
+            UUID middle = insertTicket(userId, LocalDate.of(2026, 5, 11));
+            UUID oldest = insertTicket(userId, LocalDate.of(2026, 5, 10));
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/shopping-receipts")
+                            .param("from", "2026-05-10")
+                            .param("to", "2026-05-12")
+                            .param("size", "2")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(2)))
+                    .andExpect(jsonPath("$.content[0].id").value(newest.toString()))
+                    .andExpect(jsonPath("$.content[1].id").value(middle.toString()))
+                    .andExpect(jsonPath("$.totalElements").value(3))
+                    .andExpect(jsonPath("$.totalPages").value(2));
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/shopping-receipts")
+                            .param("from", "2026-05-10")
+                            .param("to", "2026-05-12")
+                            .param("page", "2")
+                            .param("size", "2")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.page").value(2))
+                    .andExpect(jsonPath("$.content", hasSize(1)))
+                    .andExpect(jsonPath("$.content[0].id").value(oldest.toString()))
+                    .andExpect(jsonPath("$.totalElements").value(3));
+        }
+
+        @Test
+        void getReceipts_rejectsInvalidPaging() throws Exception {
+            for (String[] paging : new String[][]{{"page", "0"}, {"size", "0"}, {"size", "41"}}) {
+                mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/shopping-receipts")
+                                .param("from", "2026-05-10")
+                                .param("to", "2026-05-12")
+                                .param(paging[0], paging[1])
+                                .header("Authorization", "Bearer " + adminToken))
+                        .andExpect(status().isBadRequest());
+            }
         }
 
         @Test
@@ -871,6 +934,9 @@ public class FreshKeepIntegrationTests {
             UUID receiptId = insertTicket(userId, LocalDate.of(2026, 6, 10));
             jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Fresh Store", receiptId);
             insertMetricProduct(receiptId, LocalDate.of(2026, 6, 10), "Milk");
+            // Added a day later, so it is listed second; then deleted.
+            UUID breadId = insertMetricProduct(receiptId, LocalDate.of(2026, 6, 11), "Bread");
+            jdbcTemplate.update("UPDATE products SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?", breadId);
 
             mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/shopping-receipts/" + receiptId)
                             .header("Authorization", "Bearer " + adminToken))
@@ -882,8 +948,11 @@ public class FreshKeepIntegrationTests {
                     .andExpect(jsonPath("$.spaceId").value(spaceId.toString()))
                     .andExpect(jsonPath("$.spaceName").value("Admin test space"))
                     .andExpect(jsonPath("$.storeName").value("Fresh Store"))
-                    .andExpect(jsonPath("$.products", hasSize(1)))
-                    .andExpect(jsonPath("$.products[0].name").value("Milk"));
+                    .andExpect(jsonPath("$.products", hasSize(2)))
+                    .andExpect(jsonPath("$.products[0].name").value("Milk"))
+                    .andExpect(jsonPath("$.products[0].deleted").value(false))
+                    .andExpect(jsonPath("$.products[1].name").value("Bread"))
+                    .andExpect(jsonPath("$.products[1].deleted").value(true));
         }
 
         private UUID insertUser(LocalDate createdDate) {
