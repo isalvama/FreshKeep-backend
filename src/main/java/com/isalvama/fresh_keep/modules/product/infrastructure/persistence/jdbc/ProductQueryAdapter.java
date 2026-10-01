@@ -51,8 +51,11 @@ public class ProductQueryAdapter implements ProductQueryPort {
                    p.actual_storage_spot_id as actual_storage_spot_id, p.product_type as product_type,
                    p.shopping_receipt_id as shopping_receipt_id, p.price as price, p.currency as currency
             FROM products p
-            WHERE p.deleted_at IS NULL
             """;
+
+    private static final String CREATOR_RECEIPTS_JOIN = "JOIN shopping_receipts sr ON sr.id = p.shopping_receipt_id\n";
+
+    private static final String NOT_DELETED_CONDITION = "WHERE p.deleted_at IS NULL";
 
     private static final String PRODUCT_TYPES_BY_COUNT_QUERY = """
             SELECT p.product_type AS product_type, COUNT(*) AS product_count
@@ -89,9 +92,14 @@ public class ProductQueryAdapter implements ProductQueryPort {
                 .addValue("offset", dto.offset());
         StringBuilder sql = new StringBuilder(ALL_PRODUCTS_QUERY);
 
+        // Joins must come before the WHERE; every filter is then an AND condition.
         if (dto.creatorId() != null) {
-            sql.append("JOIN shopping_receipts sr ON p.shopping_receipt_id = sr.id\n" +
-                    "            WHERE sr.creator_id = :creatorId");
+            sql.append(CREATOR_RECEIPTS_JOIN);
+        }
+        sql.append(NOT_DELETED_CONDITION);
+
+        if (dto.creatorId() != null) {
+            sql.append("\nAND sr.creator_id = :creatorId");
             parameters.addValue("creatorId", dto.creatorId());
         }
 
