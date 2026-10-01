@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Optional;
 
@@ -31,15 +32,18 @@ public class AdminBootstrapRunner implements ApplicationRunner {
 
     private final AccountRepositoryPort accountRepositoryPort;
     private final RegisterAdminAccountUseCase registerAdminAccountUseCase;
+    private final TransactionTemplate transactionTemplate;
     private final String email;
     private final String password;
 
     public AdminBootstrapRunner(AccountRepositoryPort accountRepositoryPort,
                                 RegisterAdminAccountUseCase registerAdminAccountUseCase,
+                                TransactionTemplate transactionTemplate,
                                 @Value("${" + EMAIL_PROPERTY + ":}") String email,
                                 @Value("${" + PASSWORD_PROPERTY + ":}") String password) {
         this.accountRepositoryPort = accountRepositoryPort;
         this.registerAdminAccountUseCase = registerAdminAccountUseCase;
+        this.transactionTemplate = transactionTemplate;
         this.email = email;
         this.password = password;
     }
@@ -59,7 +63,8 @@ public class AdminBootstrapRunner implements ApplicationRunner {
         String normalizedEmail = validateEmail();
         validatePassword();
 
-        Optional<Account> existingAccount = accountRepositoryPort.findByEmail(normalizedEmail);
+        // Account roles are lazily loaded, so the lookup needs its own transaction outside of any service.
+        Optional<Account> existingAccount = transactionTemplate.execute(status -> accountRepositoryPort.findByEmail(normalizedEmail));
         if (existingAccount.isPresent() && existingAccount.get().hasRole(Role.ADMIN)) {
             log.info("Admin bootstrap skipped: an admin account with the email {} already exists.", normalizedEmail);
             return;

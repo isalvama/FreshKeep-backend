@@ -13,6 +13,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.Optional;
 
@@ -38,8 +40,12 @@ class AdminBootstrapRunnerTest {
     @Mock
     private RegisterAdminAccountUseCase registerAdminAccountUseCase;
 
+    @Mock
+    private PlatformTransactionManager transactionManager;
+
     private AdminBootstrapRunner runner(String email, String password) {
-        return new AdminBootstrapRunner(accountRepositoryPort, registerAdminAccountUseCase, email, password);
+        return new AdminBootstrapRunner(accountRepositoryPort, registerAdminAccountUseCase,
+                new TransactionTemplate(transactionManager), email, password);
     }
 
     @Test
