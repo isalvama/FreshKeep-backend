@@ -184,7 +184,7 @@ class ProductQueryAdapterTest {
         insertProduct(UUID.randomUUID(), "Apple", LocalDate.of(2026, 9, 10), storageSpotId, "FRUITS", bobReceiptId, null, null);
         insertProduct(UUID.randomUUID(), "Cheese", LocalDate.of(2026, 9, 12), storageSpotId, "DAIRY", shoppingReceiptId, null, null);
 
-        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, aliceId.toString(), null));
+        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, aliceId, null));
 
         assertEquals(List.of(aliceBreadId, aliceMilkId), result.stream().map(ProductQueryDto::id).toList());
     }
@@ -196,7 +196,7 @@ class ProductQueryAdapterTest {
         insertProduct(milkId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", otherReceiptId, null, null);
         insertProduct(UUID.randomUUID(), "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", shoppingReceiptId, null, null);
 
-        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, null, otherReceiptId.toString()));
+        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, null, otherReceiptId));
 
         assertEquals(List.of(milkId), result.stream().map(ProductQueryDto::id).toList());
     }
@@ -210,7 +210,7 @@ class ProductQueryAdapterTest {
         insertProduct(UUID.randomUUID(), "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", aliceReceiptId, null, null);
         insertProduct(UUID.randomUUID(), "Cheese", LocalDate.of(2026, 9, 12), storageSpotId, "DAIRY", shoppingReceiptId, null, null);
 
-        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, ProductType.DAIRY, aliceId.toString(), null));
+        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, ProductType.DAIRY, aliceId, null));
 
         assertEquals(List.of(aliceMilkId), result.stream().map(ProductQueryDto::id).toList());
     }
@@ -227,7 +227,7 @@ class ProductQueryAdapterTest {
         insertProduct(expensiveId, "Apple", LocalDate.of(2026, 9, 10), storageSpotId, "FRUITS", aliceReceiptId, BigDecimal.valueOf(3.0), "USD");
         insertProduct(UUID.randomUUID(), "Caviar", LocalDate.of(2026, 9, 11), storageSpotId, "SEAFOOD", shoppingReceiptId, BigDecimal.valueOf(99.0), "USD");
 
-        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.PRICE_DESC, 1, 1, null, aliceId.toString(), null));
+        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.PRICE_DESC, 1, 1, null, aliceId, null));
 
         assertEquals(List.of(middleId), result.stream().map(ProductQueryDto::id).toList());
     }
@@ -242,7 +242,7 @@ class ProductQueryAdapterTest {
         insertProduct(deletedProductId, "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", aliceReceiptId, null, null);
         jdbcTemplate.update("UPDATE products SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?", deletedProductId);
 
-        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, aliceId.toString(), null));
+        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, aliceId, null));
 
         assertEquals(List.of(activeProductId), result.stream().map(ProductQueryDto::id).toList());
     }
@@ -250,7 +250,7 @@ class ProductQueryAdapterTest {
     @Test
     void getAllProducts_returnsEmptyForUnknownCreatorOrReceipt() {
         insertProduct(UUID.randomUUID(), "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", shoppingReceiptId, null, null);
-        String unknownId = UUID.randomUUID().toString();
+        UUID unknownId = UUID.randomUUID();
 
         assertEquals(List.of(), adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, unknownId, null)));
         assertEquals(List.of(), adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, null, unknownId)));

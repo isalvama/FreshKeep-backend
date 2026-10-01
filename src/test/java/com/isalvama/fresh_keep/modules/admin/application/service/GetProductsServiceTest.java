@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -51,6 +52,20 @@ class GetProductsServiceTest {
         service.getProducts(command);
 
         verify(productQueryPort).getAllProducts(new GetAllProductsDto(ProductSortType.EXPIRATION_DATE_DESC, 0, 30, null, null, null));
+    }
+
+    @Test
+    void execute_convertsCreatorAndShoppingReceiptIdsToUuids() {
+        UUID creatorId = UUID.randomUUID();
+        UUID shoppingReceiptId = UUID.randomUUID();
+        GetProductsCommand command = new GetProductsCommand(
+                ProductSortType.NAME_ASC, null, null, null, creatorId.toString(), shoppingReceiptId.toString(), null);
+        when(productQueryPort.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 30, null, creatorId, shoppingReceiptId)))
+                .thenReturn(List.of());
+
+        service.getProducts(command);
+
+        verify(productQueryPort).getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 30, null, creatorId, shoppingReceiptId));
     }
 
     @Test
