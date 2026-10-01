@@ -740,32 +740,32 @@ public class FreshKeepIntegrationTests {
         }
 
         @Test
-        void getTickets_returnsDailyCountsForEveryoneAndOptionalUser() throws Exception {
+        void getShoppingReceiptMetrics_returnsDailyCountsForEveryoneAndOptionalCreator() throws Exception {
             UUID firstUserId = insertUser(LocalDate.of(2026, 2, 10));
             UUID secondUserId = insertUser(LocalDate.of(2026, 2, 10));
             insertTicket(firstUserId, LocalDate.of(2026, 2, 10));
             insertTicket(firstUserId, LocalDate.of(2026, 2, 10));
             insertTicket(secondUserId, LocalDate.of(2026, 2, 11));
 
-            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/tickets")
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/shopping-receipts")
                             .param("from", "2026-02-10")
                             .param("to", "2026-02-11")
                             .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].date").value("2026-02-10"))
-                    .andExpect(jsonPath("$[0].count").value(2))
+                    .andExpect(jsonPath("$[0].totalReceipts").value(2))
                     .andExpect(jsonPath("$[1].date").value("2026-02-11"))
-                    .andExpect(jsonPath("$[1].count").value(1));
+                    .andExpect(jsonPath("$[1].totalReceipts").value(1));
 
-            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/tickets")
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/shopping-receipts")
                             .param("from", "2026-02-10")
                             .param("to", "2026-02-11")
-                            .param("userId", firstUserId.toString())
+                            .param("creatorId", firstUserId.toString())
                             .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
                     .andExpect(jsonPath("$[0].date").value("2026-02-10"))
-                    .andExpect(jsonPath("$[0].count").value(2));
+                    .andExpect(jsonPath("$[0].totalReceipts").value(2));
         }
 
         @Test
@@ -806,6 +806,7 @@ public class FreshKeepIntegrationTests {
             UUID productId = insertMetricProduct(receiptId, LocalDate.of(2026, 3, 10), "Milk");
             jdbcTemplate.update("UPDATE users SET username = ? WHERE id = ?", "product-owner", userId);
             jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Fresh Store", receiptId);
+            jdbcTemplate.update("UPDATE products SET price = ?, currency = ? WHERE id = ?", new BigDecimal("1.50"), "USD", productId);
 
             mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/products/" + productId)
                             .header("Authorization", "Bearer " + adminToken))
@@ -830,15 +831,18 @@ public class FreshKeepIntegrationTests {
             UUID secondReceiptId = insertTicket(userId, LocalDate.of(2026, 4, 10));
             insertMetricProduct(firstReceiptId, LocalDate.of(2026, 4, 10), "Milk");
             insertMetricProduct(secondReceiptId, LocalDate.of(2026, 4, 10), "Apple");
+            // Purchased the day before they were uploaded: the metric must count the purchase day.
+            jdbcTemplate.update("UPDATE shopping_receipts SET purchase_date = ? WHERE id IN (?, ?)",
+                    Timestamp.valueOf(LocalDate.of(2026, 4, 9).atStartOfDay().plusHours(12)), firstReceiptId, secondReceiptId);
 
-             mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/shopping-receipts/daily-summary")
-                             .param("from", "2026-04-10")
-                             .param("to", "2026-04-10")
-                             .param("creatorId", userId.toString())
-                             .header("Authorization", "Bearer " + adminToken))
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/shopping-receipts")
+                            .param("from", "2026-04-09")
+                            .param("to", "2026-04-09")
+                            .param("creatorId", userId.toString())
+                            .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
-                    .andExpect(jsonPath("$[0].date").value("2026-04-10"))
+                    .andExpect(jsonPath("$[0].date").value("2026-04-09"))
                     .andExpect(jsonPath("$[0].totalReceipts").value(2));
         }
 
@@ -850,7 +854,7 @@ public class FreshKeepIntegrationTests {
             jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Alpha", firstReceiptId);
             jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Beta", secondReceiptId);
 
-            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/receipts")
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/shopping-receipts")
                             .param("from", "2026-05-10")
                             .param("to", "2026-05-11")
                             .header("Authorization", "Bearer " + adminToken))
@@ -868,7 +872,7 @@ public class FreshKeepIntegrationTests {
             jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Fresh Store", receiptId);
             insertMetricProduct(receiptId, LocalDate.of(2026, 6, 10), "Milk");
 
-            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/receipts/" + receiptId)
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/shopping-receipts/" + receiptId)
                             .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(receiptId.toString()))
