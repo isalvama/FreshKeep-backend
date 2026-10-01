@@ -7,6 +7,8 @@ public record GetShoppingReceiptsCommand(
         LocalDate from,
         LocalDate to,
         UUID spaceId,
-        UUID userId
+        UUID userId,
+        Integer page,
+        Integer size
 ) {
 }

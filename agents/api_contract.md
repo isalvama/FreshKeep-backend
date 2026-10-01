@@ -1138,15 +1138,19 @@ Optional query parameters:
 
 | Parameter | Type | Default/constraints |
 |-----------|------|---------------------|
-| `sort` | enum | product sort default |
-| `page` | integer | defaults to `0` |
+| `sort` | enum | `NAME_ASC` (default), `NAME_DESC`, `EXPIRATION_DATE_ASC`, `EXPIRATION_DATE_DESC`, `PRICE_ASC`, `PRICE_DESC`; ties are broken by product id |
+| `page` | integer | 1-based; missing or `0` means the first page |
 | `size` | integer | defaults to `30`, maximum `40` |
 | `productType` | enum | valid `ProductType` value |
-| `creatorId` | UUID | optional |
-| `shoppingReceiptId` | UUID | optional |
-| `isDeleted` | boolean | accepted by the request model; currently not applied by the product query |
+| `creatorId` | UUID | only products on shopping receipts this user (`users.id`) created |
+| `shoppingReceiptId` | UUID | only products on this shopping receipt |
+| `isDeleted` | boolean | accepted by the request model; currently ignored |
 
-Response — `200 OK`:
+Filters combine with AND. Deleted products are never returned. An unknown but well-formed `creatorId` or
+`shoppingReceiptId` returns `[]`; a malformed one returns `400`.
+
+Response — `200 OK`. A plain list with no total count: a page with fewer than `size` items is the last one, and a
+page past the end returns `[]`.
 
 ```json
 [

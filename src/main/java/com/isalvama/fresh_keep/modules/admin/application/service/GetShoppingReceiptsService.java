@@ -4,10 +4,13 @@ import com.isalvama.fresh_keep.modules.admin.application.command.GetShoppingRece
 import com.isalvama.fresh_keep.modules.admin.application.command.GetShoppingReceiptsCommand;
 import com.isalvama.fresh_keep.modules.admin.application.port.in.GetShoppingReceiptsUseCase;
 import com.isalvama.fresh_keep.modules.admin.application.port.in.result.DailyReceiptSummaryResult;
+import com.isalvama.fresh_keep.modules.admin.application.port.in.result.PageResult;
 import com.isalvama.fresh_keep.modules.admin.application.port.in.result.ReceiptDetailResult;
 import com.isalvama.fresh_keep.modules.admin.application.port.in.result.ReceiptSummaryResult;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.ShoppingReceiptQueryPort;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptDetailDto;
+import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptsPageDto;
+import com.isalvama.fresh_keep.modules.admin.domain.value_object.Pagination;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.exception.NonExistentShoppingReceiptException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,14 +34,17 @@ public class GetShoppingReceiptsService implements GetShoppingReceiptsUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReceiptSummaryResult> getShoppingReceipts(GetShoppingReceiptsCommand command) {
-        // TEMPORARY (backend SPEC 02 step 2): the whole range, as before; step 3 pages it.
-        return receiptQueryPort.findReceipts(command.from(), command.to(), command.spaceId(), command.userId(),
-                        0, Integer.MAX_VALUE).content().stream()
+    public PageResult<ReceiptSummaryResult> getShoppingReceipts(GetShoppingReceiptsCommand command) {
+        Pagination pagination = Pagination.fromPage(command.page(), command.size());
+        ReceiptsPageDto page = receiptQueryPort.findReceipts(command.from(), command.to(), command.spaceId(),
+                command.userId(), pagination.offset(), pagination.limit());
+        List<ReceiptSummaryResult> content = page.content().stream()
                 .map(receipt -> new ReceiptSummaryResult(
-                        receipt.id(), receipt.creatorId(), receipt.spaceId(), receipt.storeName(),
-                        receipt.purchaseDate(), receipt.createdAt()))
+                        receipt.id(), receipt.creatorId(), receipt.creatorEmail(), receipt.creatorUsername(),
+                        receipt.spaceId(), receipt.spaceName(), receipt.storeName(), receipt.purchaseDate(),
+                        receipt.createdAt(), receipt.productCount()))
                 .toList();
+        return PageResult.of(content, pagination.page(), pagination.limit(), page.totalElements());
     }
 
     @Override
@@ -54,7 +60,7 @@ public class GetShoppingReceiptsService implements GetShoppingReceiptsUseCase {
                 receipt.products().stream()
                         .map(product -> new ReceiptDetailResult.ProductResult(
                                 product.id(), product.name(), product.expirationDate(), product.actualStorageSpotId(),
-                                product.productType(), product.price(), product.currency()))
+                                product.productType(), product.price(), product.currency(), product.deleted()))
                         .toList());
     }
 }

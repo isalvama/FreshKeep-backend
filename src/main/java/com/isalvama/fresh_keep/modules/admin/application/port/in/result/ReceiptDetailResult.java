@@ -28,7 +28,8 @@ public record ReceiptDetailResult(
             UUID actualStorageSpotId,
             String productType,
             BigDecimal price,
-            String currency
+            String currency,
+            boolean deleted
     ) {
     }
 }

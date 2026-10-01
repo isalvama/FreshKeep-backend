@@ -164,8 +164,10 @@ public class AdminController {
     @Operation(summary = "Retrieve shopping receipts")
     public ResponseEntity<List<ShoppingReceiptSummaryResponse>> getShoppingReceipts(
             @Valid @ModelAttribute ShoppingReceiptsFilterRequest filterRequest) {
+        // TEMPORARY (backend SPEC 02 step 3): the first 30; step 4 returns the page.
         List<ShoppingReceiptSummaryResponse> content = getShoppingReceiptsUseCase.getShoppingReceipts(new GetShoppingReceiptsCommand(
-                        filterRequest.from(), filterRequest.to(), filterRequest.spaceId(), filterRequest.userId())).stream()
+                        filterRequest.from(), filterRequest.to(), filterRequest.spaceId(), filterRequest.userId(),
+                        null, null)).content().stream()
                 .map(adminResponseMapper::toShoppingReceiptSummaryResponse)
                 .toList();
         return ResponseEntity.ok(content);
