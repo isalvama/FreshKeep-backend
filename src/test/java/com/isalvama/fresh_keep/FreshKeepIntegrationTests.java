@@ -1,6 +1,9 @@
 package com.isalvama.fresh_keep;
 
+import com.isalvama.fresh_keep.modules.account.application.command.RegisterAdminAccountCommand;
+import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterAdminAccountUseCase;
 import com.isalvama.fresh_keep.modules.account.application.port.out.dto.ResolvedEntities;
+import com.isalvama.fresh_keep.modules.admin.application.port.out.AdminRepositoryPort;
 import com.isalvama.fresh_keep.modules.account.application.service.RegisterUserAccountService;
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.AccountSpringDataRepository;
 import com.isalvama.fresh_keep.modules.account.infrastructure.web.dto.request.AuthRequest;
@@ -82,7 +85,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "jwt.expiration=3600000",
         "cloudinary.cloud_name=test-cloud",
         "cloudinary.api_key=test-api-key",
-        "cloudinary.api_secret=test-api-secret"
+        "cloudinary.api_secret=test-api-secret",
+        "cors.allowed-origins=http://localhost:5050"
 })
 @AutoConfigureMockMvc
 public class FreshKeepIntegrationTests {
@@ -130,6 +134,12 @@ public class FreshKeepIntegrationTests {
 
         @Autowired
         private RegisterUserAccountService registerUserAccountService;
+
+        @Autowired
+        private RegisterAdminAccountUseCase registerAdminAccountUseCase;
+
+        @Autowired
+        private AdminRepositoryPort adminRepositoryPort;
 
         @Autowired
         private JpaSpaceSpringDataRepository spaceSpringDataRepository;
@@ -466,7 +476,129 @@ public class FreshKeepIntegrationTests {
                             .andExpect(jsonPath("$.detail", containsString("Invalid Credentials Error")))
                             .andExpect(jsonPath("$.detail", containsString("Invalid email or password")));
                 }
+
+                @DisplayName("should return 200 with a token carrying ROLE_ADMIN and the provisioned adminId when an admin logs in")
+                @Test
+                void shouldReturn200WithAdminIdClaimWhenAdminLogsIn() throws Exception {
+                    String adminEmail = "login-admin@email.com";
+                    String accountId = registerAdminAccountUseCase.execute(RegisterAdminAccountCommand.builder()
+                            .email(adminEmail)
+                            .rawPassword(PASSWORD)
+                            .build()).accountId();
+
+                    ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new AuthRequest(adminEmail, PASSWORD))));
+
+                    result.andExpect(status().isOk())
+                            .andExpect(jsonPath("$.email").value(adminEmail))
+                            .andExpect(jsonPath("$.jwtString").exists());
+
+                    String resultToken = com.jayway.jsonpath.JsonPath.read(
+                            result.andReturn().getResponse().getContentAsString(), "$.jwtString");
+                    CustomUserPrincipal principal = jwtTokenGeneratorAdapter.extractCustomUserPrincipal(resultToken);
+
+                    UUID provisionedAdminId = adminRepositoryPort.findByAccountId(UUID.fromString(accountId))
+                            .orElseThrow().getId().value();
+                    assertEquals(provisionedAdminId.toString(), principal.adminId());
+                    assertNull(principal.userId());
+                    assertThat(principal.getAuthorities())
+                            .extracting(GrantedAuthority::getAuthority)
+                            .containsExactly("ROLE_ADMIN");
+                }
+
+                @DisplayName("should return 200 with both userId and adminId claims when a user promoted to admin logs in")
+                @Test
+                void shouldReturn200WithUserIdAndAdminIdClaimsWhenPromotedUserLogsIn() throws Exception {
+                    registerAdminAccountUseCase.execute(RegisterAdminAccountCommand.builder()
+                            .email(EMAIL)
+                            .rawPassword("ignoredPassword")
+                            .build());
+
+                    ResultActions result = mockMvc.perform(MockMvcRequestBuilders.post(API_AUTH + "/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(REQUEST)));
+
+                    result.andExpect(status().isOk());
+
+                    String resultToken = com.jayway.jsonpath.JsonPath.read(
+                            result.andReturn().getResponse().getContentAsString(), "$.jwtString");
+                    CustomUserPrincipal principal = jwtTokenGeneratorAdapter.extractCustomUserPrincipal(resultToken);
+
+                    assertNotNull(principal.userId());
+                    assertNotNull(principal.adminId());
+                    assertThat(principal.getAuthorities())
+                            .extracting(GrantedAuthority::getAuthority)
+                            .containsExactlyInAnyOrder("ROLE_USER", "ROLE_ADMIN");
+                }
             }
+        }
+    }
+
+    @Nested
+    @DisplayName("CORS")
+    class Cors {
+
+        private static final String ALLOWED_ORIGIN = "http://localhost:5050";
+        private static final String DISALLOWED_ORIGIN = "http://evil.example.com";
+
+        @Autowired
+        private MockMvc mockMvc;
+
+        @Autowired
+        private JwtTokenGeneratorAdapter jwtTokenGeneratorAdapter;
+
+        private String adminToken;
+
+        @BeforeEach
+        void setUp() {
+            Account admin = Account.createAdmin(Email.of("cors-admin@email.com"), "Password1");
+            adminToken = jwtTokenGeneratorAdapter
+                    .generateToken(admin, ResolvedEntities.constitute(null, UUID.randomUUID().toString()))
+                    .token();
+        }
+
+        private MockHttpServletRequestBuilder preflight(String origin) {
+            return MockMvcRequestBuilders.options(API_ADMIN + "/users")
+                    .header("Origin", origin)
+                    .header("Access-Control-Request-Method", "GET")
+                    .header("Access-Control-Request-Headers", "Authorization");
+        }
+
+        @DisplayName("should return 200 with CORS headers on a preflight from an allowed origin")
+        @Test
+        void shouldAllowPreflightFromAllowedOrigin() throws Exception {
+            mockMvc.perform(preflight(ALLOWED_ORIGIN))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Access-Control-Allow-Origin", ALLOWED_ORIGIN))
+                    .andExpect(header().string("Access-Control-Allow-Headers", containsStringIgnoringCase("Authorization")));
+        }
+
+        @DisplayName("should return 403 without CORS headers on a preflight from a disallowed origin")
+        @Test
+        void shouldRejectPreflightFromDisallowedOrigin() throws Exception {
+            mockMvc.perform(preflight(DISALLOWED_ORIGIN))
+                    .andExpect(status().isForbidden())
+                    .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+        }
+
+        @DisplayName("should return 200 with the CORS header on an authenticated admin GET from an allowed origin")
+        @Test
+        void shouldAllowAuthenticatedRequestFromAllowedOrigin() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/product-types")
+                            .header("Origin", ALLOWED_ORIGIN)
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Access-Control-Allow-Origin", ALLOWED_ORIGIN));
+        }
+
+        @DisplayName("should behave as before for requests without an Origin header")
+        @Test
+        void shouldNotAffectRequestsWithoutOrigin() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/product-types")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
         }
     }
 
@@ -531,6 +663,49 @@ public class FreshKeepIntegrationTests {
         }
 
         @Test
+        void getProducts_filtersByCreator() throws Exception {
+            UUID firstUserId = insertUser(LocalDate.of(2026, 3, 10));
+            UUID secondUserId = insertUser(LocalDate.of(2026, 3, 10));
+            UUID firstTicketId = insertTicket(firstUserId, LocalDate.of(2026, 3, 10));
+            UUID secondTicketId = insertTicket(secondUserId, LocalDate.of(2026, 3, 11));
+            UUID cheeseId = insertMetricProduct(firstTicketId, LocalDate.of(2026, 3, 10), "Cheese");
+            UUID milkId = insertMetricProduct(firstTicketId, LocalDate.of(2026, 3, 10), "Milk");
+            insertMetricProduct(secondTicketId, LocalDate.of(2026, 3, 11), "Apple");
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/products")
+                            .param("creatorId", firstUserId.toString())
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(2)))
+                    .andExpect(jsonPath("$[0].id").value(cheeseId.toString()))
+                    .andExpect(jsonPath("$[1].id").value(milkId.toString()));
+        }
+
+        @Test
+        void getProducts_filtersByShoppingReceipt() throws Exception {
+            UUID userId = insertUser(LocalDate.of(2026, 3, 10));
+            UUID ticketId = insertTicket(userId, LocalDate.of(2026, 3, 10));
+            UUID milkId = insertMetricProduct(ticketId, LocalDate.of(2026, 3, 10), "Milk");
+            insertProduct("Apple", "FRUITS", LocalDate.of(2026, 9, 10));
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/products")
+                            .param("shoppingReceiptId", ticketId.toString())
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(1)))
+                    .andExpect(jsonPath("$[0].id").value(milkId.toString()))
+                    .andExpect(jsonPath("$[0].shoppingReceiptId").value(ticketId.toString()));
+        }
+
+        @Test
+        void getProducts_returns400ForMalformedCreatorId() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/products")
+                            .param("creatorId", "abc")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
         void getProductTypes_returnsProductTypesSortedByExistingProductCount() throws Exception {
             insertProduct("Apple", "FRUITS", LocalDate.of(2026, 9, 10));
             insertProduct("Pear", "FRUITS", LocalDate.of(2026, 9, 11));
@@ -565,32 +740,32 @@ public class FreshKeepIntegrationTests {
         }
 
         @Test
-        void getTickets_returnsDailyCountsForEveryoneAndOptionalUser() throws Exception {
+        void getShoppingReceiptMetrics_returnsDailyCountsForEveryoneAndOptionalCreator() throws Exception {
             UUID firstUserId = insertUser(LocalDate.of(2026, 2, 10));
             UUID secondUserId = insertUser(LocalDate.of(2026, 2, 10));
             insertTicket(firstUserId, LocalDate.of(2026, 2, 10));
             insertTicket(firstUserId, LocalDate.of(2026, 2, 10));
             insertTicket(secondUserId, LocalDate.of(2026, 2, 11));
 
-            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/tickets")
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/shopping-receipts")
                             .param("from", "2026-02-10")
                             .param("to", "2026-02-11")
                             .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].date").value("2026-02-10"))
-                    .andExpect(jsonPath("$[0].count").value(2))
+                    .andExpect(jsonPath("$[0].totalReceipts").value(2))
                     .andExpect(jsonPath("$[1].date").value("2026-02-11"))
-                    .andExpect(jsonPath("$[1].count").value(1));
+                    .andExpect(jsonPath("$[1].totalReceipts").value(1));
 
-            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/tickets")
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/shopping-receipts")
                             .param("from", "2026-02-10")
                             .param("to", "2026-02-11")
-                            .param("userId", firstUserId.toString())
+                            .param("creatorId", firstUserId.toString())
                             .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
                     .andExpect(jsonPath("$[0].date").value("2026-02-10"))
-                    .andExpect(jsonPath("$[0].count").value(2));
+                    .andExpect(jsonPath("$[0].totalReceipts").value(2));
         }
 
         @Test
@@ -631,6 +806,7 @@ public class FreshKeepIntegrationTests {
             UUID productId = insertMetricProduct(receiptId, LocalDate.of(2026, 3, 10), "Milk");
             jdbcTemplate.update("UPDATE users SET username = ? WHERE id = ?", "product-owner", userId);
             jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Fresh Store", receiptId);
+            jdbcTemplate.update("UPDATE products SET price = ?, currency = ? WHERE id = ?", new BigDecimal("1.50"), "USD", productId);
 
             mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/products/" + productId)
                             .header("Authorization", "Bearer " + adminToken))
@@ -655,15 +831,18 @@ public class FreshKeepIntegrationTests {
             UUID secondReceiptId = insertTicket(userId, LocalDate.of(2026, 4, 10));
             insertMetricProduct(firstReceiptId, LocalDate.of(2026, 4, 10), "Milk");
             insertMetricProduct(secondReceiptId, LocalDate.of(2026, 4, 10), "Apple");
+            // Purchased the day before they were uploaded: the metric must count the purchase day.
+            jdbcTemplate.update("UPDATE shopping_receipts SET purchase_date = ? WHERE id IN (?, ?)",
+                    Timestamp.valueOf(LocalDate.of(2026, 4, 9).atStartOfDay().plusHours(12)), firstReceiptId, secondReceiptId);
 
-             mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/shopping-receipts/daily-summary")
-                             .param("from", "2026-04-10")
-                             .param("to", "2026-04-10")
-                             .param("creatorId", userId.toString())
-                             .header("Authorization", "Bearer " + adminToken))
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/metrics/shopping-receipts")
+                            .param("from", "2026-04-09")
+                            .param("to", "2026-04-09")
+                            .param("creatorId", userId.toString())
+                            .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
-                    .andExpect(jsonPath("$[0].date").value("2026-04-10"))
+                    .andExpect(jsonPath("$[0].date").value("2026-04-09"))
                     .andExpect(jsonPath("$[0].totalReceipts").value(2));
         }
 
@@ -674,15 +853,78 @@ public class FreshKeepIntegrationTests {
             UUID secondReceiptId = insertTicket(userId, LocalDate.of(2026, 5, 11));
             jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Alpha", firstReceiptId);
             jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Beta", secondReceiptId);
+            // Usernames are unique, and this class doesn't clear users between tests.
+            jdbcTemplate.update("UPDATE users SET username = ? WHERE id = ?", "receipts-list-owner", userId);
+            String email = jdbcTemplate.queryForObject("SELECT email FROM users WHERE id = ?", String.class, userId);
+            insertMetricProduct(firstReceiptId, LocalDate.of(2026, 5, 10), "Milk");
+            insertMetricProduct(firstReceiptId, LocalDate.of(2026, 5, 10), "Bread");
 
-            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/receipts")
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/shopping-receipts")
                             .param("from", "2026-05-10")
                             .param("to", "2026-05-11")
                             .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$", hasSize(2)))
-                    .andExpect(jsonPath("$[0].id").value(secondReceiptId.toString()))
-                    .andExpect(jsonPath("$[1].id").value(firstReceiptId.toString()));
+                    .andExpect(jsonPath("$.page").value(1))
+                    .andExpect(jsonPath("$.size").value(30))
+                    .andExpect(jsonPath("$.totalElements").value(2))
+                    .andExpect(jsonPath("$.totalPages").value(1))
+                    .andExpect(jsonPath("$.content", hasSize(2)))
+                    // Newest purchase first.
+                    .andExpect(jsonPath("$.content[0].id").value(secondReceiptId.toString()))
+                    .andExpect(jsonPath("$.content[0].productCount").value(0))
+                    .andExpect(jsonPath("$.content[1].id").value(firstReceiptId.toString()))
+                    .andExpect(jsonPath("$.content[1].storeName").value("Alpha"))
+                    .andExpect(jsonPath("$.content[1].creatorId").value(userId.toString()))
+                    .andExpect(jsonPath("$.content[1].creatorEmail").value(email))
+                    .andExpect(jsonPath("$.content[1].creatorUsername").value("receipts-list-owner"))
+                    .andExpect(jsonPath("$.content[1].spaceId").value(spaceId.toString()))
+                    .andExpect(jsonPath("$.content[1].spaceName").value("Admin test space"))
+                    .andExpect(jsonPath("$.content[1].purchaseDate").value("2026-05-10"))
+                    .andExpect(jsonPath("$.content[1].productCount").value(2));
+        }
+
+        @Test
+        void getReceipts_pagesWithTotal() throws Exception {
+            UUID userId = insertUser(LocalDate.of(2026, 5, 10));
+            UUID newest = insertTicket(userId, LocalDate.of(2026, 5, 12));
+            UUID middle = insertTicket(userId, LocalDate.of(2026, 5, 11));
+            UUID oldest = insertTicket(userId, LocalDate.of(2026, 5, 10));
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/shopping-receipts")
+                            .param("from", "2026-05-10")
+                            .param("to", "2026-05-12")
+                            .param("size", "2")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(2)))
+                    .andExpect(jsonPath("$.content[0].id").value(newest.toString()))
+                    .andExpect(jsonPath("$.content[1].id").value(middle.toString()))
+                    .andExpect(jsonPath("$.totalElements").value(3))
+                    .andExpect(jsonPath("$.totalPages").value(2));
+
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/shopping-receipts")
+                            .param("from", "2026-05-10")
+                            .param("to", "2026-05-12")
+                            .param("page", "2")
+                            .param("size", "2")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.page").value(2))
+                    .andExpect(jsonPath("$.content", hasSize(1)))
+                    .andExpect(jsonPath("$.content[0].id").value(oldest.toString()))
+                    .andExpect(jsonPath("$.totalElements").value(3));
+        }
+
+        @Test
+        void getReceipts_rejectsInvalidPaging() throws Exception {
+            for (String[] paging : new String[][]{{"page", "0"}, {"size", "0"}, {"size", "41"}}) {
+                mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/shopping-receipts")
+                                .param("from", "2026-05-10")
+                                .param("to", "2026-05-12")
+                                .param(paging[0], paging[1])
+                                .header("Authorization", "Bearer " + adminToken))
+                        .andExpect(status().isBadRequest());
+            }
         }
 
         @Test
@@ -692,8 +934,11 @@ public class FreshKeepIntegrationTests {
             UUID receiptId = insertTicket(userId, LocalDate.of(2026, 6, 10));
             jdbcTemplate.update("UPDATE shopping_receipts SET store_name = ? WHERE id = ?", "Fresh Store", receiptId);
             insertMetricProduct(receiptId, LocalDate.of(2026, 6, 10), "Milk");
+            // Added a day later, so it is listed second; then deleted.
+            UUID breadId = insertMetricProduct(receiptId, LocalDate.of(2026, 6, 11), "Bread");
+            jdbcTemplate.update("UPDATE products SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?", breadId);
 
-            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/receipts/" + receiptId)
+            mockMvc.perform(MockMvcRequestBuilders.get(API_ADMIN + "/shopping-receipts/" + receiptId)
                             .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(receiptId.toString()))
@@ -703,8 +948,11 @@ public class FreshKeepIntegrationTests {
                     .andExpect(jsonPath("$.spaceId").value(spaceId.toString()))
                     .andExpect(jsonPath("$.spaceName").value("Admin test space"))
                     .andExpect(jsonPath("$.storeName").value("Fresh Store"))
-                    .andExpect(jsonPath("$.products", hasSize(1)))
-                    .andExpect(jsonPath("$.products[0].name").value("Milk"));
+                    .andExpect(jsonPath("$.products", hasSize(2)))
+                    .andExpect(jsonPath("$.products[0].name").value("Milk"))
+                    .andExpect(jsonPath("$.products[0].deleted").value(false))
+                    .andExpect(jsonPath("$.products[1].name").value("Bread"))
+                    .andExpect(jsonPath("$.products[1].deleted").value(true));
         }
 
         private UUID insertUser(LocalDate createdDate) {

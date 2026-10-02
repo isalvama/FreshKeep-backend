@@ -44,7 +44,7 @@ public class GetProductsService implements GetProductsUseCase {
                 ? null
                 : ProductType.getValueOf(command.productType());
 
-        return productQueryPort.getAllProducts(new GetAllProductsDto(command.sort(), pagination.offset(), pagination.limit(), productType, command.creatorId(), command.shoppingReceiptId()))
+        return productQueryPort.getAllProducts(new GetAllProductsDto(command.sort(), pagination.offset(), pagination.limit(), productType, toUuid(command.creatorId()), toUuid(command.shoppingReceiptId())))
                 .stream()
                 .map(product -> new ProductResult(
                         product.id(), product.name(), product.expirationDate(), product.actualStorageSpotId(),
@@ -72,5 +72,9 @@ public class GetProductsService implements GetProductsUseCase {
         return productQueryPort.getProductTypesByCount().stream()
                 .map(productType -> new ProductTypeCountResult(productType.productType(), productType.productCount()))
                 .toList();
+    }
+
+    private static UUID toUuid(String id) {
+        return id == null ? null : UUID.fromString(id);
     }
 }

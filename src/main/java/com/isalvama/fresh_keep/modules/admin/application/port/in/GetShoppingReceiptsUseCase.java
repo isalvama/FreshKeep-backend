@@ -3,6 +3,7 @@ package com.isalvama.fresh_keep.modules.admin.application.port.in;
 import com.isalvama.fresh_keep.modules.admin.application.command.GetShoppingReceiptMetricsCommand;
 import com.isalvama.fresh_keep.modules.admin.application.command.GetShoppingReceiptsCommand;
 import com.isalvama.fresh_keep.modules.admin.application.port.in.result.DailyReceiptSummaryResult;
+import com.isalvama.fresh_keep.modules.admin.application.port.in.result.PageResult;
 import com.isalvama.fresh_keep.modules.admin.application.port.in.result.ReceiptDetailResult;
 import com.isalvama.fresh_keep.modules.admin.application.port.in.result.ReceiptSummaryResult;
 
@@ -13,7 +14,8 @@ public interface GetShoppingReceiptsUseCase {
 
     List<DailyReceiptSummaryResult> getShoppingReceiptMetrics(GetShoppingReceiptMetricsCommand command);
 
-    List<ReceiptSummaryResult> getShoppingReceipts(GetShoppingReceiptsCommand command);
+    /** One page, newest purchase first. */
+    PageResult<ReceiptSummaryResult> getShoppingReceipts(GetShoppingReceiptsCommand command);
 
     ReceiptDetailResult getShoppingReceipt(UUID receiptId);
 }

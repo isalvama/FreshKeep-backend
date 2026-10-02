@@ -172,6 +172,91 @@ class ProductQueryAdapterTest {
     }
 
     @Test
+    void getAllProducts_filtersByCreator() {
+        UUID aliceId = insertCreator("alice@email.com");
+        UUID bobId = insertCreator("bob@email.com");
+        UUID aliceReceiptId = insertReceiptCreatedBy(aliceId);
+        UUID bobReceiptId = insertReceiptCreatedBy(bobId);
+        UUID aliceMilkId = UUID.randomUUID();
+        UUID aliceBreadId = UUID.randomUUID();
+        insertProduct(aliceMilkId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", aliceReceiptId, null, null);
+        insertProduct(aliceBreadId, "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", aliceReceiptId, null, null);
+        insertProduct(UUID.randomUUID(), "Apple", LocalDate.of(2026, 9, 10), storageSpotId, "FRUITS", bobReceiptId, null, null);
+        insertProduct(UUID.randomUUID(), "Cheese", LocalDate.of(2026, 9, 12), storageSpotId, "DAIRY", shoppingReceiptId, null, null);
+
+        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, aliceId, null));
+
+        assertEquals(List.of(aliceBreadId, aliceMilkId), result.stream().map(ProductQueryDto::id).toList());
+    }
+
+    @Test
+    void getAllProducts_filtersByShoppingReceipt() {
+        UUID otherReceiptId = insertReceiptCreatedBy(null);
+        UUID milkId = UUID.randomUUID();
+        insertProduct(milkId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", otherReceiptId, null, null);
+        insertProduct(UUID.randomUUID(), "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", shoppingReceiptId, null, null);
+
+        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, null, otherReceiptId));
+
+        assertEquals(List.of(milkId), result.stream().map(ProductQueryDto::id).toList());
+    }
+
+    @Test
+    void getAllProducts_combinesCreatorAndProductType() {
+        UUID aliceId = insertCreator("alice@email.com");
+        UUID aliceReceiptId = insertReceiptCreatedBy(aliceId);
+        UUID aliceMilkId = UUID.randomUUID();
+        insertProduct(aliceMilkId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", aliceReceiptId, null, null);
+        insertProduct(UUID.randomUUID(), "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", aliceReceiptId, null, null);
+        insertProduct(UUID.randomUUID(), "Cheese", LocalDate.of(2026, 9, 12), storageSpotId, "DAIRY", shoppingReceiptId, null, null);
+
+        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, ProductType.DAIRY, aliceId, null));
+
+        assertEquals(List.of(aliceMilkId), result.stream().map(ProductQueryDto::id).toList());
+    }
+
+    @Test
+    void getAllProducts_appliesSortLimitAndOffsetUnderCreatorFilter() {
+        UUID aliceId = insertCreator("alice@email.com");
+        UUID aliceReceiptId = insertReceiptCreatedBy(aliceId);
+        UUID cheapId = UUID.randomUUID();
+        UUID middleId = UUID.randomUUID();
+        UUID expensiveId = UUID.randomUUID();
+        insertProduct(cheapId, "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", aliceReceiptId, BigDecimal.valueOf(1.0), "USD");
+        insertProduct(middleId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", aliceReceiptId, BigDecimal.valueOf(2.0), "USD");
+        insertProduct(expensiveId, "Apple", LocalDate.of(2026, 9, 10), storageSpotId, "FRUITS", aliceReceiptId, BigDecimal.valueOf(3.0), "USD");
+        insertProduct(UUID.randomUUID(), "Caviar", LocalDate.of(2026, 9, 11), storageSpotId, "SEAFOOD", shoppingReceiptId, BigDecimal.valueOf(99.0), "USD");
+
+        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.PRICE_DESC, 1, 1, null, aliceId, null));
+
+        assertEquals(List.of(middleId), result.stream().map(ProductQueryDto::id).toList());
+    }
+
+    @Test
+    void getAllProducts_excludesDeletedProductsUnderCreatorFilter() {
+        UUID aliceId = insertCreator("alice@email.com");
+        UUID aliceReceiptId = insertReceiptCreatedBy(aliceId);
+        UUID activeProductId = UUID.randomUUID();
+        UUID deletedProductId = UUID.randomUUID();
+        insertProduct(activeProductId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", aliceReceiptId, null, null);
+        insertProduct(deletedProductId, "Bread", LocalDate.of(2026, 9, 15), storageSpotId, "BAKERY", aliceReceiptId, null, null);
+        jdbcTemplate.update("UPDATE products SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?", deletedProductId);
+
+        List<ProductQueryDto> result = adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, aliceId, null));
+
+        assertEquals(List.of(activeProductId), result.stream().map(ProductQueryDto::id).toList());
+    }
+
+    @Test
+    void getAllProducts_returnsEmptyForUnknownCreatorOrReceipt() {
+        insertProduct(UUID.randomUUID(), "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", shoppingReceiptId, null, null);
+        UUID unknownId = UUID.randomUUID();
+
+        assertEquals(List.of(), adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, unknownId, null)));
+        assertEquals(List.of(), adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, null, unknownId)));
+    }
+
+    @Test
     void getProductTypesByCount_returnsTypesSortedDescendingByProductCount() {
         insertProduct(UUID.randomUUID(), "Apple", LocalDate.of(2026, 9, 20), storageSpotId, "FRUITS", shoppingReceiptId, null, null);
         insertProduct(UUID.randomUUID(), "Pear", LocalDate.of(2026, 9, 21), storageSpotId, "FRUITS", shoppingReceiptId, null, null);
@@ -215,6 +300,20 @@ class ProductQueryAdapterTest {
 
     private void insertShoppingReceipt(UUID id) {
         jdbcTemplate.update("INSERT INTO shopping_receipts (id, status) VALUES (?, 'DRAFT')", id);
+    }
+
+    private UUID insertReceiptCreatedBy(UUID creatorId) {
+        UUID id = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO shopping_receipts (id, creator_id, status) VALUES (?, ?, 'DRAFT')", id, creatorId);
+        return id;
+    }
+
+    private UUID insertCreator(String email) {
+        UUID accountId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO accounts (id, email, password_hash) VALUES (?, ?, 'hash')", accountId, email);
+        jdbcTemplate.update("INSERT INTO users (id, account_id, email) VALUES (?, ?, ?)", userId, accountId, email);
+        return userId;
     }
 
     private void insertProduct(UUID id, String name, LocalDate expirationDate, UUID actualStorageSpotId,
