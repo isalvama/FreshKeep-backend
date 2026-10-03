@@ -31,9 +31,16 @@ import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.Registered
 import com.isalvama.fresh_keep.modules.admin.application.port.in.result.PageResult;
 import com.isalvama.fresh_keep.modules.admin.application.port.in.result.ReceiptSummaryResult;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -55,7 +62,18 @@ public class AdminController {
 
     @GetMapping("/metrics/users/registrations")
     @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Retrieve daily user registration counts")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Metrics retrieved",
+                    content = @Content(schema = @Schema(implementation = ProductMetricResponse.class))),
+            @ApiResponse(responseCode = "400", description = "from/to missing or malformed, or the date range spans more than 100 days",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No/invalid/expired bearer token",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Authenticated, but the caller does not have the ADMIN role",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<List<ProductMetricResponse>> getMetricUserRegistrations(
             @Valid @ModelAttribute UserRegistrationFilterRequest filterRequest) {
         return ResponseEntity.ok(getUsersUseCase
@@ -67,7 +85,19 @@ public class AdminController {
 
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Retrieve registered users")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Retrieve registered users", description = "page is one-based; defaults to 1. size defaults to 30, maximum 40.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Users retrieved",
+                    content = @Content(schema = @Schema(implementation = RegisteredUserResponse.class))),
+            @ApiResponse(responseCode = "400", description = "from/to missing or malformed, the date range spans more than 90 days, " +
+                    "or page/size are out of range",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No/invalid/expired bearer token",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Authenticated, but the caller does not have the ADMIN role",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<PageResponse<RegisteredUserResponse>> getRegisteredUsers(
             @Valid @ModelAttribute RegisteredUsersFilterRequest filterRequest) {
         PageResult<RegisteredUserDto> result = getUsersUseCase.getUsers(new GetRegisteredUsersCommand(
@@ -81,7 +111,18 @@ public class AdminController {
 
     @GetMapping("/users/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Retrieve complete user details")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "User details retrieved",
+                    content = @Content(schema = @Schema(implementation = UserDetailsResponse.class))),
+            @ApiResponse(responseCode = "400", description = "id path variable is not a valid UUID, or the user does not exist",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No/invalid/expired bearer token",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Authenticated, but the caller does not have the ADMIN role",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<UserDetailsResponse> getUserDetails(@PathVariable UUID id) {
         return ResponseEntity.ok(adminResponseMapper.toUserDetailsResponse(getUsersUseCase.getUser(new GetUserDetailsCommand(id))));
     }
@@ -89,7 +130,20 @@ public class AdminController {
 
     @GetMapping("/metrics/products")
     @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Retrieve daily product creation counts")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Metrics retrieved",
+                    content = @Content(schema = @Schema(implementation = ProductMetricResponse.class))),
+            @ApiResponse(responseCode = "400", description = "from/to missing or malformed, or the date range spans more than 100 days",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No/invalid/expired bearer token",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Authenticated, but the caller does not have the ADMIN role",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "500", description = "Unexpected persistence failure while retrieving the metrics",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<List<ProductMetricResponse>> getMetricProducts(
             @Valid @ModelAttribute ProductMetricsFilterRequest filterRequest) {
         return ResponseEntity.ok(getProductsUseCase
@@ -104,7 +158,27 @@ public class AdminController {
 
     @GetMapping("/products")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Retrieve generated products data")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(
+            summary = "Retrieve generated products data",
+            description = "page is 1-based (missing or 0 means the first page); size defaults to 30, maximum 40. " +
+                    "Filters combine with AND. Deleted products are never returned. isDeleted is accepted by the " +
+                    "request model but currently ignored. This is a plain list with no total count: a page with " +
+                    "fewer than size items is the last one, and a page past the end returns []."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Products retrieved",
+                    content = @Content(schema = @Schema(implementation = ProductInfoResponse.class))),
+            @ApiResponse(responseCode = "400", description = "productType is not a recognized ProductType, creatorId/shoppingReceiptId " +
+                    "is not a valid UUID, or page/size are out of range",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No/invalid/expired bearer token",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Authenticated, but the caller does not have the ADMIN role",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "500", description = "Unexpected persistence failure while retrieving the products",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<List<ProductInfoResponse>> getProducts(
             @Valid @ModelAttribute ProductFilterRequest filterRequest
     ) {
@@ -126,14 +200,38 @@ public class AdminController {
 
     @GetMapping("/products/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Retrieve product details")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Product details retrieved",
+                    content = @Content(schema = @Schema(implementation = ProductDetailResponse.class))),
+            @ApiResponse(responseCode = "400", description = "id path variable is not a valid UUID, or the product does not exist",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No/invalid/expired bearer token",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Authenticated, but the caller does not have the ADMIN role",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "500", description = "Unexpected persistence failure while retrieving the product",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<ProductDetailResponse> getProduct(@PathVariable UUID id) {
         return ResponseEntity.ok(adminResponseMapper.toProductDetailResponse(getProductsUseCase.getProduct(id)));
     }
 
     @GetMapping("/product-types")
     @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Retrieve product types sorted by number of existing products")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Product type counts retrieved",
+                    content = @Content(schema = @Schema(implementation = ProductTypeCountResponse.class))),
+            @ApiResponse(responseCode = "401", description = "No/invalid/expired bearer token",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Authenticated, but the caller does not have the ADMIN role",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "500", description = "Unexpected persistence failure while retrieving the product type counts",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<List<ProductTypeCountResponse>> getProductTypes() {
         List<ProductTypeCountResponse> productTypes = getProductsUseCase.getProductTypes().stream()
                 .map(adminResponseMapper::toProductTypeCountResponse)
@@ -145,7 +243,18 @@ public class AdminController {
 
     @GetMapping("/metrics/shopping-receipts")
     @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Retrieve daily shopping receipt counts")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Metrics retrieved",
+                    content = @Content(schema = @Schema(implementation = DailyReceiptSummaryResponse.class))),
+            @ApiResponse(responseCode = "400", description = "from/to missing or malformed, or the date range spans more than 100 days",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No/invalid/expired bearer token",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Authenticated, but the caller does not have the ADMIN role",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<List<DailyReceiptSummaryResponse>> getMetricShoppingReceipts(
             @Valid @ModelAttribute ReceiptFilterRequest filterRequest) {
         List<DailyReceiptSummaryResponse> summaries = getShoppingReceiptsUseCase
@@ -162,7 +271,19 @@ public class AdminController {
 
     @GetMapping("/shopping-receipts")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Retrieve shopping receipts")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Retrieve shopping receipts", description = "page is one-based; defaults to 1. size defaults to 30, maximum 40.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Shopping receipts retrieved",
+                    content = @Content(schema = @Schema(implementation = ShoppingReceiptSummaryResponse.class))),
+            @ApiResponse(responseCode = "400", description = "from/to missing or malformed, the date range spans more than 100 days, " +
+                    "spaceId/userId is not a valid UUID, or page/size are out of range",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No/invalid/expired bearer token",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Authenticated, but the caller does not have the ADMIN role",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<PageResponse<ShoppingReceiptSummaryResponse>> getShoppingReceipts(
             @Valid @ModelAttribute ShoppingReceiptsFilterRequest filterRequest) {
         PageResult<ReceiptSummaryResult> result = getShoppingReceiptsUseCase.getShoppingReceipts(
@@ -177,7 +298,18 @@ public class AdminController {
 
     @GetMapping("/shopping-receipts/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Retrieve shopping receipt details")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Shopping receipt details retrieved",
+                    content = @Content(schema = @Schema(implementation = ShoppingReceiptDetailResponse.class))),
+            @ApiResponse(responseCode = "400", description = "id path variable is not a valid UUID, or the shopping receipt does not exist",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "401", description = "No/invalid/expired bearer token",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "403", description = "Authenticated, but the caller does not have the ADMIN role",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public ResponseEntity<ShoppingReceiptDetailResponse> getShoppingReceipt(@PathVariable UUID id) {
         return ResponseEntity.ok(adminResponseMapper.toShoppingReceiptDetailResponse(getShoppingReceiptsUseCase.getShoppingReceipt(id)));
     }
