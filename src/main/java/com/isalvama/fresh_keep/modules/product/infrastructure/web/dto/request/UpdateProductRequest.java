@@ -14,7 +14,7 @@ import java.time.LocalDate;
 public record UpdateProductRequest (
 
         @Size(max= 30)
-        @Pattern(regexp = ".*\\S.*")
+        @Pattern(regexp = ".*\\p{L}.*")
         @Schema(description = "Optional. Max 30 characters, must contain at least one letter", example = "Milk")
         String name,
 
