@@ -84,7 +84,6 @@ public class MoveProductService implements MoveProductUseCase {
                 storageSpotInfoById.get(command.newStorageSpotId().toString()),
                 clock
         );
-
         LocalDate newExpirationDate = productMovedExpirationDateCalculatorPort.execute(productMovedDto);
 
         product.updateStorageSpot(StorageSpotId.from(command.newStorageSpotId().toString()), newExpirationDate);

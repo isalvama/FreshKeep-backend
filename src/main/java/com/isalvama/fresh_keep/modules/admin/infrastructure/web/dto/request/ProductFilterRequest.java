@@ -20,7 +20,7 @@ public record ProductFilterRequest(
         Integer page,
 
         @RequestParam(required = false)
-        @EnumValue(enumClass = ProductType.class, message = "Type is an invalid ProductType")
+        @EnumValue(enumClass = ProductType.class, message = "productType is an invalid ProductType")
         String productType,
 
         @RequestParam(required = false)
