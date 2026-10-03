@@ -287,26 +287,26 @@ class JpaSpaceRepositoryAdapterTest {
 
         @Test
         void getById_ShouldSpaceWithAMatchingId(){
-            Optional<Space> result1 = adapter.getById(spaceId1);
+            Optional<Space> result1 = adapter.findById(spaceId1);
             assertFalse(result1.isEmpty());
             assertEquals(result1.get(), space1);
 
-            Optional<Space> result2 = adapter.getById(spaceId2);
+            Optional<Space> result2 = adapter.findById(spaceId2);
             assertFalse(result2.isEmpty());
             assertEquals(result2.get(), space2);
 
-            Optional<Space> result3 = adapter.getById(spaceId3);
+            Optional<Space> result3 = adapter.findById(spaceId3);
             assertFalse(result3.isEmpty());
             assertEquals(result3.get(), space3);
 
-            Optional<Space> result4 = adapter.getById(spaceId4);
+            Optional<Space> result4 = adapter.findById(spaceId4);
             assertFalse(result4.isEmpty());
             assertEquals(result4.get(), space4);
         }
 
         @Test
         void getById_ShouldReturnEmptyListWhenASpaceWithAMatchingIdDoesNotExist(){
-            Optional<Space> result = adapter.getById(SpaceId.create());
+            Optional<Space> result = adapter.findById(SpaceId.create());
             assertTrue(result.isEmpty());
         }
     }

@@ -4,6 +4,6 @@ import com.isalvama.fresh_keep.shared.infrastructure.exception.InfrastructureExc
 
 public class SpacePersistenceException extends InfrastructureException {
     public SpacePersistenceException(String message) {
-        super(message);
+        super("Error Persisting/Retrieving Space Data: " + message);
     }
 }

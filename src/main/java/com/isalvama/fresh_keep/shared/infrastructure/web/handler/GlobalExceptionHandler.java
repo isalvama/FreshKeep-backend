@@ -8,6 +8,7 @@ import com.isalvama.fresh_keep.shared.domain.exception.DomainException;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.*;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +41,18 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         problemDetail.setTitle("Application Server Error");
         problemDetail.setDetail(ex.getMessage());
+        return problemDetail;
+    }
+
+    // Backstop for any repository/adapter method that doesn't wrap DataAccessException itself —
+    // never exposes the raw exception message, since it wasn't written with a client response in mind.
+    @ResponseBody
+    @ExceptionHandler(DataAccessException.class)
+    public ProblemDetail handleDataAccessException(DataAccessException ex) {
+        log.error("Unhandled DataAccessException", ex);
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+        problemDetail.setTitle("Server Error");
+        problemDetail.setDetail("An unexpected database error occurred.");
         return problemDetail;
     }
 

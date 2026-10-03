@@ -16,7 +16,7 @@ public interface SpaceRepositoryPort {
     boolean existsStorageSpotByIdAndParticipantId(UserId userId, StorageSpotId storageSpotId);
     boolean existsSpaceByIdAndParticipantId(UserId userId, SpaceId spaceId);
     Set<String> findAccessible(String userId, List<StorageSpotId> storageSpotIds);
-    Optional<Space> getById(SpaceId spaceId);
+    Optional<Space> findById(SpaceId spaceId);
     List<StorageSpot> findStorageSpotsByIds(Set<StorageSpotId> storageSpotIds);
     void addParticipant (UserId userid, SpaceId spaceId);
     }

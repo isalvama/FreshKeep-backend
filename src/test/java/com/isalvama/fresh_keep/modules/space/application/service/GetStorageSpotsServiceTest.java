@@ -42,7 +42,7 @@ class GetStorageSpotsServiceTest {
 
     @Test
     void execute_throwsInvalidSpaceReferenceExceptionWhenSpaceDoesNotExist() {
-        when(spaceRepositoryPort.getById(any())).thenReturn(Optional.empty());
+        when(spaceRepositoryPort.findById(any())).thenReturn(Optional.empty());
 
         Exception exception = assertThrows(InvalidSpaceReferenceException.class, () -> service.execute(command));
 
@@ -52,7 +52,7 @@ class GetStorageSpotsServiceTest {
 
     @Test
     void execute_throwsSpaceNotAccessibleExceptionWhenUserIsNotAParticipant() {
-        when(spaceRepositoryPort.getById(any())).thenReturn(Optional.of(space));
+        when(spaceRepositoryPort.findById(any())).thenReturn(Optional.of(space));
         when(spaceRepositoryPort.getByParticipantId(any())).thenReturn(List.of());
 
         Exception exception = assertThrows(SpaceNotAccessibleException.class, () -> service.execute(command));
@@ -62,7 +62,7 @@ class GetStorageSpotsServiceTest {
 
     @Test
     void execute_returnsMappedStorageSpotsWhenUserIsAParticipant() {
-        when(spaceRepositoryPort.getById(any())).thenReturn(Optional.of(space));
+        when(spaceRepositoryPort.findById(any())).thenReturn(Optional.of(space));
         when(spaceRepositoryPort.getByParticipantId(any())).thenReturn(List.of(space));
 
         List<StorageSpotResult> result = service.execute(command);
@@ -76,12 +76,12 @@ class GetStorageSpotsServiceTest {
 
     @Test
     void execute_passesTheExpectedIdsToTheRepository() {
-        when(spaceRepositoryPort.getById(any())).thenReturn(Optional.of(space));
+        when(spaceRepositoryPort.findById(any())).thenReturn(Optional.of(space));
         when(spaceRepositoryPort.getByParticipantId(any())).thenReturn(List.of(space));
 
         service.execute(command);
 
-        verify(spaceRepositoryPort).getById(space.getId());
+        verify(spaceRepositoryPort).findById(space.getId());
         verify(spaceRepositoryPort).getByParticipantId(userId);
     }
 }

@@ -21,7 +21,7 @@ public class GetStorageSpotsService implements GetStorageSpotsUseCase {
 
     @Override
     public List<StorageSpotResult> execute(GetStorageSpotsCommand command) {
-        Space space = spaceRepositoryPort.getById(SpaceId.from(command.spaceId()))
+        Space space = spaceRepositoryPort.findById(SpaceId.from(command.spaceId()))
                 .orElseThrow(() -> new InvalidSpaceReferenceException("Space with id " + command.spaceId() + " does not exist."));
 
         List<Space> spaces = spaceRepositoryPort.getByParticipantId(UserId.from(command.userId()));
