@@ -83,6 +83,25 @@ class ProductQueryAdapterTest {
     }
 
     @Test
+    void getSpaceProducts_sortsAlphabeticallyByNameWhenExpirationDatesMatch() {
+        UUID yogurtId = UUID.randomUUID();
+        UUID milkId = UUID.randomUUID();
+        UUID breadId = UUID.randomUUID();
+        LocalDate sameExpirationDate = LocalDate.of(2026, 9, 20);
+
+        insertProduct(yogurtId, "Yogurt", sameExpirationDate, storageSpotId, "DAIRY", shoppingReceiptId, BigDecimal.valueOf(2.0), "USD");
+        insertProduct(milkId, "Milk", sameExpirationDate, storageSpotId, "DAIRY", shoppingReceiptId, BigDecimal.valueOf(1.5), "USD");
+        insertProduct(breadId, "Bread", sameExpirationDate, storageSpotId, "BAKERY", shoppingReceiptId, BigDecimal.valueOf(1.0), "USD");
+
+        List<ProductQueryDto> result = adapter.getSpaceProducts(spaceId);
+
+        assertEquals(3, result.size());
+        assertEquals(breadId, result.get(0).id());
+        assertEquals(milkId, result.get(1).id());
+        assertEquals(yogurtId, result.get(2).id());
+    }
+
+    @Test
     void getSpaceProducts_mapsEveryColumnCorrectly() {
         UUID productId = UUID.randomUUID();
         insertProduct(productId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY", shoppingReceiptId, BigDecimal.valueOf(1.5), "USD");

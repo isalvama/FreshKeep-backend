@@ -9,7 +9,7 @@ public record ShoppingReceiptResponse(
         @Schema(description = "Shopping receipt id") String id,
         @Schema(description = "Final purchase date persisted for this receipt") LocalDate shoppingDate,
         @Schema(description = "Store name") String storeName,
-        @Schema(description = "Persisted products, sorted by expirationDate ascending (soonest-to-expire first), nulls last") List<ShoppingReceiptProductResponse> products,
+        @Schema(description = "Persisted products, sorted by expirationDate ascending (soonest-to-expire first), nulls last, ties broken alphabetically by productName ascending") List<ShoppingReceiptProductResponse> products,
         @Schema(description = "This space's storage spots") List<SuggestedStorageSpotResponse> storageSpots
 ) {
 }

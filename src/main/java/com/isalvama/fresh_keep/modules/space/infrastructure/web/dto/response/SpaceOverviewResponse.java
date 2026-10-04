@@ -9,6 +9,6 @@ public record SpaceOverviewResponse(
         @Schema(description = "Space name") String name,
         @Schema(description = "Space emoji") String emoji,
         @Schema(description = "This space's storage spots") List<StorageSpotResponse> storageSpots,
-        @Schema(description = "Every product currently stored in this space, sorted by expirationDate ascending (soonest-to-expire first)") List<SpaceProductResponse> productResults
+        @Schema(description = "Every product currently stored in this space, sorted by expirationDate ascending (soonest-to-expire first), ties broken alphabetically by productName ascending") List<SpaceProductResponse> productResults
 ) {
 }

@@ -104,7 +104,10 @@ public class ReProcessShoppingReceiptService implements ReProcessShoppingReceipt
                         )).toList()
         );
 
-        List<RegisteredProductDto> registeredSortedProducts = registeredProducts.stream().sorted(Comparator.comparing(RegisteredProductDto::expirationDate, Comparator.nullsLast(Comparator.naturalOrder()))).toList();
+        List<RegisteredProductDto> registeredSortedProducts = registeredProducts.stream()
+                .sorted(Comparator.comparing(RegisteredProductDto::expirationDate, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(RegisteredProductDto::productName))
+                .toList();
 
         return new ShoppingReceiptResult(
                 shoppingReceipt.getId().toString(),

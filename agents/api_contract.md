@@ -419,8 +419,9 @@ a storage spot or another user added/removed products moments ago, this reflects
 }
 ```
 
-`productResults` is returned sorted by `expirationDate` ascending (soonest-to-expire first) — same convention as
-the `confirm`/`reprocess` product lists. A space with no products yet returns `200 OK` with `productResults: []`,
+`productResults` is returned sorted by `expirationDate` ascending (soonest-to-expire first), with products sharing
+the same `expirationDate` broken alphabetically by `productName` ascending — same convention as the
+`confirm`/`reprocess` product lists. A space with no products yet returns `200 OK` with `productResults: []`,
 not an error.
 
 ### Error responses
@@ -717,8 +718,9 @@ saved, not a re-extraction preview. `products[].productName` for any re-examined
 the language requested via `language`; unflagged products keep whatever language they already had from the prior
 `processNewShoppingReceipt`/`reprocess` call, since they're carried over unchanged rather than re-extracted.
 
-`products` is returned sorted by `expirationDate` ascending (soonest-to-expire first), nulls last — the sort only
-affects response order, not persistence order.
+`products` is returned sorted by `expirationDate` ascending (soonest-to-expire first), nulls last, with products
+sharing the same `expirationDate` broken alphabetically by `productName` ascending — the sort only affects response
+order, not persistence order.
 
 ### Error responses
 
@@ -812,7 +814,7 @@ persisting, and there is no future-date clamping — a `shoppingDate` in the fut
 products, as in the other endpoints.
 
 As with reprocess, `products` is returned sorted by `expirationDate` ascending (soonest-to-expire first), nulls
-last.
+last, with products sharing the same `expirationDate` broken alphabetically by `productName` ascending.
 
 ### Error responses
 
