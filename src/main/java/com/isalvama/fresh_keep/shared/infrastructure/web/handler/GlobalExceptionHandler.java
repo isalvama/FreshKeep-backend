@@ -9,6 +9,7 @@ import com.isalvama.fresh_keep.shared.infrastructure.exception.*;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -122,8 +123,19 @@ public class GlobalExceptionHandler {
 
     @ResponseBody
     @ExceptionHandler(AiRetryableException.class)
-    public ProblemDetail handleAiRetryableException(AiRetryableException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+    public ResponseEntity<ProblemDetail> handleAiRetryableException(AiRetryableException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.SERVICE_UNAVAILABLE);
+        problemDetail.setTitle("AI Server Error");
+        problemDetail.setDetail(ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header(HttpHeaders.RETRY_AFTER, "5")
+                .body(problemDetail);
+    }
+
+    @ResponseBody
+    @ExceptionHandler(UnparseableAiResponseException.class)
+    public ProblemDetail handleUnparseableAiResponseException(UnparseableAiResponseException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
         problemDetail.setTitle("AI Server Error");
         problemDetail.setDetail(ex.getMessage());
         return problemDetail;

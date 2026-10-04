@@ -5,6 +5,7 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ProductReviewFlag;
 import com.isalvama.fresh_keep.shared.infrastructure.ai.dto.ReceiptExtractionToReview;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.AiRetryableException;
+import com.isalvama.fresh_keep.shared.infrastructure.exception.UnparseableAiResponseException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -78,13 +79,13 @@ public class OllamaReceiptExtractionReviewerAdapter implements AiReceiptExtracti
     private List<ProductReviewFlag> parseAndValidate(ChatResponse response, BeanOutputConverter<ReceiptExtractionToReview> converter) {
 
         if (response.getResult() == null) {
-            throw new AiRetryableException("The AI reviewer did not return any response to the ticket");
+            throw new UnparseableAiResponseException("The AI reviewer did not return any response to the ticket");
         }
 
         String jsonText = response.getResult().getOutput().getText();
 
         if (jsonText == null || jsonText.isBlank() || !jsonText.trim().startsWith("{")) {
-            throw new AiRetryableException("The AI reviewer returned and empty response.");
+            throw new UnparseableAiResponseException("The AI reviewer returned and empty response.");
         }
 
         ReceiptExtractionToReview receiptExtractionToReview;
@@ -92,7 +93,7 @@ public class OllamaReceiptExtractionReviewerAdapter implements AiReceiptExtracti
         try {
              receiptExtractionToReview = converter.convert(jsonText);
         } catch (Exception e) {
-            throw new AiRetryableException("The AI reviewer answer could not be parsed", e);
+            throw new UnparseableAiResponseException("The AI reviewer answer could not be parsed", e);
         }
 
         if (receiptExtractionToReview.flaggedProducts() == null || receiptExtractionToReview.flaggedProducts().isEmpty()) {
