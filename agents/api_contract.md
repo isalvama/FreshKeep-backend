@@ -623,12 +623,13 @@ Notes on this shape:
 | 400 Bad Request | `file` is present but empty (`InvalidReceiptImageException`) | "Business Rule Error" |
 | 400 Bad Request | `spaceId` path variable is not a valid UUID | "Validation Error in Parameter" |
 | 400 Bad Request | Space does not exist (`InvalidSpaceReferenceException`) | "Business Rule Error" |
-| 400 Bad Request | AI extraction failed in a retryable way after retries exhausted (`AiRetryableException`) | "AI Server Error" |
 | 401/403 | Auth failures — see [shared error responses](#shared-error-responses) | — |
 | 409 Conflict | Authenticated user is not a participant of `spaceId` (`SpaceNotAccessibleException`) | "Conflict Error" |
 | 422 Unprocessable Content | AI could not process the image at all (`AiUnprocessableInputException`) — e.g. not a readable receipt | "Unprocessable Ticket Data Error" |
 | 429 Too Many Requests | AI provider rate limit hit (`AiRateLimitedException`) | "AI Rate Limit Exceedance" |
 | 500 Internal Server Error | Unexpected AI-side failure (`TicketProcessingException`) | "Internal AI Server Error" |
+| 502 Bad Gateway | The AI call completed but returned an empty/unparseable response (`UnparseableAiResponseException`) | "AI Server Error" |
+| 503 Service Unavailable | The AI call could not be completed (unreachable/unavailable) in a retryable way after retries exhausted (`AiRetryableException`); response includes a `Retry-After` header (seconds) | "AI Server Error" |
 
 ---
 
@@ -731,12 +732,13 @@ affects response order, not persistence order.
 | 400 Bad Request | `shoppingReceiptId` does not reference an existing `ShoppingReceipt` (`NonExistentShoppingReceiptException`) | "Business Rule Error" |
 | 400 Bad Request | `shoppingReceiptId`/`receiptImageId`/`spaceId`/creator don't all belong to the same draft (`InvalidShoppingReceiptException` — "cannot be reprocessed in the requested context") | "Business Rule Error" |
 | 400 Bad Request | Rectified `shoppingDate` still ends up after today, e.g. from clock skew (`InvalidShoppingReceiptException`) | "Business Rule Error" |
-| 400 Bad Request | AI extraction failed in a retryable way after retries exhausted (`AiRetryableException`) | "AI Server Error" |
 | 401/403 | Auth failures — see [shared error responses](#shared-error-responses) | — |
 | 409 Conflict | Authenticated user is not a participant of `spaceId` (`SpaceNotAccessibleException`) | "Conflict Error" |
 | 422 Unprocessable Content | AI could not process the image at all (`AiUnprocessableInputException`) | "Unprocessable Ticket Data Error" |
 | 429 Too Many Requests | AI provider rate limit hit (`AiRateLimitedException`) | "AI Rate Limit Exceedance" |
 | 500 Internal Server Error | Unexpected AI-side failure (`TicketProcessingException`) | "Internal AI Server Error" |
+| 502 Bad Gateway | The AI call completed but returned an empty/unparseable response (`UnparseableAiResponseException`) | "AI Server Error" |
+| 503 Service Unavailable | The AI call could not be completed (unreachable/unavailable) in a retryable way after retries exhausted (`AiRetryableException`); response includes a `Retry-After` header (seconds) | "AI Server Error" |
 
 Note: unlike `processNewShoppingReceipt`, this endpoint has **no fallback** if the AI call fails outright — since its
 whole purpose is re-extraction, an AI failure here surfaces as a real error to the client rather than degrading
@@ -941,12 +943,12 @@ service to be reachable; AI-side failures surface as real errors (this endpoint 
 | 400 Bad Request | `oldStorageSpotId`/`newStorageSpotId` missing, or `id` path variable not a valid UUID | "Validation Error In Body Data" / "Validation Error in Parameter" |
 | 400 Bad Request | Product does not exist (`NonExistentProductException`) | "Business Rule Error" |
 | 400 Bad Request | `oldStorageSpotId` doesn't match the product's current spot (`InvalidProductMoveException`) | "Business Rule Error" |
-| 400 Bad Request | AI recalculation failed in a retryable way after retries exhausted (`AiRetryableException`) | "AI Server Error" |
 | 401 Unauthorized | No `Authorization` header, or an invalid/malformed/expired bearer token | "Unauthorized" |
 | 403 Forbidden | Valid token, but the account does not have the `USER` role | "Forbidden" |
 | 409 Conflict | User is not a participant of the old/new spot's space(s) (`SpaceNotAccessibleException`) | "Conflict Error" |
 | 500 Internal Server Error | Bad/missing data for the recalculation (`ExpirationDateCalculationException`) | "Server Error" |
 | 500 Internal Server Error | Supporting data (shopping date / storage-spot history / spot info) couldn't be resolved (`MoveProductDataUnavailableException`) | "Application Server Error" |
+| 503 Service Unavailable | AI recalculation failed in a retryable way after retries exhausted (`AiRetryableException`); response includes a `Retry-After` header (seconds) | "AI Server Error" |
 
 ---
 

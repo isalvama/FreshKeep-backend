@@ -120,8 +120,7 @@ public class ProductController {
             @ApiResponse(responseCode = "200", description = "Product moved",
                     content = @Content(schema = @Schema(implementation = MoveProductResponse.class))),
             @ApiResponse(responseCode = "400", description = "oldStorageSpotId/newStorageSpotId missing, id path variable not a valid UUID, " +
-                    "the product does not exist, oldStorageSpotId does not match the product's current spot, or AI expiration-date " +
-                    "recalculation failed in a retryable way after retries exhausted",
+                    "the product does not exist, or oldStorageSpotId does not match the product's current spot",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
             @ApiResponse(responseCode = "401", description = "No/invalid/expired bearer token",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
@@ -132,6 +131,9 @@ public class ProductController {
             @ApiResponse(responseCode = "500", description = "Bad/missing data for the product's expiration date recalculation, supporting data (shopping date / " +
                     "storage-spot history / spot info) could not be resolved, or an unexpected persistence failure while saving the move or " +
                     "in the product, storage spot history, shopping date or storage spot data retrieval",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "503", description = "AI expiration-date recalculation failed in a retryable way after retries " +
+                    "exhausted; response includes a Retry-After header (seconds)",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
     })
     public ResponseEntity<MoveProductResponse> move(
