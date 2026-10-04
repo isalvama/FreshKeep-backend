@@ -132,8 +132,10 @@ public class ProductController {
                     "storage-spot history / spot info) could not be resolved, or an unexpected persistence failure while saving the move or " +
                     "in the product, storage spot history, shopping date or storage spot data retrieval",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
-            @ApiResponse(responseCode = "503", description = "AI expiration-date recalculation failed in a retryable way after retries " +
-                    "exhausted; response includes a Retry-After header (seconds)",
+            @ApiResponse(responseCode = "502", description = "The AI call completed but returned a null/empty/unparseable response",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "503", description = "The AI call could not be completed (unreachable/unavailable) in a " +
+                    "retryable way after retries exhausted; response includes a Retry-After header (seconds)",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
     })
     public ResponseEntity<MoveProductResponse> move(

@@ -950,7 +950,8 @@ service to be reachable; AI-side failures surface as real errors (this endpoint 
 | 409 Conflict | User is not a participant of the old/new spot's space(s) (`SpaceNotAccessibleException`) | "Conflict Error" |
 | 500 Internal Server Error | Bad/missing data for the recalculation (`ExpirationDateCalculationException`) | "Server Error" |
 | 500 Internal Server Error | Supporting data (shopping date / storage-spot history / spot info) couldn't be resolved (`MoveProductDataUnavailableException`) | "Application Server Error" |
-| 503 Service Unavailable | AI recalculation failed in a retryable way after retries exhausted (`AiRetryableException`); response includes a `Retry-After` header (seconds) | "AI Server Error" |
+| 502 Bad Gateway | The AI call completed but returned an empty/unparseable response (`UnparseableAiResponseException`) | "AI Server Error" |
+| 503 Service Unavailable | The AI call could not be completed (unreachable/unavailable) in a retryable way after retries exhausted (`AiRetryableException`); response includes a `Retry-After` header (seconds) | "AI Server Error" |
 
 ---
 

@@ -2,10 +2,10 @@ package com.isalvama.fresh_keep.shared.infrastructure.ai.product_moved_expiratio
 
 import com.isalvama.fresh_keep.modules.product.application.port.out.ProductMovedExpirationDateCalculatorPort;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductMovedDto;
-import com.isalvama.fresh_keep.modules.product.domain.exception.InvalidProductException;
 import com.isalvama.fresh_keep.shared.infrastructure.ai.receipt_extraction_reviewer.ReviewPromptBuilder;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.AiRetryableException;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.ExpirationDateCalculationException;
+import com.isalvama.fresh_keep.shared.infrastructure.exception.UnparseableAiResponseException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -18,7 +18,6 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -88,7 +87,7 @@ public class OllamaProductMovedExpirationDateCalculatorAdapter implements Produc
     private LocalDate parseAndValidate(ChatResponse response, BeanOutputConverter<LocalDate> converter) {
 
         if (response.getResult() == null) {
-            throw new AiRetryableException("The AI expiration date calculator did not return any response.");
+            throw new UnparseableAiResponseException("The AI expiration date calculator did not return any response.");
         }
 
         String jsonText = response.getResult().getOutput().getText();
@@ -96,7 +95,7 @@ public class OllamaProductMovedExpirationDateCalculatorAdapter implements Produc
         String trimmedJsonText = jsonText == null ? "" : jsonText.trim();
         if (trimmedJsonText.isBlank()
                 || !(trimmedJsonText.startsWith("{") || trimmedJsonText.startsWith("\""))) {
-            throw new AiRetryableException("The AI expiration date calculator returned and empty response.");
+            throw new UnparseableAiResponseException("The AI expiration date calculator returned and empty response.");
         }
 
         LocalDate expirationDate;
@@ -104,7 +103,7 @@ public class OllamaProductMovedExpirationDateCalculatorAdapter implements Produc
         try {
             expirationDate = converter.convert(jsonText);
         } catch (Exception e) {
-            throw new AiRetryableException("The AI expiration date calculator answer could not be parsed", e);
+            throw new UnparseableAiResponseException("The AI expiration date calculator answer could not be parsed", e);
         }
 
         return expirationDate;
