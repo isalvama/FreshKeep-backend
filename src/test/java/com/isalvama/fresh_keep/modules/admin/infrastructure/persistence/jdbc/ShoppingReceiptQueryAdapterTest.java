@@ -4,6 +4,7 @@ import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptDet
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptProductDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptSummaryDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptsPageDto;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jdbc.ShoppingReceiptQueryAdapter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

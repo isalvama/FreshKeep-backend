@@ -2,8 +2,8 @@ package com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jdbc;
 
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyMetricDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.GetAllProductsDto;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc.QueryAppender;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc.dto.QueryAppenderResult;
+import com.isalvama.fresh_keep.shared.infrastructure.persistence.QueryAppender;
+import com.isalvama.fresh_keep.shared.infrastructure.persistence.QueryAppenderResult;
 import com.isalvama.fresh_keep.modules.product.application.port.out.ProductQueryPort;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductQueryDto;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductDetailDto;

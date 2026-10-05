@@ -2,7 +2,7 @@ package com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jdbc;
 
 import com.isalvama.fresh_keep.modules.admin.domain.criteria.ProductSortType;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.GetAllProductsDto;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc.QueryAppender;
+import com.isalvama.fresh_keep.shared.infrastructure.persistence.QueryAppender;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductQueryDto;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductTypeCountDto;
 import com.isalvama.fresh_keep.modules.product.domain.model.ProductType;
