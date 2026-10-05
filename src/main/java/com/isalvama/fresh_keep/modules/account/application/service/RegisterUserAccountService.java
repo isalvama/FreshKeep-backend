@@ -4,8 +4,8 @@ import com.isalvama.fresh_keep.modules.account.application.command.RegisterUserA
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterUserAccountUseCase;
 import com.isalvama.fresh_keep.modules.account.application.port.in.dto.response.AuthRegisterResult;
 import com.isalvama.fresh_keep.modules.account.application.port.out.*;
-import com.isalvama.fresh_keep.modules.account.domain.event.UserAccountRegisteredEvent;
-import com.isalvama.fresh_keep.modules.account.domain.event.UserAccountRegisteredEventPublisher;
+import com.isalvama.fresh_keep.modules.account.application.port.out.dto.event.UserAccountRegisteredEvent;
+import com.isalvama.fresh_keep.modules.account.application.port.out.UserAccountRegisteredEventPublisher;
 import com.isalvama.fresh_keep.modules.account.domain.exception.AccountAlreadyExistsException;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.shared.domain.Role;
