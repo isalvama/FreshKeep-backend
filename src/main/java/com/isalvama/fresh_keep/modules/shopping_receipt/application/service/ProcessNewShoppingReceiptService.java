@@ -101,7 +101,9 @@ public class ProcessNewShoppingReceiptService implements ProcessNewShoppingRecei
                 productExtractions == null || productExtractions.isEmpty()
                     ? List.of()
                     : productExtractions.stream().map(ProcessProductResult::fromProductExtraction).toList(),
-                productsToReview == null || productsToReview.isEmpty() ? List.of() : productsToReview.stream().map(p -> ProcessProductResult.fromProductExtraction(p.product())).toList()
+                productsToReview == null || productsToReview.isEmpty()
+                        ? List.of()
+                        : productsToReview.stream().map(p -> ProcessProductResult.fromProductExtraction(p.product())).toList()
         );
     }
 

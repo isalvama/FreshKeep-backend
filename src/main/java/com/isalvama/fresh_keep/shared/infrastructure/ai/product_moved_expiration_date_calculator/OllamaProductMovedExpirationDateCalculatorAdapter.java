@@ -13,6 +13,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
@@ -25,6 +26,9 @@ import java.time.LocalDate;
 public class OllamaProductMovedExpirationDateCalculatorAdapter implements ProductMovedExpirationDateCalculatorPort {
     private final OllamaChatModel chatModel;
     private final ReviewPromptBuilder reviewPromptBuilder;
+
+    @Value("${spring.ai.ollama.chat.options.model}")
+    private String model;
 
 
     private static final String TEMPLATE_PROMPT_TEXT = """
@@ -59,7 +63,7 @@ public class OllamaProductMovedExpirationDateCalculatorAdapter implements Produc
             """;
 
     @Override
-    @Retryable(retryFor = AiRetryableException.class, maxAttempts = 2,  backoff = @Backoff(delay = 1000))
+    @Retryable(retryFor = AiRetryableException.class, maxAttempts = 3, backoff = @Backoff(delay = 2000, multiplier = 2))
     public LocalDate execute(ProductMovedDto dto) {
 
         validateNotNull(dto, "ProductMovedDto");
@@ -71,6 +75,7 @@ public class OllamaProductMovedExpirationDateCalculatorAdapter implements Produc
         BeanOutputConverter<LocalDate> converter = new BeanOutputConverter<>(LocalDate.class);
 
         OllamaChatOptions chatOptions = OllamaChatOptions.builder()
+                .model(model)
                 .outputSchema(converter.getJsonSchema())
                 .build();
         ChatResponse response;
