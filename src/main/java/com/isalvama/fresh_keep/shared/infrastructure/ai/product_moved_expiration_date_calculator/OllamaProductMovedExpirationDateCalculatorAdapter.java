@@ -51,11 +51,11 @@ public class OllamaProductMovedExpirationDateCalculatorAdapter implements Produc
             1. How many days have passed since the product was originally purchased ({shoppingDate} to {today}).
             2. The type of the new storage spot and how it affects shelf life compared to the old spot. Use the reference shelf life ranges below as a guide.
             3. Any previous expiration date adjustments from prior moves — do not reset the clock, adjust from the most recent expiration date.
-
+            
             Rules:
             - If the new spot is colder than the old spot (e.g. FRIDGE -> FREEZER), the product's remaining shelf life should increase.
             - If the new spot is warmer (e.g. FRIDGE -> PANTRY for a dairy product), the remaining shelf life should decrease — potentially to 0 if the product becomes unsafe.
-            - Never set an expiration date in the past.
+            - Never calculate or assign a new expiration date in the past (prior to {today}). The only exception is if the product is already expired: in that case, keep the original expiration date unchanged            
             - Never extend beyond the maximum shelf life for the product type in the new storage spot type.
 
             Return only the new expiration date following the format detailed:

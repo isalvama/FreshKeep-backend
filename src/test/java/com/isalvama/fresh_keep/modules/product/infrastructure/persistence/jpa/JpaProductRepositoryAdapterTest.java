@@ -131,7 +131,7 @@ class JpaProductRepositoryAdapterTest {
                     ShoppingReceiptId.of(UUID.randomUUID()),
                     Money.from(BigDecimal.valueOf(9.99), "EUR")
             );
-            updated.updateStorageSpot(StorageSpotId.of(updatedStorageSpotId), updated.getExpirationDate());
+            updated.updateStorageSpot(StorageSpotId.of(updatedStorageSpotId), updated.getExpirationDate(), Clock.systemUTC());
 
             adapter.save(updated);
             jpaProductRepository.flush();
@@ -214,7 +214,7 @@ class JpaProductRepositoryAdapterTest {
             UUID actualStorageSpotId = UUID.randomUUID();
             insertStorageSpot(actualStorageSpotId, "Pantry", "PANTRY", spaceId);
             Product milk = createProduct("Milk", BigDecimal.valueOf(1.5), "USD");
-            milk.updateStorageSpot(StorageSpotId.of(actualStorageSpotId), milk.getExpirationDate());
+            milk.updateStorageSpot(StorageSpotId.of(actualStorageSpotId), milk.getExpirationDate(), Clock.systemUTC());
             adapter.save(milk);
             jpaProductRepository.flush();
             entityManager.clear();
