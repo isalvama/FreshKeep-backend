@@ -8,7 +8,6 @@ import com.isalvama.fresh_keep.modules.product.domain.model.value_object.Product
 import com.isalvama.fresh_keep.modules.product.infrastructure.exception.ProductPersistenceException;
 import com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa.entity.JpaProductEntity;
 import com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa.mapper.ProductMapper;
-import com.isalvama.fresh_keep.modules.space.infrastructure.exception.SpacePersistenceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -18,6 +17,7 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -96,17 +96,26 @@ public class JpaProductRepositoryAdapter implements ProductRepositoryPort {
 
     @Override
     public Optional<Product> findById(ProductId id) {
+        try {
         Optional<JpaProductEntity> jpaEntity = jpaProductRepository.findById(id.value());
         return jpaEntity.map(mapper::toDomain);
+        } catch (DataAccessException e){
+            throw new ProductPersistenceException("Failed to retrieve product data with id " + id + ". " + e.getMessage());
+        }
     }
 
     @Override
     public List<Product> findAllById(List<ProductId> ids) {
         List<UUID> productIds = ids.stream().map(ProductId::value).toList();
+        try {
         List<JpaProductEntity> jpaEntities = jpaProductRepository.findAllById(productIds);
         if (jpaEntities.isEmpty()){
             return List.of();
         }
         return jpaEntities.stream().map(mapper::toDomain).toList();
+        } catch (DataAccessException e){
+            String stringIds = ids.stream().map(ProductId::toString).collect(Collectors.joining(", "));
+            throw new ProductPersistenceException("Failed to retrieve data of the products with id " + stringIds + ". " + e.getMessage());
+        }
     }
 }

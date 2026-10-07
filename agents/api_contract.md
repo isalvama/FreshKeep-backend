@@ -170,6 +170,12 @@ Validation errors additionally include an `errors` property: `{ "field": "messag
 | `DomainException` (any other) | `FreshKeepException` | 400 |
 | `InfrastructureException` (incl. `IdentityMappingException`, `UserProvisioningPendingException`, `AdminProvisioningPendingException`, `InvalidResolvedEntitiesException`, `ExpirationDateCalculationException`) | `FreshKeepException` | 500 |
 | `ApplicationException` (incl. `MoveProductDataUnavailableException`) | `RuntimeException` (handled explicitly, title "Application Server Error") | 500 |
+| `AiUnprocessableInputException` | `RuntimeException` (handled explicitly, title "Unprocessable Ticket Data Error") | 422 |
+| `AiRateLimitedException` | `RuntimeException` (handled explicitly, title "AI Rate Limit Exceedance") | 429 |
+| `TicketProcessingException` | `RuntimeException` (handled explicitly, title "Internal AI Server Error") | 500 |
+| `UnparseableAiResponseException` | `AiRetryableException` (handled explicitly *before* its parent, title "AI Server Error") | 502 |
+| `AiRetryableException` (any other) | `RuntimeException` (handled explicitly, title "AI Server Error"); response includes a `Retry-After` header (seconds) | 503 |
+| `DataAccessException` (backstop for any repository/adapter that doesn't wrap it itself) | — (title "Server Error", detail never exposes the raw message) | 500 |
 | `MethodArgumentNotValidException` / `ConstraintViolationException` | — | 400 |
 | `HttpMessageNotReadableException` | — | 400 |
 | `MethodArgumentTypeMismatchException` | — | 400 |
@@ -292,7 +298,7 @@ valid `Bearer` JWT for an account with the `USER` role, obtained via `POST /api/
 
 | Field | Type | Constraints |
 |-------|------|-------------|
-| `spaceName` | string | required (`@NotBlank`), max 20 characters |
+| `spaceName` | string | required (`@NotBlank`), max 30 characters |
 | `emoji` | string | required (`@NotBlank`), 1–8 characters. Also validated at the domain layer (`Emoji`): must consist only of actual emoji codepoints (letters/digits/plain text are rejected) |
 | `storageSpots` | array of `StorageSpotRequest` | required, non-empty (`@NotEmpty`), cascade-validated (`@Valid`) |
 
@@ -419,8 +425,9 @@ a storage spot or another user added/removed products moments ago, this reflects
 }
 ```
 
-`productResults` is returned sorted by `expirationDate` ascending (soonest-to-expire first) — same convention as
-the `confirm`/`reprocess` product lists. A space with no products yet returns `200 OK` with `productResults: []`,
+`productResults` is returned sorted by `expirationDate` ascending (soonest-to-expire first), with products sharing
+the same `expirationDate` broken alphabetically by `productName` ascending — same convention as the
+`confirm`/`reprocess` product lists. A space with no products yet returns `200 OK` with `productResults: []`,
 not an error.
 
 ### Error responses
@@ -623,12 +630,13 @@ Notes on this shape:
 | 400 Bad Request | `file` is present but empty (`InvalidReceiptImageException`) | "Business Rule Error" |
 | 400 Bad Request | `spaceId` path variable is not a valid UUID | "Validation Error in Parameter" |
 | 400 Bad Request | Space does not exist (`InvalidSpaceReferenceException`) | "Business Rule Error" |
-| 400 Bad Request | AI extraction failed in a retryable way after retries exhausted (`AiRetryableException`) | "AI Server Error" |
 | 401/403 | Auth failures — see [shared error responses](#shared-error-responses) | — |
 | 409 Conflict | Authenticated user is not a participant of `spaceId` (`SpaceNotAccessibleException`) | "Conflict Error" |
 | 422 Unprocessable Content | AI could not process the image at all (`AiUnprocessableInputException`) — e.g. not a readable receipt | "Unprocessable Ticket Data Error" |
 | 429 Too Many Requests | AI provider rate limit hit (`AiRateLimitedException`) | "AI Rate Limit Exceedance" |
 | 500 Internal Server Error | Unexpected AI-side failure (`TicketProcessingException`) | "Internal AI Server Error" |
+| 502 Bad Gateway | The AI call completed but returned an empty/unparseable response (`UnparseableAiResponseException`) | "AI Server Error" |
+| 503 Service Unavailable | The AI call could not be completed (unreachable/unavailable) in a retryable way after retries exhausted (`AiRetryableException`); response includes a `Retry-After` header (seconds) | "AI Server Error" |
 
 ---
 
@@ -674,7 +682,7 @@ is the "AI, try again on these" path; use [Confirm](#3-confirm-and-persist) inst
 | Field                          | Type                | Constraints |
 |--------------------------------|---------------------|-------------|
 | `expirationDate`               | string (`yyyy-MM-dd`) | required |
-| `productName`                  | string              | required, max 30 chars |
+| `productName`                  | string              | required, max 30 chars, must contain at least one letter (checked at the domain layer when persisting, not bean-validated) |
 | `suggestedStorageSpotId`        | string (UUID)       | required |
 | `productType`                  | string              | required, max 30 chars |
 | `priceAmount`                  | number              | optional, must be positive if present |
@@ -716,8 +724,9 @@ saved, not a re-extraction preview. `products[].productName` for any re-examined
 the language requested via `language`; unflagged products keep whatever language they already had from the prior
 `processNewShoppingReceipt`/`reprocess` call, since they're carried over unchanged rather than re-extracted.
 
-`products` is returned sorted by `expirationDate` ascending (soonest-to-expire first), nulls last — the sort only
-affects response order, not persistence order.
+`products` is returned sorted by `expirationDate` ascending (soonest-to-expire first), nulls last, with products
+sharing the same `expirationDate` broken alphabetically by `productName` ascending — the sort only affects response
+order, not persistence order.
 
 ### Error responses
 
@@ -731,12 +740,14 @@ affects response order, not persistence order.
 | 400 Bad Request | `shoppingReceiptId` does not reference an existing `ShoppingReceipt` (`NonExistentShoppingReceiptException`) | "Business Rule Error" |
 | 400 Bad Request | `shoppingReceiptId`/`receiptImageId`/`spaceId`/creator don't all belong to the same draft (`InvalidShoppingReceiptException` — "cannot be reprocessed in the requested context") | "Business Rule Error" |
 | 400 Bad Request | Rectified `shoppingDate` still ends up after today, e.g. from clock skew (`InvalidShoppingReceiptException`) | "Business Rule Error" |
-| 400 Bad Request | AI extraction failed in a retryable way after retries exhausted (`AiRetryableException`) | "AI Server Error" |
+| 400 Bad Request | A product's `productName` has no letter — checked at the domain layer when persisting, not bean-validated (`InvalidProductNameException`) | "Business Rule Error" |
 | 401/403 | Auth failures — see [shared error responses](#shared-error-responses) | — |
 | 409 Conflict | Authenticated user is not a participant of `spaceId` (`SpaceNotAccessibleException`) | "Conflict Error" |
 | 422 Unprocessable Content | AI could not process the image at all (`AiUnprocessableInputException`) | "Unprocessable Ticket Data Error" |
 | 429 Too Many Requests | AI provider rate limit hit (`AiRateLimitedException`) | "AI Rate Limit Exceedance" |
 | 500 Internal Server Error | Unexpected AI-side failure (`TicketProcessingException`) | "Internal AI Server Error" |
+| 502 Bad Gateway | The AI call completed but returned an empty/unparseable response (`UnparseableAiResponseException`) | "AI Server Error" |
+| 503 Service Unavailable | The AI call could not be completed (unreachable/unavailable) in a retryable way after retries exhausted (`AiRetryableException`); response includes a `Retry-After` header (seconds) | "AI Server Error" |
 
 Note: unlike `processNewShoppingReceipt`, this endpoint has **no fallback** if the AI call fails outright — since its
 whole purpose is re-extraction, an AI failure here surfaces as a real error to the client rather than degrading
@@ -810,7 +821,7 @@ persisting, and there is no future-date clamping — a `shoppingDate` in the fut
 products, as in the other endpoints.
 
 As with reprocess, `products` is returned sorted by `expirationDate` ascending (soonest-to-expire first), nulls
-last.
+last, with products sharing the same `expirationDate` broken alphabetically by `productName` ascending.
 
 ### Error responses
 
@@ -824,6 +835,7 @@ last.
 | 400 Bad Request | `shoppingReceiptId` does not reference an existing `ShoppingReceipt` (`NonExistentShoppingReceiptException`) | "Business Rule Error" |
 | 400 Bad Request | `shoppingReceiptId`/`receiptImageId`/`spaceId`/creator don't all belong to the same draft (`InvalidShoppingReceiptException` — "cannot be confirmed in the requested context") | "Business Rule Error" |
 | 400 Bad Request | `shoppingDate` is after the server's current date (`InvalidShoppingReceiptException`) | "Business Rule Error" |
+| 400 Bad Request | A product's `productName` has no letter — checked at the domain layer when persisting, not bean-validated (`InvalidProductNameException`) | "Business Rule Error" |
 | 401/403 | Auth failures — see [shared error responses](#shared-error-responses) | — |
 | 409 Conflict | Authenticated user is not a participant of `spaceId` (`SpaceNotAccessibleException`) | "Conflict Error" |
 
@@ -875,11 +887,11 @@ valid no-op that returns the product's current state).
 
 | Field            | Type                  | Constraints |
 |------------------|-----------------------|-------------|
-| `name`           | string                | optional, max 30 chars, must contain a non-space character (`@Pattern`) |
+| `name`           | string                | optional, max 30 chars, must contain at least one letter (`@Pattern`) |
 | `expirationDate` | string (`yyyy-MM-dd`) | optional |
-| `productType`    | string                | optional, max 30 chars — must be a valid `ProductType` constant name, checked at the domain layer: an invalid value is a 400 "Business Rule Error" (`InvalidProductTypeException`), not a bean-validation `errors` entry |
+| `productType`    | string                | optional, max 30 chars — must be a valid `ProductType` constant name (case-insensitive), validated as a bean-validation constraint (`@EnumValue`) |
 | `amount`         | number                | optional, positive if present (the product's price amount) |
-| `currency`       | string                | optional, max 20 chars — must be a valid currency constant name, checked at the domain layer (`InvalidCurrencyException` → 400 "Business Rule Error") |
+| `currency`       | string                | optional, max 20 chars — must be a valid currency constant name (case-insensitive), validated as a bean-validation constraint (`@EnumValue`) |
 
 ### Success response — `200 OK`
 
@@ -898,10 +910,9 @@ valid no-op that returns the product's current state).
 
 | Status | Condition | Body title |
 |--------|-----------|------------|
-| 400 Bad Request | Field fails bean validation (too long / spaces-only / non-positive amount) | "Validation Error In Body Data" |
+| 400 Bad Request | Field fails bean validation (too long / name has no letter / non-positive amount / `productType`/`currency` not a recognized constant) | "Validation Error In Body Data" |
 | 400 Bad Request | `id` path variable is not a valid UUID | "Validation Error in Parameter" |
 | 400 Bad Request | Product does not exist (`NonExistentProductException`) | "Business Rule Error" |
-| 400 Bad Request | `productType`/`currency` not a recognized constant (`InvalidProductTypeException`/`InvalidCurrencyException`) | "Business Rule Error" |
 | 401 Unauthorized | No `Authorization` header, or an invalid/malformed/expired bearer token | "Unauthorized" |
 | 403 Forbidden | Valid token, but the account does not have the `USER` role | "Forbidden" |
 | 409 Conflict | User is not a participant of the product's storage spot's space (`SpaceNotAccessibleException`) | "Conflict Error" |
@@ -941,12 +952,13 @@ service to be reachable; AI-side failures surface as real errors (this endpoint 
 | 400 Bad Request | `oldStorageSpotId`/`newStorageSpotId` missing, or `id` path variable not a valid UUID | "Validation Error In Body Data" / "Validation Error in Parameter" |
 | 400 Bad Request | Product does not exist (`NonExistentProductException`) | "Business Rule Error" |
 | 400 Bad Request | `oldStorageSpotId` doesn't match the product's current spot (`InvalidProductMoveException`) | "Business Rule Error" |
-| 400 Bad Request | AI recalculation failed in a retryable way after retries exhausted (`AiRetryableException`) | "AI Server Error" |
 | 401 Unauthorized | No `Authorization` header, or an invalid/malformed/expired bearer token | "Unauthorized" |
 | 403 Forbidden | Valid token, but the account does not have the `USER` role | "Forbidden" |
 | 409 Conflict | User is not a participant of the old/new spot's space(s) (`SpaceNotAccessibleException`) | "Conflict Error" |
 | 500 Internal Server Error | Bad/missing data for the recalculation (`ExpirationDateCalculationException`) | "Server Error" |
 | 500 Internal Server Error | Supporting data (shopping date / storage-spot history / spot info) couldn't be resolved (`MoveProductDataUnavailableException`) | "Application Server Error" |
+| 502 Bad Gateway | The AI call completed but returned an empty/unparseable response (`UnparseableAiResponseException`) | "AI Server Error" |
+| 503 Service Unavailable | The AI call could not be completed (unreachable/unavailable) in a retryable way after retries exhausted (`AiRetryableException`); response includes a `Retry-After` header (seconds) | "AI Server Error" |
 
 ---
 

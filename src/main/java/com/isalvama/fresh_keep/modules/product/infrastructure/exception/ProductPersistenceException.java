@@ -4,6 +4,6 @@ import com.isalvama.fresh_keep.shared.infrastructure.exception.InfrastructureExc
 
 public class ProductPersistenceException extends InfrastructureException {
     public ProductPersistenceException(String message) {
-        super("Error Persisting Product: " + message);
+        super("Error Persisting/Retrieving Product Data: " + message);
     }
 }

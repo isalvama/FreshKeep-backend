@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc;
+package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jdbc;
 
 import com.isalvama.fresh_keep.modules.admin.application.port.out.ShoppingReceiptQueryPort;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyReceiptSummaryDto;

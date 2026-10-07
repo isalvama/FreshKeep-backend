@@ -1,6 +1,7 @@
 package com.isalvama.fresh_keep.modules.admin.infrastructure.web.dto.request;
 
 import com.isalvama.fresh_keep.modules.admin.domain.exception.InvalidMetricsDateRangeException;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -12,11 +13,13 @@ public record UserRegistrationFilterRequest(
         @RequestParam
         @NotNull
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        @Schema(description = "Required. Range start (inclusive)")
         LocalDate from,
 
         @RequestParam
         @NotNull
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        @Schema(description = "Required. Range end (inclusive); must span 0-100 days from 'from'")
         LocalDate to
 ) {
     public UserRegistrationFilterRequest {

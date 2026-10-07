@@ -7,6 +7,7 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_objec
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotId;
 import lombok.Getter;
 
+import java.time.Clock;
 import java.time.LocalDate;
 
 @Getter
@@ -55,9 +56,28 @@ public class Product {
                 price);
     }
 
-    public void updateStorageSpot(StorageSpotId newStorageSpotId, LocalDate newExpirationDate){
+    public void updateStorageSpot(StorageSpotId newStorageSpotId, LocalDate newExpirationDate, Clock clock){
         this.actualStorageSpotId = validateNotNull(newStorageSpotId, "newStorageSpotId");
-        this.expirationDate = validateNotNull(newExpirationDate, "newExpirationDate");
+
+        LocalDate today = LocalDate.now(clock);
+
+        if (this.isExpired(clock)){
+            return;
+        }
+
+        this.expirationDate = newExpirationDate.isBefore(today)
+                ? today
+                : validateNotNull(newExpirationDate, "newExpirationDate");
+    }
+
+
+    public void updateStorageSpotWhenExpired(StorageSpotId newStorageSpotId){
+        this.actualStorageSpotId = validateNotNull(newStorageSpotId, "newStorageSpotId");
+    }
+
+    public boolean isExpired(Clock clock){
+        LocalDate today = LocalDate.now(clock);
+        return this.expirationDate.isBefore(today);
     }
 
     public void update(ProductName name, LocalDate expirationDate, ProductType productType,

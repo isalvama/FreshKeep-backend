@@ -4,8 +4,8 @@ import com.isalvama.fresh_keep.modules.account.application.command.RegisterUserA
 import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterUserAccountUseCase;
 import com.isalvama.fresh_keep.modules.account.application.port.in.dto.response.AuthRegisterResult;
 import com.isalvama.fresh_keep.modules.account.application.port.out.*;
-import com.isalvama.fresh_keep.modules.account.domain.event.UserAccountRegisteredEvent;
-import com.isalvama.fresh_keep.modules.account.domain.event.UserAccountRegisteredEventPublisher;
+import com.isalvama.fresh_keep.modules.account.application.port.out.dto.event.UserAccountRegisteredEvent;
+import com.isalvama.fresh_keep.modules.account.application.port.out.UserAccountRegisteredEventPublisher;
 import com.isalvama.fresh_keep.modules.account.domain.exception.AccountAlreadyExistsException;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.shared.domain.Role;
@@ -30,7 +30,6 @@ public class RegisterUserAccountService implements RegisterUserAccountUseCase {
        Optional<Account> optionalAccount = accountRepositoryPort.findByEmail(command.email());
 
        if (optionalAccount.isPresent()){
-
            Account account = optionalAccount.get();
            if (account.hasRole(Role.USER)) throw new AccountAlreadyExistsException("A user account with the email address " + command.email() + " already exists.");
 
@@ -42,7 +41,6 @@ public class RegisterUserAccountService implements RegisterUserAccountUseCase {
                    account.getId().toString(),
                    account.getEmail().toString()
            );
-
        }
 
         String passwordHash = passwordHasherPort.hash(command.rawPassword());
@@ -52,7 +50,6 @@ public class RegisterUserAccountService implements RegisterUserAccountUseCase {
                 passwordHash
         );
         Account savedAccount = accountRepositoryPort.save(account);
-
         accountEventPublisher.publish(UserAccountRegisteredEvent.from(account));
 
         return AuthRegisterResult.constitute(

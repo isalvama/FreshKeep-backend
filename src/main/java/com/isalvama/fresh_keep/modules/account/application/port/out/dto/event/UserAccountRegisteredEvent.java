@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.account.domain.event;
+package com.isalvama.fresh_keep.modules.account.application.port.out.dto.event;
 
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 

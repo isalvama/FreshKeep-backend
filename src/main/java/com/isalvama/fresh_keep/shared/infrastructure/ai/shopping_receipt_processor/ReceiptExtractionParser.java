@@ -1,8 +1,8 @@
 package com.isalvama.fresh_keep.shared.infrastructure.ai.shopping_receipt_processor;
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto.ReceiptExtraction;
-import com.isalvama.fresh_keep.shared.infrastructure.exception.AiRetryableException;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.AiUnprocessableInputException;
+import com.isalvama.fresh_keep.shared.infrastructure.exception.UnparseableAiResponseException;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.stereotype.Component;
@@ -28,7 +28,7 @@ public class ReceiptExtractionParser {
         String jsonText = response.getResult().getOutput().getText();
 
         if (jsonText == null || jsonText.isBlank() || !jsonText.trim().startsWith("{")) {
-            throw new AiRetryableException("The ticket could not be interpreted. Make sure the text is legible in the image.");
+            throw new UnparseableAiResponseException("The ticket could not be interpreted. Make sure the text is legible in the image.");
         }
 
         return jsonText;
@@ -38,7 +38,7 @@ public class ReceiptExtractionParser {
         try {
             return converter.convert(jsonText);
         } catch (Exception e) {
-            throw new AiRetryableException("The ticket format is not compatible with the system.", e);
+            throw new UnparseableAiResponseException("The ticket format is not compatible with the system.", e);
         }
     }
 

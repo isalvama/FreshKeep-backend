@@ -1,9 +1,9 @@
 package com.isalvama.fresh_keep.modules.account.infrastructure.event;
 
-import com.isalvama.fresh_keep.modules.account.domain.event.AdminAccountRegisteredEvent;
-import com.isalvama.fresh_keep.modules.account.domain.event.AdminAccountRegisteredEventPublisher;
-import com.isalvama.fresh_keep.modules.account.domain.event.UserAccountRegisteredEvent;
-import com.isalvama.fresh_keep.modules.account.domain.event.UserAccountRegisteredEventPublisher;
+import com.isalvama.fresh_keep.modules.account.application.port.out.dto.event.AdminAccountRegisteredEvent;
+import com.isalvama.fresh_keep.modules.account.application.port.out.AdminAccountRegisteredEventPublisher;
+import com.isalvama.fresh_keep.modules.account.application.port.out.dto.event.UserAccountRegisteredEvent;
+import com.isalvama.fresh_keep.modules.account.application.port.out.UserAccountRegisteredEventPublisher;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 

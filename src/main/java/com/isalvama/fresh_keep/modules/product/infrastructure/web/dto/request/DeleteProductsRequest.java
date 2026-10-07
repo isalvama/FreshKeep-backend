@@ -1,5 +1,6 @@
 package com.isalvama.fresh_keep.modules.product.infrastructure.web.dto.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
@@ -10,6 +11,7 @@ public record DeleteProductsRequest(
 
         @NotNull
         @NotEmpty
+        @Schema(description = "Ids of the products to delete; required, non-empty")
         List<UUID> productsIds
 ) {
 }

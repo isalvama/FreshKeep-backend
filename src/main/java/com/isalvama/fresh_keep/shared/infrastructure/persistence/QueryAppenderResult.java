@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc.dto;
+package com.isalvama.fresh_keep.shared.infrastructure.persistence;
 
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 

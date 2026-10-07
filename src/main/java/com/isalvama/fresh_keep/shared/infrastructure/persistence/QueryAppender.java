@@ -1,7 +1,6 @@
-package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc;
+package com.isalvama.fresh_keep.shared.infrastructure.persistence;
 
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyMetricDto;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc.dto.QueryAppenderResult;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Component;
 

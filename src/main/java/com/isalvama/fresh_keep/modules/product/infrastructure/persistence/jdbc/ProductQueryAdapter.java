@@ -2,13 +2,15 @@ package com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jdbc;
 
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyMetricDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.GetAllProductsDto;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc.QueryAppender;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc.dto.QueryAppenderResult;
+import com.isalvama.fresh_keep.shared.infrastructure.persistence.QueryAppender;
+import com.isalvama.fresh_keep.shared.infrastructure.persistence.QueryAppenderResult;
 import com.isalvama.fresh_keep.modules.product.application.port.out.ProductQueryPort;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductQueryDto;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductDetailDto;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductTypeCountDto;
+import com.isalvama.fresh_keep.modules.product.infrastructure.exception.ProductPersistenceException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -43,7 +45,7 @@ public class ProductQueryAdapter implements ProductQueryPort {
             JOIN storage_spots ss ON p.actual_storage_spot_id = ss.id
             WHERE ss.space_id = :spaceId
               AND p.deleted_at IS NULL
-            ORDER BY p.expiration_date ASC
+            ORDER BY p.expiration_date ASC, p.name ASC
             """;
 
     private static final String ALL_PRODUCTS_QUERY = """
@@ -82,7 +84,12 @@ public class ProductQueryAdapter implements ProductQueryPort {
 
     @Override
     public List<ProductQueryDto> getSpaceProducts(UUID spaceId) {
-        return jdbcTemplate.query(SPACE_PRODUCTS_QUERY, Map.of("spaceId", spaceId), productQueryResultSetExtractor);
+        try {
+            return jdbcTemplate.query(SPACE_PRODUCTS_QUERY, Map.of("spaceId", spaceId), productQueryResultSetExtractor);
+        } catch (DataAccessException e) {
+            throw new ProductPersistenceException(
+                    "Failed to retrieve products for space with id " + spaceId + ": " + e.getMessage());
+        }
     }
 
     @Override
@@ -121,32 +128,40 @@ public class ProductQueryAdapter implements ProductQueryPort {
                 .append(dto.sortType().orderType().name())
                 .append(", p.id ASC LIMIT :limit OFFSET :offset");
 
-        return jdbcTemplate.query(sql.toString(), parameters, productQueryResultSetExtractor);
+        try {
+            return jdbcTemplate.query(sql.toString(), parameters, productQueryResultSetExtractor);
+        } catch (DataAccessException e) {
+            throw new ProductPersistenceException("Failed to retrieve products for the given filters: " + e.getMessage());
+        }
     }
 
     @Override
     public Optional<ProductDetailDto> getProductById(UUID productId) {
-        List<ProductDetailDto> products = jdbcTemplate.query(
-                GET_PRODUCT_BY_ID_QUERY, Map.of("productId", productId), (rs, rowNum) ->
-                        new ProductDetailDto(
-                rs.getObject("id", UUID.class),
-                rs.getString("name"),
-                rs.getString("product_type"),
-                rs.getObject("expiration_date", LocalDate.class),
-                rs.getObject("actual_storage_spot_id", UUID.class),
-                rs.getString("storage_spot_type"),
-                rs.getObject("creator_id", UUID.class),
-                rs.getString("creator_username"),
-                rs.getString("creator_email"),
-                rs.getObject("space_id", UUID.class),
-                rs.getString("space_name"),
-                rs.getString("store_name"),
-                toLocalDate(rs.getObject("purchase_date", Timestamp.class)),
-                rs.getObject("created_at", Timestamp.class).toInstant(),
-                rs.getObject("shopping_receipt_id", UUID.class),
-                rs.getBigDecimal("price"),
-                rs.getString("currency")));
-        return products.stream().findFirst();
+        try {
+            List<ProductDetailDto> products = jdbcTemplate.query(
+                    GET_PRODUCT_BY_ID_QUERY, Map.of("productId", productId), (rs, rowNum) ->
+                            new ProductDetailDto(
+                    rs.getObject("id", UUID.class),
+                    rs.getString("name"),
+                    rs.getString("product_type"),
+                    rs.getObject("expiration_date", LocalDate.class),
+                    rs.getObject("actual_storage_spot_id", UUID.class),
+                    rs.getString("storage_spot_type"),
+                    rs.getObject("creator_id", UUID.class),
+                    rs.getString("creator_username"),
+                    rs.getString("creator_email"),
+                    rs.getObject("space_id", UUID.class),
+                    rs.getString("space_name"),
+                    rs.getString("store_name"),
+                    toLocalDate(rs.getObject("purchase_date", Timestamp.class)),
+                    rs.getObject("created_at", Timestamp.class).toInstant(),
+                    rs.getObject("shopping_receipt_id", UUID.class),
+                    rs.getBigDecimal("price"),
+                    rs.getString("currency")));
+            return products.stream().findFirst();
+        } catch (DataAccessException e) {
+            throw new ProductPersistenceException("Failed to retrieve product with id " + productId + ": " + e.getMessage());
+        }
     }
 
     private static LocalDate toLocalDate(Timestamp timestamp) {
@@ -155,10 +170,14 @@ public class ProductQueryAdapter implements ProductQueryPort {
 
     @Override
     public List<ProductTypeCountDto> getProductTypesByCount() {
-        return jdbcTemplate.query(PRODUCT_TYPES_BY_COUNT_QUERY, (rs, rowNum) ->
-                new ProductTypeCountDto(
-                        rs.getString("product_type"),
-                        rs.getLong("product_count")));
+        try {
+            return jdbcTemplate.query(PRODUCT_TYPES_BY_COUNT_QUERY, (rs, rowNum) ->
+                    new ProductTypeCountDto(
+                            rs.getString("product_type"),
+                            rs.getLong("product_count")));
+        } catch (DataAccessException e) {
+            throw new ProductPersistenceException("Failed to retrieve product type counts: " + e.getMessage());
+        }
     }
 
     @Override
@@ -174,7 +193,11 @@ public class ProductQueryAdapter implements ProductQueryPort {
             parameters.addValue("creatorId", creatorId);
         }
         String query = appender.appendCommonFilters(PRODUCTS_QUERY, parameters, "p", filters.toString(), false);
-        return jdbcTemplate.query(query, parameters, appender::mapMetric);
+        try {
+            return jdbcTemplate.query(query, parameters, appender::mapMetric);
+        } catch (DataAccessException e) {
+            throw new ProductPersistenceException("Failed to retrieve daily product metrics: " + e.getMessage());
+        }
     }
 
 }

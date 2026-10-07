@@ -174,7 +174,7 @@ class ReProcessShoppingReceiptServiceTest {
         String expectedShoppingReceiptId = shoppingReceiptCaptor.getValue().getId().toString();
 
         assertEquals(expectedShoppingReceiptId, result.shoppingReceiptId());
-        assertEquals(shoppingDate, result.shoppingDate());
+        assertEquals(dateRectifiedExtraction.purchaseDate(), result.shoppingDate());
         assertEquals("SuperMart", result.storeName());
 
         assertEquals(1, result.products().size());
@@ -268,7 +268,27 @@ class ReProcessShoppingReceiptServiceTest {
     }
 
     @Test
-    void execute_updatesTheExistingShoppingReceiptWithTheRequestedPurchaseDateAndStoreName() {
+    void execute_sortsAlphabeticallyByNameWhenExpirationDatesMatch() {
+        stubHappyPath();
+
+        LocalDate sameExpirationDate = LocalDate.of(2026, 9, 20);
+        List<RegisteredProductDto> unsortedRegisteredProducts = List.of(
+                new RegisteredProductDto(UUID.randomUUID(), "Yogurt", sameExpirationDate, "fridge-id", "DAIRY", BigDecimal.valueOf(2.0), "USD"),
+                new RegisteredProductDto(UUID.randomUUID(), "Milk", sameExpirationDate, "fridge-id", "DAIRY", BigDecimal.valueOf(1.5), "USD"),
+                new RegisteredProductDto(UUID.randomUUID(), "Bread", sameExpirationDate, "fridge-id", "BAKERY", BigDecimal.valueOf(1.0), "USD")
+        );
+        when(productRegistrationPort.registerProducts(any())).thenReturn(unsortedRegisteredProducts);
+
+        ShoppingReceiptResult result = service.execute(command);
+
+        assertEquals(3, result.products().size());
+        assertEquals("Bread", result.products().get(0).productName());
+        assertEquals("Milk", result.products().get(1).productName());
+        assertEquals("Yogurt", result.products().get(2).productName());
+    }
+
+    @Test
+    void execute_updatesTheExistingShoppingReceiptWithTheRectifiedPurchaseDateAndStoreName() {
         stubHappyPath();
 
         service.execute(command);
@@ -280,7 +300,7 @@ class ReProcessShoppingReceiptServiceTest {
         assertEquals(UserId.from(creatorId), savedReceipt.getCreatorId());
         assertEquals(SpaceId.from(spaceId), savedReceipt.getSpaceId());
         assertEquals(ReceiptImageId.from(receiptImageId), savedReceipt.getReceiptImageId());
-        assertEquals(shoppingDate, savedReceipt.getPurchaseDate());
+        assertEquals(dateRectifiedExtraction.purchaseDate(), savedReceipt.getPurchaseDate());
         assertEquals(storeName, savedReceipt.getStoreName());
     }
 }

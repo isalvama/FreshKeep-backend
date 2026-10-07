@@ -57,7 +57,7 @@ class GetSpaceOverviewServiceTest {
 
     @Test
     void execute_throwsInvalidSpaceReferenceExceptionWhenSpaceDoesNotExist() {
-        when(spaceRepositoryPort.getById(any())).thenReturn(Optional.empty());
+        when(spaceRepositoryPort.findById(any())).thenReturn(Optional.empty());
 
         Exception exception = assertThrows(InvalidSpaceReferenceException.class, () -> service.execute(command));
 
@@ -68,7 +68,7 @@ class GetSpaceOverviewServiceTest {
 
     @Test
     void execute_throwsSpaceNotAccessibleExceptionWhenUserIsNotAParticipant() {
-        when(spaceRepositoryPort.getById(any())).thenReturn(Optional.of(space));
+        when(spaceRepositoryPort.findById(any())).thenReturn(Optional.of(space));
         when(spaceRepositoryPort.getByParticipantId(any())).thenReturn(List.of());
 
         Exception exception = assertThrows(SpaceNotAccessibleException.class, () -> service.execute(command));
@@ -79,7 +79,7 @@ class GetSpaceOverviewServiceTest {
 
     @Test
     void execute_returnsResultAssembledFromSpaceStorageSpotsAndProducts() {
-        when(spaceRepositoryPort.getById(any())).thenReturn(Optional.of(space));
+        when(spaceRepositoryPort.findById(any())).thenReturn(Optional.of(space));
         when(spaceRepositoryPort.getByParticipantId(any())).thenReturn(List.of(space));
         when(spaceProductsLookUpPort.getProductsFromSpaceId(any())).thenReturn(products);
 
@@ -107,7 +107,7 @@ class GetSpaceOverviewServiceTest {
 
     @Test
     void execute_passesTheSpaceIdAsUuidToTheProductsLookUpPort() {
-        when(spaceRepositoryPort.getById(any())).thenReturn(Optional.of(space));
+        when(spaceRepositoryPort.findById(any())).thenReturn(Optional.of(space));
         when(spaceRepositoryPort.getByParticipantId(any())).thenReturn(List.of(space));
         when(spaceProductsLookUpPort.getProductsFromSpaceId(any())).thenReturn(List.of());
 
@@ -120,7 +120,7 @@ class GetSpaceOverviewServiceTest {
 
     @Test
     void execute_returnsEmptyProductResultsWhenSpaceHasNoProducts() {
-        when(spaceRepositoryPort.getById(any())).thenReturn(Optional.of(space));
+        when(spaceRepositoryPort.findById(any())).thenReturn(Optional.of(space));
         when(spaceRepositoryPort.getByParticipantId(any())).thenReturn(List.of(space));
         when(spaceProductsLookUpPort.getProductsFromSpaceId(any())).thenReturn(List.of());
 

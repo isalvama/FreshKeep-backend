@@ -1,6 +1,6 @@
 package com.isalvama.fresh_keep.modules.admin.infrastructure.event;
 
-import com.isalvama.fresh_keep.modules.account.domain.event.AdminAccountRegisteredEvent;
+import com.isalvama.fresh_keep.modules.account.application.port.out.dto.event.AdminAccountRegisteredEvent;
 import com.isalvama.fresh_keep.modules.admin.application.command.RegisterAdminCommand;
 import com.isalvama.fresh_keep.modules.admin.application.port.in.RegisterAdminUseCase;
 import lombok.RequiredArgsConstructor;

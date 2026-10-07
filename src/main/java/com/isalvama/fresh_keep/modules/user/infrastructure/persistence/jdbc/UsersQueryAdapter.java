@@ -1,10 +1,11 @@
-package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc;
+package com.isalvama.fresh_keep.modules.user.infrastructure.persistence.jdbc;
 
 import com.isalvama.fresh_keep.modules.admin.application.port.out.UsersQueryPort;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyMetricDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.RegisteredUserDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.RegisteredUsersPageDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.UserDetailsDto;
+import com.isalvama.fresh_keep.shared.infrastructure.persistence.QueryAppender;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;

@@ -46,7 +46,7 @@ public class JpaAccountRepositoryAdapter implements AccountRepositoryPort {
             return accountMapper.toDomain(savedEntity);
         } catch (DataAccessException e) {
             throw new AccountPersistenceException(
-                    "Failed to retrieve account data with id " + account.getId().toString() + ": " + e.getMessage());
+                    "Failed to persist account data with id " + account.getId().toString() + ": " + e.getMessage());
         }
     }
 
@@ -56,7 +56,7 @@ public class JpaAccountRepositoryAdapter implements AccountRepositoryPort {
             accountSpringDataRepository.updateLastLogIn(id.value(), now);
         } catch (DataAccessException e) {
             throw new AccountPersistenceException(
-                    "Failed to persist space with id " + id + ": " + e.getMessage());
+                    "Failed to update login data of the account with id " + id + ": " + e.getMessage());
         }
     }
 }

@@ -59,12 +59,22 @@ public class JpaSpaceRepositoryAdapter implements SpaceRepositoryPort {
 
     @Override
     public boolean existsStorageSpotByIdAndParticipantId(UserId userId, StorageSpotId storageSpotId) {
+        try {
              return spaceSpringDataRepository.existsStorageSpotByIdAndParticipantId(userId.value(), storageSpotId.value());
+        } catch (DataAccessException e) {
+            throw new SpacePersistenceException(
+                    "Failed to validate the existence of the storage spot with id " + storageSpotId + " and the participancy of the user with id " + userId + " in it: " + e.getMessage());
+        }
     }
 
     @Override
     public boolean existsSpaceByIdAndParticipantId(UserId userId, SpaceId spaceId) {
+        try {
         return spaceSpringDataRepository.existsSpaceByIdAndParticipantId(userId.value(), spaceId.value());
+        } catch (DataAccessException e) {
+            throw new SpacePersistenceException(
+                    "Failed to validate the existence of the space with id " + spaceId + " and the participancy of the user with id " + userId + " in it: " + e.getMessage());
+        }
     }
 
     @Override
@@ -72,23 +82,45 @@ public class JpaSpaceRepositoryAdapter implements SpaceRepositoryPort {
         if (storageSpotIds.isEmpty()){
             return Set.of();
         }
+
         List<UUID> ids = storageSpotIds.stream().map(StorageSpotId::value).toList();
+
+        try {
+
         Set<UUID> resultantIds = spaceSpringDataRepository.findAccessible(UUID.fromString(userId), ids);
         return resultantIds.stream().map(UUID::toString).collect(Collectors.toSet());
+
+        } catch (DataAccessException e) {
+            String storageSpotIdsString = storageSpotIds.stream().map(StorageSpotId::toString).collect(Collectors.joining(", "));
+            throw new SpacePersistenceException(
+                    "Failed to validate the accessibility of the storage spots with id " + storageSpotIdsString + " and the participancy of the user with id " + userId + " in it: " + e.getMessage());
+        }
+
     }
 
     @Override
-    public Optional<Space> getById(SpaceId spaceId) {
+    public Optional<Space> findById(SpaceId spaceId) {
+        try {
         return spaceSpringDataRepository.findByIdWithRelations(spaceId.value()).map(spaceMapper::toDomain);
+        } catch (DataAccessException e) {
+            throw new SpacePersistenceException(
+                    "Failed to retrieve the space data with id " + spaceId + ": " + e.getMessage());
+        }
     }
 
     @Override
     public List<StorageSpot> findStorageSpotsByIds(Set<StorageSpotId> storageSpotIds) {
         Set<UUID> ids = storageSpotIds.stream().map(StorageSpotId::value).collect(Collectors.toSet());
+        try {
         List<JpaStorageSpotEntity> entities = spaceSpringDataRepository.findStorageSpotsByIds(ids);
         return entities.stream()
                 .map(e -> StorageSpot.reconstitute(StorageSpotId.of(e.getId()), StorageSpotName.from(e.getName()), e.getType()))
                 .toList();
+        } catch (DataAccessException e) {
+            String storageSpotIdsString = storageSpotIds.stream().map(StorageSpotId::toString).collect(Collectors.joining(", "));
+            throw new SpacePersistenceException(
+                    "Failed to retrieve the storage spots data of spots with id " + storageSpotIdsString + ": " + e.getMessage());
+        }
     }
 
     @Override

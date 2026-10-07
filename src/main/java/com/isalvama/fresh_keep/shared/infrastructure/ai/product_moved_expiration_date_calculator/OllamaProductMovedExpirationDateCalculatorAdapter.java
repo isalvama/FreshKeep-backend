@@ -2,10 +2,10 @@ package com.isalvama.fresh_keep.shared.infrastructure.ai.product_moved_expiratio
 
 import com.isalvama.fresh_keep.modules.product.application.port.out.ProductMovedExpirationDateCalculatorPort;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductMovedDto;
-import com.isalvama.fresh_keep.modules.product.domain.exception.InvalidProductException;
 import com.isalvama.fresh_keep.shared.infrastructure.ai.receipt_extraction_reviewer.ReviewPromptBuilder;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.AiRetryableException;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.ExpirationDateCalculationException;
+import com.isalvama.fresh_keep.shared.infrastructure.exception.UnparseableAiResponseException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -13,12 +13,12 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -26,6 +26,9 @@ import java.util.List;
 public class OllamaProductMovedExpirationDateCalculatorAdapter implements ProductMovedExpirationDateCalculatorPort {
     private final OllamaChatModel chatModel;
     private final ReviewPromptBuilder reviewPromptBuilder;
+
+    @Value("${spring.ai.ollama.chat.options.model}")
+    private String model;
 
 
     private static final String TEMPLATE_PROMPT_TEXT = """
@@ -48,11 +51,11 @@ public class OllamaProductMovedExpirationDateCalculatorAdapter implements Produc
             1. How many days have passed since the product was originally purchased ({shoppingDate} to {today}).
             2. The type of the new storage spot and how it affects shelf life compared to the old spot. Use the reference shelf life ranges below as a guide.
             3. Any previous expiration date adjustments from prior moves — do not reset the clock, adjust from the most recent expiration date.
-
+            
             Rules:
             - If the new spot is colder than the old spot (e.g. FRIDGE -> FREEZER), the product's remaining shelf life should increase.
             - If the new spot is warmer (e.g. FRIDGE -> PANTRY for a dairy product), the remaining shelf life should decrease — potentially to 0 if the product becomes unsafe.
-            - Never set an expiration date in the past.
+            - Never calculate or assign a new expiration date in the past (prior to {today}). The only exception is if the product is already expired: in that case, keep the original expiration date unchanged            
             - Never extend beyond the maximum shelf life for the product type in the new storage spot type.
 
             Return only the new expiration date following the format detailed:
@@ -60,7 +63,7 @@ public class OllamaProductMovedExpirationDateCalculatorAdapter implements Produc
             """;
 
     @Override
-    @Retryable(retryFor = AiRetryableException.class, maxAttempts = 2,  backoff = @Backoff(delay = 1000))
+    @Retryable(retryFor = AiRetryableException.class, maxAttempts = 3, backoff = @Backoff(delay = 2000, multiplier = 2))
     public LocalDate execute(ProductMovedDto dto) {
 
         validateNotNull(dto, "ProductMovedDto");
@@ -72,6 +75,7 @@ public class OllamaProductMovedExpirationDateCalculatorAdapter implements Produc
         BeanOutputConverter<LocalDate> converter = new BeanOutputConverter<>(LocalDate.class);
 
         OllamaChatOptions chatOptions = OllamaChatOptions.builder()
+                .model(model)
                 .outputSchema(converter.getJsonSchema())
                 .build();
         ChatResponse response;
@@ -88,7 +92,7 @@ public class OllamaProductMovedExpirationDateCalculatorAdapter implements Produc
     private LocalDate parseAndValidate(ChatResponse response, BeanOutputConverter<LocalDate> converter) {
 
         if (response.getResult() == null) {
-            throw new AiRetryableException("The AI expiration date calculator did not return any response.");
+            throw new UnparseableAiResponseException("The AI expiration date calculator did not return any response.");
         }
 
         String jsonText = response.getResult().getOutput().getText();
@@ -96,7 +100,7 @@ public class OllamaProductMovedExpirationDateCalculatorAdapter implements Produc
         String trimmedJsonText = jsonText == null ? "" : jsonText.trim();
         if (trimmedJsonText.isBlank()
                 || !(trimmedJsonText.startsWith("{") || trimmedJsonText.startsWith("\""))) {
-            throw new AiRetryableException("The AI expiration date calculator returned and empty response.");
+            throw new UnparseableAiResponseException("The AI expiration date calculator returned and empty response.");
         }
 
         LocalDate expirationDate;
@@ -104,7 +108,7 @@ public class OllamaProductMovedExpirationDateCalculatorAdapter implements Produc
         try {
             expirationDate = converter.convert(jsonText);
         } catch (Exception e) {
-            throw new AiRetryableException("The AI expiration date calculator answer could not be parsed", e);
+            throw new UnparseableAiResponseException("The AI expiration date calculator answer could not be parsed", e);
         }
 
         return expirationDate;

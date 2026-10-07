@@ -122,6 +122,51 @@ class MoveProductServiceTest {
     }
 
     @Test
+    void execute_keepsTheOriginalExpirationDateUnchangedWhenTheProductIsAlreadyExpired() {
+        Product expiredProduct = Product.create(
+                ProductName.from("Milk"), LocalDate.of(2026, 9, 10), oldStorageSpotId,
+                ProductType.DAIRY, ShoppingReceiptId.create(), Money.from(BigDecimal.valueOf(1.5), "USD"));
+        MoveProductCommand command = new MoveProductCommand(userId, expiredProduct.getId().value(),
+                oldStorageSpotId.value(), newStorageSpotId.value());
+        when(productRepositoryPort.findById(any())).thenReturn(Optional.of(expiredProduct));
+        when(spaceParticipancyLookUpPort.filterAccessible(any(), any()))
+                .thenReturn(Set.of(oldStorageSpotId.toString(), newStorageSpotId.toString()));
+        when(productShoppingDateLookUpPort.findShoppingDate(any())).thenReturn(Optional.of(LocalDate.of(2026, 9, 1)));
+        when(historyRepositoryPort.findByProductId(any())).thenReturn(List.of(initialMove));
+        when(storageSpotLookUpPort.findByIds(any())).thenReturn(List.of(
+                StorageSpotInfoDto.create(oldStorageSpotId.toString(), "Fridge", "FRIDGE"),
+                StorageSpotInfoDto.create(newStorageSpotId.toString(), "Freezer", "FREEZER")));
+        // Even if the AI "revives" the product with a future date, an already-expired product's
+        // expirationDate must never change as a result of a move.
+        when(expirationDateCalculatorPort.execute(any())).thenReturn(LocalDate.of(2026, 9, 25));
+
+        MoveProductResult result = service.execute(command);
+
+        assertEquals(newStorageSpotId.toString(), result.newStorageSpotId());
+        assertEquals(LocalDate.of(2026, 9, 10), result.newExpirationDate());
+        assertEquals(newStorageSpotId, expiredProduct.getActualStorageSpotId());
+        assertEquals(LocalDate.of(2026, 9, 10), expiredProduct.getExpirationDate());
+    }
+
+    @Test
+    void execute_clampsToTodayWhenTheCalculatorReturnsAPastDateForANotYetExpiredProduct() {
+        MoveProductCommand command = new MoveProductCommand(userId, product.getId().value(),
+                oldStorageSpotId.value(), newStorageSpotId.value());
+        givenProductIsAccessible(command);
+        when(productShoppingDateLookUpPort.findShoppingDate(any())).thenReturn(Optional.of(LocalDate.of(2026, 9, 1)));
+        when(historyRepositoryPort.findByProductId(any())).thenReturn(List.of(initialMove));
+        when(storageSpotLookUpPort.findByIds(any())).thenReturn(List.of(
+                StorageSpotInfoDto.create(oldStorageSpotId.toString(), "Fridge", "FRIDGE"),
+                StorageSpotInfoDto.create(newStorageSpotId.toString(), "Freezer", "FREEZER")));
+        when(expirationDateCalculatorPort.execute(any())).thenReturn(LocalDate.of(2026, 9, 1));
+
+        MoveProductResult result = service.execute(command);
+
+        assertEquals(LocalDate.of(2026, 9, 16), result.newExpirationDate());
+        assertEquals(LocalDate.of(2026, 9, 16), product.getExpirationDate());
+    }
+
+    @Test
     void execute_throwsWhenProductDoesNotExist() {
         MoveProductCommand command = new MoveProductCommand(userId, product.getId().value(),
                 oldStorageSpotId.value(), newStorageSpotId.value());

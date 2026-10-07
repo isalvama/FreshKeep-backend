@@ -5,8 +5,8 @@ import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterAdmin
 import com.isalvama.fresh_keep.modules.account.application.port.in.dto.response.AuthRegisterResult;
 import com.isalvama.fresh_keep.modules.account.application.port.out.AccountRepositoryPort;
 import com.isalvama.fresh_keep.modules.account.application.port.out.PasswordHasherPort;
-import com.isalvama.fresh_keep.modules.account.domain.event.AdminAccountRegisteredEvent;
-import com.isalvama.fresh_keep.modules.account.domain.event.AdminAccountRegisteredEventPublisher;
+import com.isalvama.fresh_keep.modules.account.application.port.out.dto.event.AdminAccountRegisteredEvent;
+import com.isalvama.fresh_keep.modules.account.application.port.out.AdminAccountRegisteredEventPublisher;
 import com.isalvama.fresh_keep.modules.account.domain.exception.AccountAlreadyExistsException;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.shared.domain.Role;

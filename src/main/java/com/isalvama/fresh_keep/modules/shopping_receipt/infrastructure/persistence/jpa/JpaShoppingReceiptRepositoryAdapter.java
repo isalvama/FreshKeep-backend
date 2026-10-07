@@ -12,7 +12,6 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Optional;
 
@@ -33,6 +32,7 @@ public class JpaShoppingReceiptRepositoryAdapter implements ShoppingReceiptRepos
 
     @Override
     public void update(ShoppingReceipt shoppingReceipt) {
+        try {
         jpaRepository.findById(shoppingReceipt.getId().value()).map(
                 entity -> {
                     entity.update(
@@ -44,17 +44,28 @@ public class JpaShoppingReceiptRepositoryAdapter implements ShoppingReceiptRepos
                     return entity;
                 }
         ).orElseGet(() -> jpaRepository.saveAndFlush(shoppingReceiptMapper.toEntity(shoppingReceipt)));
+        } catch (DataAccessException e) {
+            throw new ShoppingReceiptPersistenceException("Failed to update Shopping Receipt with id " + shoppingReceipt.getId().toString() + ": " + e.getMessage());
+        }
     }
 
     @Override
     public Optional<LocalDate> getShoppingDate(ShoppingReceiptId shoppingReceiptId) {
+        try {
         Optional<Instant> shoppingDate = jpaRepository.getShoppingDateById(shoppingReceiptId.value());
         return shoppingDate.map(instant -> LocalDate.ofInstant(instant, ZoneOffset.UTC));
+        } catch (DataAccessException e) {
+            throw new ShoppingReceiptPersistenceException("Failed to retrieve shopping date from the Shopping Receipt with id " + shoppingReceiptId + ": " + e.getMessage());
+        }
     }
 
     @Override
     public Optional<ShoppingReceipt> getById(ShoppingReceiptId id) {
+        try {
         Optional<JpaShoppingReceiptEntity> shoppingReceiptEntity = jpaRepository.findById(id.value());
         return shoppingReceiptEntity.map(shoppingReceiptMapper::toDomain);
+        } catch (DataAccessException e) {
+            throw new ShoppingReceiptPersistenceException("Failed to retrieve Shopping Receipt with id " + id + ": " + e.getMessage());
+        }
     }
 }

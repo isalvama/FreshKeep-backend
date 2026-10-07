@@ -10,7 +10,10 @@ import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSp
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -85,15 +88,63 @@ class ProductTest {
         assertEquals(Money.from(BigDecimal.valueOf(3.75), "EUR"), product.getPrice());
     }
 
+    private static final Clock FIXED_CLOCK = Clock.fixed(Instant.parse("2026-09-16T10:00:00Z"), ZoneOffset.UTC);
+
     @Test
-    void setters_updateMutableFields() {
-        Product product = Product.create(NAME, EXPIRATION_DATE, SUGGESTED_STORAGE_SPOT_ID, PRODUCT_TYPE, SHOPPING_RECEIPT_ID, PRICE);
-        StorageSpotId actualStorageSpotId = StorageSpotId.create();
-        LocalDate newExpirationDate = EXPIRATION_DATE.plusDays(1);
+    void updateStorageSpot_updatesBothFieldsWhenProductIsNotYetExpiredAndNewDateIsNotInThePast() {
+        Product product = Product.create(NAME, LocalDate.of(2026, 9, 20), SUGGESTED_STORAGE_SPOT_ID, PRODUCT_TYPE, SHOPPING_RECEIPT_ID, PRICE);
+        StorageSpotId newStorageSpotId = StorageSpotId.create();
 
-        product.updateStorageSpot(actualStorageSpotId, newExpirationDate);
+        product.updateStorageSpot(newStorageSpotId, LocalDate.of(2026, 9, 25), FIXED_CLOCK);
 
-        assertEquals(actualStorageSpotId, product.getActualStorageSpotId());
-        assertEquals(newExpirationDate, product.getExpirationDate());
+        assertEquals(newStorageSpotId, product.getActualStorageSpotId());
+        assertEquals(LocalDate.of(2026, 9, 25), product.getExpirationDate());
+    }
+
+    @Test
+    void updateStorageSpot_keepsTheOriginalExpirationDateWhenTheProductIsAlreadyExpired() {
+        Product product = Product.create(NAME, LocalDate.of(2026, 9, 10), SUGGESTED_STORAGE_SPOT_ID, PRODUCT_TYPE, SHOPPING_RECEIPT_ID, PRICE);
+        StorageSpotId newStorageSpotId = StorageSpotId.create();
+
+        product.updateStorageSpot(newStorageSpotId, LocalDate.of(2026, 9, 25), FIXED_CLOCK);
+
+        assertEquals(newStorageSpotId, product.getActualStorageSpotId());
+        assertEquals(LocalDate.of(2026, 9, 10), product.getExpirationDate());
+    }
+
+    @Test
+    void updateStorageSpot_clampsToTodayWhenProductWasNotExpiredButTheNewDateIsInThePast() {
+        Product product = Product.create(NAME, LocalDate.of(2026, 9, 20), SUGGESTED_STORAGE_SPOT_ID, PRODUCT_TYPE, SHOPPING_RECEIPT_ID, PRICE);
+        StorageSpotId newStorageSpotId = StorageSpotId.create();
+
+        product.updateStorageSpot(newStorageSpotId, LocalDate.of(2026, 9, 1), FIXED_CLOCK);
+
+        assertEquals(newStorageSpotId, product.getActualStorageSpotId());
+        assertEquals(LocalDate.of(2026, 9, 16), product.getExpirationDate());
+    }
+
+    @Test
+    void updateStorageSpotWhenExpired_updatesOnlyTheStorageSpot() {
+        Product product = Product.create(NAME, LocalDate.of(2026, 9, 10), SUGGESTED_STORAGE_SPOT_ID, PRODUCT_TYPE, SHOPPING_RECEIPT_ID, PRICE);
+        StorageSpotId newStorageSpotId = StorageSpotId.create();
+
+        product.updateStorageSpotWhenExpired(newStorageSpotId);
+
+        assertEquals(newStorageSpotId, product.getActualStorageSpotId());
+        assertEquals(LocalDate.of(2026, 9, 10), product.getExpirationDate());
+    }
+
+    @Test
+    void isExpired_trueWhenExpirationDateIsBeforeToday() {
+        Product product = Product.create(NAME, LocalDate.of(2026, 9, 10), SUGGESTED_STORAGE_SPOT_ID, PRODUCT_TYPE, SHOPPING_RECEIPT_ID, PRICE);
+
+        assertTrue(product.isExpired(FIXED_CLOCK));
+    }
+
+    @Test
+    void isExpired_falseWhenExpirationDateIsTodayOrLater() {
+        Product product = Product.create(NAME, LocalDate.of(2026, 9, 16), SUGGESTED_STORAGE_SPOT_ID, PRODUCT_TYPE, SHOPPING_RECEIPT_ID, PRICE);
+
+        assertFalse(product.isExpired(FIXED_CLOCK));
     }
 }

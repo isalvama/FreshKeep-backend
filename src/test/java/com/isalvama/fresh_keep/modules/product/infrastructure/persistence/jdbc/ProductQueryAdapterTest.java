@@ -2,7 +2,7 @@ package com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jdbc;
 
 import com.isalvama.fresh_keep.modules.admin.domain.criteria.ProductSortType;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.GetAllProductsDto;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc.QueryAppender;
+import com.isalvama.fresh_keep.shared.infrastructure.persistence.QueryAppender;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductQueryDto;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductTypeCountDto;
 import com.isalvama.fresh_keep.modules.product.domain.model.ProductType;
@@ -79,6 +79,25 @@ class ProductQueryAdapterTest {
         assertEquals(3, result.size());
         assertEquals(milkId, result.get(0).id());
         assertEquals(breadId, result.get(1).id());
+        assertEquals(yogurtId, result.get(2).id());
+    }
+
+    @Test
+    void getSpaceProducts_sortsAlphabeticallyByNameWhenExpirationDatesMatch() {
+        UUID yogurtId = UUID.randomUUID();
+        UUID milkId = UUID.randomUUID();
+        UUID breadId = UUID.randomUUID();
+        LocalDate sameExpirationDate = LocalDate.of(2026, 9, 20);
+
+        insertProduct(yogurtId, "Yogurt", sameExpirationDate, storageSpotId, "DAIRY", shoppingReceiptId, BigDecimal.valueOf(2.0), "USD");
+        insertProduct(milkId, "Milk", sameExpirationDate, storageSpotId, "DAIRY", shoppingReceiptId, BigDecimal.valueOf(1.5), "USD");
+        insertProduct(breadId, "Bread", sameExpirationDate, storageSpotId, "BAKERY", shoppingReceiptId, BigDecimal.valueOf(1.0), "USD");
+
+        List<ProductQueryDto> result = adapter.getSpaceProducts(spaceId);
+
+        assertEquals(3, result.size());
+        assertEquals(breadId, result.get(0).id());
+        assertEquals(milkId, result.get(1).id());
         assertEquals(yogurtId, result.get(2).id());
     }
 

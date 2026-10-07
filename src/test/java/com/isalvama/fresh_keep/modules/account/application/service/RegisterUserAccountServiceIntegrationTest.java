@@ -5,7 +5,7 @@ import com.isalvama.fresh_keep.modules.account.application.port.in.RegisterUserA
 import com.isalvama.fresh_keep.modules.account.application.port.out.AccountRepositoryPort;
 import com.isalvama.fresh_keep.modules.account.application.port.out.JwtTokenGeneratorPort;
 import com.isalvama.fresh_keep.modules.account.application.port.out.PasswordHasherPort;
-import com.isalvama.fresh_keep.modules.account.domain.event.UserAccountRegisteredEvent;
+import com.isalvama.fresh_keep.modules.account.application.port.out.dto.event.UserAccountRegisteredEvent;
 import com.isalvama.fresh_keep.modules.account.domain.model.Account;
 import com.isalvama.fresh_keep.modules.account.infrastructure.event.AccountEventPublisherAdapter;
 import com.isalvama.fresh_keep.modules.account.infrastructure.security.AuthenticationAdapter;

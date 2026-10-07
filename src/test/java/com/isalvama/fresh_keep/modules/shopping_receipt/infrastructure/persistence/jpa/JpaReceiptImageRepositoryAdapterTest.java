@@ -3,6 +3,7 @@ package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persiste
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.ReceiptImage;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.AssetId;
 import com.isalvama.fresh_keep.modules.shopping_receipt.domain.model.value_object.ReceiptImageId;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.exception.ReceiptImagePersistenceException;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaReceiptImageEntity;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.mapper.ReceiptImageMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,6 +75,17 @@ class JpaReceiptImageRepositoryAdapterTest {
             assertNotNull(saved.getCreatedAt());
             assertTrue(saved.getCreatedAt().isBefore(Instant.now().plus(1, ChronoUnit.MINUTES)));
             assertTrue(saved.getCreatedAt().isAfter(Instant.now().minus(1, ChronoUnit.MINUTES)));
+        }
+
+        @Test
+        void shouldThrowReceiptImagePersistenceExceptionWhenAssetIdAlreadyExists() {
+            insertReceiptImage(UUID.randomUUID(), assetId, mimeType);
+
+            ReceiptImage duplicateAssetReceiptImage = ReceiptImage.reconstitute(ReceiptImageId.create(), AssetId.of(assetId), mimeType);
+
+            Exception exception = assertThrows(ReceiptImagePersistenceException.class, () -> adapter.save(duplicateAssetReceiptImage));
+
+            assertTrue(exception.getMessage().contains(duplicateAssetReceiptImage.getId().toString()));
         }
     }
 
