@@ -35,15 +35,19 @@ public class GetShoppingReceiptsService implements GetShoppingReceiptsUseCase {
     @Override
     @Transactional(readOnly = true)
     public PageResult<ReceiptSummaryResult> getShoppingReceipts(GetShoppingReceiptsCommand command) {
+
         Pagination pagination = Pagination.fromPage(command.page(), command.size());
+
         ReceiptsPageDto page = receiptQueryPort.findReceipts(command.from(), command.to(), command.spaceId(),
                 command.userId(), pagination.offset(), pagination.limit());
+
         List<ReceiptSummaryResult> content = page.content().stream()
                 .map(receipt -> new ReceiptSummaryResult(
                         receipt.id(), receipt.creatorId(), receipt.creatorEmail(), receipt.creatorUsername(),
                         receipt.spaceId(), receipt.spaceName(), receipt.storeName(), receipt.purchaseDate(),
                         receipt.createdAt(), receipt.productCount()))
                 .toList();
+
         return PageResult.of(content, pagination.page(), pagination.limit(), page.totalElements());
     }
 
