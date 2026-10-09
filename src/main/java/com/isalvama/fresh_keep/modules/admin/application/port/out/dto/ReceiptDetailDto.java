@@ -8,8 +8,8 @@ import java.util.UUID;
 public record ReceiptDetailDto(
         UUID id,
         UUID creatorId,
-        String creatorUsername,
         String creatorEmail,
+        String creatorUsername,
         UUID spaceId,
         String spaceName,
         String storeName,

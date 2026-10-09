@@ -4,9 +4,17 @@ import com.isalvama.fresh_keep.modules.admin.application.port.out.ShoppingReceip
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyReceiptSummaryDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptDetailDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptProductDto;
-import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptSummaryDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptsPageDto;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.ShoppingReceiptSummaryQueryBuilder;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.mapper.ShoppingReceiptQueryRepositoryMapper;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaShoppingReceiptEntity;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.projection.ReceiptDetailProjection;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.projection.ReceiptSummaryProjection;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.specification.ShoppingReceiptSpecifications;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.query.criteria.JpaCriteriaQuery;
+import org.springframework.data.jpa.domain.PredicateSpecification;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -22,6 +30,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
     private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final EntityManager entityManager;
+    private final ShoppingReceiptSummaryQueryBuilder shoppingReceiptSummaryQueryBuilder;
+    private final ShoppingReceiptQueryRepositoryMapper mapper;
+
 
     @Override
     public List<DailyReceiptSummaryDto> getShoppingReceiptMetrics (LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
@@ -41,81 +53,52 @@ public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
                         rs.getLong("total_receipts")));
     }
 
+
     @Override
     public ReceiptsPageDto findReceipts(LocalDate from, LocalDate to, UUID spaceId, UUID creatorId,
                                         int offset, int limit) {
-        MapSqlParameterSource parameters = new MapSqlParameterSource()
-                .addValue("limit", limit)
-                .addValue("offset", offset);
-        // The product count skips deleted products, like the admin products list.
-        StringBuilder query = new StringBuilder("""
-                SELECT sr.id, sr.creator_id, u.email AS creator_email, u.username AS creator_username,
-                       sr.space_id, s.name AS space_name, sr.store_name, sr.purchase_date, sr.created_at,
-                       (SELECT COUNT(*) FROM products p
-                        WHERE p.shopping_receipt_id = sr.id AND p.deleted_at IS NULL) AS product_count,
-                       COUNT(*) OVER() AS total_elements
-                FROM shopping_receipts sr
-                LEFT JOIN users u ON u.id = sr.creator_id
-                LEFT JOIN spaces s ON s.id = sr.space_id
-                WHERE 1 = 1
-                """);
-        appendFilters(query, parameters, from, to, spaceId, creatorId);
-        query.append(" ORDER BY sr.purchase_date DESC, sr.created_at DESC, sr.id ASC LIMIT :limit OFFSET :offset");
-        List<ReceiptSummaryRow> rows = jdbcTemplate.query(query.toString(), parameters, (rs, rowNum) ->
-                new ReceiptSummaryRow(
-                        new ReceiptSummaryDto(
-                                rs.getObject("id", UUID.class),
-                                rs.getObject("creator_id", UUID.class),
-                                rs.getString("creator_email"),
-                                rs.getString("creator_username"),
-                                rs.getObject("space_id", UUID.class),
-                                rs.getString("space_name"),
-                                rs.getString("store_name"),
-                                rs.getObject("purchase_date", Timestamp.class).toInstant().atZone(java.time.ZoneOffset.UTC).toLocalDate(),
-                                rs.getObject("created_at", Timestamp.class).toInstant(),
-                                rs.getLong("product_count")),
-                        rs.getLong("total_elements")));
 
-        long totalElements = rows.isEmpty() ? 0 : rows.getFirst().totalElements();
-        return new ReceiptsPageDto(rows.stream().map(ReceiptSummaryRow::receipt).toList(), totalElements);
+        PredicateSpecification<JpaShoppingReceiptEntity> filters =
+                ShoppingReceiptSpecifications.matchingFilters(from, to, spaceId, creatorId);
+
+        JpaCriteriaQuery<ReceiptSummaryProjection> query = shoppingReceiptSummaryQueryBuilder.buildReceiptSummaryProjectionQuery(filters);
+
+        List<ReceiptSummaryProjection> rows = entityManager.createQuery(query)
+                .setFirstResult(offset)
+                .setMaxResults(limit)
+                .getResultList();
+
+        if (rows.isEmpty()) return new ReceiptsPageDto(List.of(), 0);
+
+        long totalElements = entityManager.createQuery(shoppingReceiptSummaryQueryBuilder.countQuery(filters)).getSingleResult();
+        return new ReceiptsPageDto(rows.stream().map(mapper::toSummaryDto).toList(), totalElements);
     }
+
 
     @Override
     public Optional<ReceiptDetailDto> findReceiptById(UUID receiptId) {
-        Map<String, UUID> parameters = Map.of("receiptId", receiptId);
-        List<ReceiptDetailDto> receipts = jdbcTemplate.query("""
-                SELECT sr.id, sr.creator_id, u.username AS creator_username, u.email AS creator_email,
-                       sr.space_id, s.name AS space_name, sr.store_name, sr.purchase_date, sr.created_at,
-                       sr.receipt_image_id, ri.asset_id AS receipt_image_asset_id, ri.mime_type AS receipt_image_mime_type
-                FROM shopping_receipts sr
-                LEFT JOIN users u ON u.id = sr.creator_id
-                LEFT JOIN spaces s ON s.id = sr.space_id
-                LEFT JOIN receipt_images ri ON ri.id = sr.receipt_image_id
-                WHERE sr.id = :receiptId
-                """, parameters, (rs, rowNum) -> new ReceiptDetailDto(
-                rs.getObject("id", UUID.class),
-                rs.getObject("creator_id", UUID.class),
-                rs.getString("creator_username"),
-                rs.getString("creator_email"),
-                rs.getObject("space_id", UUID.class),
-                rs.getString("space_name"),
-                rs.getString("store_name"),
-                rs.getObject("purchase_date", Timestamp.class).toInstant().atZone(java.time.ZoneOffset.UTC).toLocalDate(),
-                rs.getObject("created_at", Timestamp.class).toInstant(),
-                rs.getObject("receipt_image_id", UUID.class),
-                rs.getString("receipt_image_asset_id"),
-                rs.getString("receipt_image_mime_type"),
-                List.of()));
+        JpaCriteriaQuery<ReceiptDetailProjection> query = shoppingReceiptSummaryQueryBuilder.buildReceiptDetailProjectionQuery(receiptId);
 
-        if (receipts.isEmpty()) return Optional.empty();
-        ReceiptDetailDto receipt = receipts.getFirst();
-        List<ReceiptProductDto> products = jdbcTemplate.query("""
+        List<ReceiptDetailProjection> headers = entityManager.createQuery(query).getResultList();
+        if (headers.isEmpty()) return Optional.empty();
+
+        return Optional.of(mapper.toDetailDto(headers.getFirst(), findProductsByReceiptId(receiptId)));
+    }
+
+    // Products are a one-to-many list for a single receipt, so they can't be folded into the header's
+    // constructor projection as a column value (a subquery there must return exactly one row/column,
+    // like the COUNT above). They're also fetched via plain JDBC rather than Criteria on
+    // JpaProductEntity, because that entity's @SQLRestriction("deleted_at IS NULL") would silently drop
+    // deleted products from every Criteria/JPQL query against it - but this list must include them,
+    // flagged via "deleted".
+    private List<ReceiptProductDto> findProductsByReceiptId(UUID receiptId) {
+        return jdbcTemplate.query("""
                 SELECT p.id, p.name, p.expiration_date, p.actual_storage_spot_id,
                        p.product_type, p.price, p.currency, p.deleted_at IS NOT NULL AS deleted
                 FROM products p
                 WHERE p.shopping_receipt_id = :receiptId
                 ORDER BY p.created_at ASC, p.id ASC
-                """, parameters, (rs, rowNum) -> new ReceiptProductDto(
+                """, Map.of("receiptId", receiptId), (rs, rowNum) -> new ReceiptProductDto(
                 rs.getObject("id", UUID.class),
                 rs.getString("name"),
                 rs.getObject("expiration_date", LocalDate.class),
@@ -124,13 +107,9 @@ public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
                 rs.getBigDecimal("price"),
                 rs.getString("currency"),
                 rs.getBoolean("deleted")));
-
-        return Optional.of(new ReceiptDetailDto(
-                receipt.id(), receipt.creatorId(), receipt.creatorUsername(), receipt.creatorEmail(),
-                receipt.spaceId(), receipt.spaceName(), receipt.storeName(), receipt.purchaseDate(),
-                receipt.createdAt(), receipt.receiptImageId(), receipt.receiptImageAssetId(),
-                receipt.receiptImageMimeType(), products));
     }
+
+
 
     private void appendFilters(StringBuilder query, MapSqlParameterSource parameters,
                                LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
@@ -150,8 +129,5 @@ public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
             query.append(" AND sr.creator_id = :creatorId");
             parameters.addValue("creatorId", creatorId);
         }
-    }
-
-    private record ReceiptSummaryRow(ReceiptSummaryDto receipt, long totalElements) {
     }
 }
