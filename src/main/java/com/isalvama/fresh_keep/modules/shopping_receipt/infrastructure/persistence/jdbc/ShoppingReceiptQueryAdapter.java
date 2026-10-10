@@ -5,7 +5,7 @@ import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyRecei
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptDetailDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptProductDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptsPageDto;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.ShoppingReceiptSummaryQueryBuilder;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.ShoppingReceiptQueryBuilder;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.mapper.ShoppingReceiptQueryRepositoryMapper;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaShoppingReceiptEntity;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.projection.ReceiptDetailProjection;
@@ -21,17 +21,14 @@ import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor
 public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final EntityManager entityManager;
-    private final ShoppingReceiptSummaryQueryBuilder shoppingReceiptSummaryQueryBuilder;
+    private final ShoppingReceiptQueryBuilder receiptQueryBuilder;
     private final ShoppingReceiptQueryRepositoryMapper mapper;
 
 
@@ -61,7 +58,7 @@ public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
         PredicateSpecification<JpaShoppingReceiptEntity> filters =
                 ShoppingReceiptSpecifications.matchingFilters(from, to, spaceId, creatorId);
 
-        JpaCriteriaQuery<ReceiptSummaryProjection> query = shoppingReceiptSummaryQueryBuilder.buildReceiptSummaryProjectionQuery(filters);
+        JpaCriteriaQuery<ReceiptSummaryProjection> query = receiptQueryBuilder.buildReceiptSummaryProjectionQuery(filters);
 
         List<ReceiptSummaryProjection> rows = entityManager.createQuery(query)
                 .setFirstResult(offset)
@@ -70,14 +67,14 @@ public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
 
         if (rows.isEmpty()) return new ReceiptsPageDto(List.of(), 0);
 
-        long totalElements = entityManager.createQuery(shoppingReceiptSummaryQueryBuilder.countQuery(filters)).getSingleResult();
+        long totalElements = entityManager.createQuery(receiptQueryBuilder.countQuery(filters)).getSingleResult();
         return new ReceiptsPageDto(rows.stream().map(mapper::toSummaryDto).toList(), totalElements);
     }
 
 
     @Override
     public Optional<ReceiptDetailDto> findReceiptById(UUID receiptId) {
-        JpaCriteriaQuery<ReceiptDetailProjection> query = shoppingReceiptSummaryQueryBuilder.buildReceiptDetailProjectionQuery(receiptId);
+        JpaCriteriaQuery<ReceiptDetailProjection> query = receiptQueryBuilder.buildReceiptDetailProjectionQuery(receiptId);
 
         List<ReceiptDetailProjection> headers = entityManager.createQuery(query).getResultList();
         if (headers.isEmpty()) return Optional.empty();
