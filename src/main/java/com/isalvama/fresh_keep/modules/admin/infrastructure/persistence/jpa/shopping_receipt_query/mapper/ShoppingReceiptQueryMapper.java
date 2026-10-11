@@ -1,11 +1,11 @@
-package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin.mapper;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.mapper;
 
-import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyReceiptSummaryDto;
+import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ShoppingReceiptCreationDailyMetricDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptDetailDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptProductDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptSummaryDto;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection.ReceiptDetailProjection;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection.ReceiptMetricProjection;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.projection.MetricProjection;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection.ReceiptSummaryProjection;
 import org.springframework.stereotype.Component;
 
@@ -13,7 +13,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 @Component
-public class ShoppingReceiptQueryRepositoryMapper {
+public class ShoppingReceiptQueryMapper {
 
     public ReceiptSummaryDto toSummaryDto(ReceiptSummaryProjection row) {
         return new ReceiptSummaryDto(
@@ -38,7 +38,7 @@ public class ShoppingReceiptQueryRepositoryMapper {
                 header.receiptImageMimeType(), products);
     }
 
-    public List<DailyReceiptSummaryDto> toDailyReceiptSummaryDto(List<ReceiptMetricProjection> rows) {
-        return rows.stream().map(row -> new DailyReceiptSummaryDto(row.date(), row.totalReceipts())).toList();
+    public List<ShoppingReceiptCreationDailyMetricDto> toShoppingReceiptCreationDailyMetricDto(List<MetricProjection> rows) {
+        return rows.stream().map(row -> new ShoppingReceiptCreationDailyMetricDto(row.date(), row.totalReceipts())).toList();
     }
 }

@@ -1,12 +1,19 @@
 package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.user_query;
 
 import com.isalvama.fresh_keep.modules.admin.application.port.out.UsersQueryPort;
-import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyMetricDto;
+import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.UserCreationDailyMetricDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.RegisteredUserDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.RegisteredUsersPageDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.UserDetailsDto;
-import com.isalvama.fresh_keep.shared.infrastructure.persistence.QueryAppender;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.projection.MetricProjection;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.query_builder.MetricsQueryBuilder;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.specification.SpecificationBuilder;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.user_query.mapper.UserQueryMapper;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaShoppingReceiptEntity;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.query.criteria.JpaCriteriaQuery;
+import org.springframework.data.jpa.domain.PredicateSpecification;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -18,15 +25,11 @@ import java.util.*;
 
 @Component
 @RequiredArgsConstructor
-public class UsersQueryAdapter implements UsersQueryPort {
+public class UserQueryAdapter implements UsersQueryPort {
+    private final MetricsQueryBuilder metricsQueryBuilder;
     private final NamedParameterJdbcTemplate jdbcTemplate;
-    private final QueryAppender queryAppender;
-
-    private static final String GET_USER_REGISTRATIONS_QUERY = """
-            SELECT CAST(u.created_at AS DATE) AS metric_date, COUNT(*) AS metric_count
-            FROM users u
-            WHERE 1 = 1
-            """;
+    private final EntityManager entityManager;
+    private final UserQueryMapper mapper;
 
     private static final String FIND_REGISTERED_USERS_QUERY = """
                 SELECT u.id, u.email, u.username, u.created_at AS registered_at,
@@ -51,14 +54,23 @@ public class UsersQueryAdapter implements UsersQueryPort {
                 """;
 
     @Override
-    public List<DailyMetricDto> getUserRegistrations(LocalDate from, LocalDate to) {
-        MapSqlParameterSource parameters = queryAppender.parameters(from, to, 0, 0);
-        String query = queryAppender.appendCommonFilters(GET_USER_REGISTRATIONS_QUERY, parameters, "u", "", false);
-        return jdbcTemplate.query(query, parameters, queryAppender::mapMetric);
+    public List<UserCreationDailyMetricDto> getUserRegistrations(LocalDate from, LocalDate to) {
+        PredicateSpecification<JpaShoppingReceiptEntity> filters =
+                SpecificationBuilder.matchingFromToFilters(from, to);
+
+        JpaCriteriaQuery<MetricProjection> query = metricsQueryBuilder.build(filters, "createdAt");
+        List<MetricProjection> rows = entityManager.createQuery(query)
+                .getResultList();
+
+        if (rows.isEmpty()) return List.of();
+        return mapper.toDailyReceiptSummaryDto(rows);
     }
 
     @Override
     public RegisteredUsersPageDto findRegisteredUsers(LocalDate from, LocalDate to, int offset, int limit) {
+        PredicateSpecification<JpaShoppingReceiptEntity> filters =
+                SpecificationBuilder.matchingFromToFilters(from, to);
+
         MapSqlParameterSource parameters = new MapSqlParameterSource()
                 .addValue("from", Timestamp.valueOf(from.atStartOfDay()))
                 .addValue("toExclusive", Timestamp.valueOf(to.plusDays(1).atStartOfDay()))

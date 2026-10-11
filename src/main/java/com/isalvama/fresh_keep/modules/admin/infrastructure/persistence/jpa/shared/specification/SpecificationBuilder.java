@@ -1,6 +1,5 @@
-package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.specification;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.specification;
 
-import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaShoppingReceiptEntity;
 import org.springframework.data.jpa.domain.PredicateSpecification;
 
 import java.time.Instant;
@@ -8,12 +7,18 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.UUID;
 
-public final class ShoppingReceiptSpecifications {
+public final class SpecificationBuilder {
 
-    private ShoppingReceiptSpecifications() {
+    private SpecificationBuilder() {
     }
 
-    public static PredicateSpecification<JpaShoppingReceiptEntity> matchingFilters(
+    public static <T> PredicateSpecification<T> matchingFromToFilters(LocalDate from, LocalDate to) {
+        return PredicateSpecification.allOf(
+                purchasedOnOrAfter(from),
+                purchasedOnOrBefore(to));
+    }
+
+    public static <T> PredicateSpecification<T> matchingFilters(
             LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
         return PredicateSpecification.allOf(
                 purchasedOnOrAfter(from),
@@ -22,23 +27,23 @@ public final class ShoppingReceiptSpecifications {
                 createdBy(creatorId));
     }
 
-    public static PredicateSpecification<JpaShoppingReceiptEntity> purchasedOnOrAfter(LocalDate from) {
+    public static <T>  PredicateSpecification<T> purchasedOnOrAfter(LocalDate from) {
         if (from == null) return PredicateSpecification.unrestricted();
         return (receipt, cb) -> cb.greaterThanOrEqualTo(receipt.get("purchaseDate"), startOfDay(from));
     }
 
     /** [to] is inclusive, so the cut-off is the start of the following day. */
-    public static PredicateSpecification<JpaShoppingReceiptEntity> purchasedOnOrBefore(LocalDate to) {
+    public static <T> PredicateSpecification<T> purchasedOnOrBefore(LocalDate to) {
         if (to == null) return PredicateSpecification.unrestricted();
         return (receipt, cb) -> cb.lessThan(receipt.get("purchaseDate"), startOfDay(to.plusDays(1)));
     }
 
-    public static PredicateSpecification<JpaShoppingReceiptEntity> inSpace(UUID spaceId) {
+    public static <T> PredicateSpecification<T> inSpace(UUID spaceId) {
         if (spaceId == null) return PredicateSpecification.unrestricted();
         return (receipt, cb) -> cb.equal(receipt.get("spaceId"), spaceId);
     }
 
-    public static PredicateSpecification<JpaShoppingReceiptEntity> createdBy(UUID creatorId) {
+    public static <T> PredicateSpecification<T> createdBy(UUID creatorId) {
         if (creatorId == null) return PredicateSpecification.unrestricted();
         return (receipt, cb) -> cb.equal(receipt.get("creatorId"), creatorId);
     }

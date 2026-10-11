@@ -1,6 +1,6 @@
 package com.isalvama.fresh_keep.shared.infrastructure.persistence;
 
-import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyMetricDto;
+import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.UserCreationDailyMetricDto;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Component;
 
@@ -53,8 +53,8 @@ public class QueryAppender {
         return parameters;
     }
 
-    public DailyMetricDto mapMetric(ResultSet resultSet, int rowNumber) throws SQLException {
-        return new DailyMetricDto(
+    public UserCreationDailyMetricDto mapMetric(ResultSet resultSet, int rowNumber) throws SQLException {
+        return new UserCreationDailyMetricDto(
                 resultSet.getObject("metric_date", LocalDate.class),
                 resultSet.getLong("metric_count"));
     }

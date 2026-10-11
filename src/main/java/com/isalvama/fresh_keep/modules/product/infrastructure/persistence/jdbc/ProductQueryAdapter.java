@@ -1,6 +1,6 @@
 package com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jdbc;
 
-import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyMetricDto;
+import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.UserCreationDailyMetricDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.GetAllProductsDto;
 import com.isalvama.fresh_keep.shared.infrastructure.persistence.QueryAppender;
 import com.isalvama.fresh_keep.shared.infrastructure.persistence.QueryAppenderResult;
@@ -181,7 +181,7 @@ public class ProductQueryAdapter implements ProductQueryPort {
     }
 
     @Override
-    public List<DailyMetricDto> getProducts(LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
+    public List<UserCreationDailyMetricDto> getProducts(LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
         MapSqlParameterSource parameters = appender.parameters(from, to, 0, 0);
         StringBuilder filters = new StringBuilder();
         if (spaceId != null) {
