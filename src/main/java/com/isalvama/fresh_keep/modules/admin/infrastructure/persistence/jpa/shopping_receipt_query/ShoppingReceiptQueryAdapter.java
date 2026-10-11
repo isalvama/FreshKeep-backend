@@ -1,16 +1,18 @@
 package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query;
 
 import com.isalvama.fresh_keep.modules.admin.application.port.out.ShoppingReceiptQueryPort;
-import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyReceiptSummaryDto;
+import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ShoppingReceiptCreationDailyMetricDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptDetailDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptProductDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptsPageDto;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin.mapper.ShoppingReceiptQueryRepositoryMapper;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection.ReceiptMetricProjection;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.mapper.ShoppingReceiptQueryMapper;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.projection.MetricProjection;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.query_builder.MetricsQueryBuilder;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.query_builder.ShoppingReceiptQueryBuilder;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaShoppingReceiptEntity;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection.ReceiptDetailProjection;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection.ReceiptSummaryProjection;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.specification.ShoppingReceiptSpecifications;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.specification.SpecificationBuilder;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
@@ -27,30 +29,29 @@ public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final EntityManager entityManager;
     private final ShoppingReceiptQueryBuilder receiptQueryBuilder;
-    private final ShoppingReceiptQueryRepositoryMapper mapper;
+    private final ShoppingReceiptQueryMapper mapper;
+    private final MetricsQueryBuilder metricsQueryBuilder;
 
 
     @Override
-    public List<DailyReceiptSummaryDto> getShoppingReceiptMetrics (LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
-
+    public List<ShoppingReceiptCreationDailyMetricDto> getShoppingReceiptMetrics (LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
         PredicateSpecification<JpaShoppingReceiptEntity> filters =
-                ShoppingReceiptSpecifications.matchingFilters(from, to, spaceId, creatorId);
+                SpecificationBuilder.matchingFilters(from, to, spaceId, creatorId);
 
-        JpaCriteriaQuery<ReceiptMetricProjection> query = receiptQueryBuilder.buildReceiptMetricsQuery(filters);
-        List<ReceiptMetricProjection> rows = entityManager.createQuery(query)
+        JpaCriteriaQuery<MetricProjection> query = metricsQueryBuilder.build(filters, "createdAt");
+        List<MetricProjection> rows = entityManager.createQuery(query)
                 .getResultList();
 
         if (rows.isEmpty()) return List.of();
-        return mapper.toDailyReceiptSummaryDto(rows);
+        return mapper.toShoppingReceiptCreationDailyMetricDto(rows);
     }
 
 
     @Override
     public ReceiptsPageDto findReceipts(LocalDate from, LocalDate to, UUID spaceId, UUID creatorId,
                                         int offset, int limit) {
-
         PredicateSpecification<JpaShoppingReceiptEntity> filters =
-                ShoppingReceiptSpecifications.matchingFilters(from, to, spaceId, creatorId);
+                SpecificationBuilder.matchingFilters(from, to, spaceId, creatorId);
 
         JpaCriteriaQuery<ReceiptSummaryProjection> query = receiptQueryBuilder.buildReceiptSummaryProjectionQuery(filters);
 

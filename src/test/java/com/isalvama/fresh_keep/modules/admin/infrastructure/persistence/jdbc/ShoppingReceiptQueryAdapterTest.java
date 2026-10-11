@@ -1,13 +1,13 @@
 package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc;
 
-import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyReceiptSummaryDto;
+import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ShoppingReceiptCreationDailyMetricDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptDetailDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptProductDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptSummaryDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptsPageDto;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin.mapper.ShoppingReceiptQueryRepositoryMapper;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.mapper.ShoppingReceiptQueryMapper;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.ShoppingReceiptQueryAdapter;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.ShoppingReceiptQueryBuilder;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.query_builder.ShoppingReceiptQueryBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({ShoppingReceiptQueryAdapter.class, ShoppingReceiptQueryBuilder.class, ShoppingReceiptQueryRepositoryMapper.class})
+@Import({ShoppingReceiptQueryAdapter.class, ShoppingReceiptQueryBuilder.class, ShoppingReceiptQueryMapper.class})
 class ShoppingReceiptQueryAdapterTest {
 
     @Container
@@ -81,10 +81,10 @@ class ShoppingReceiptQueryAdapterTest {
         // The date range filters by purchase date (SEP_10..SEP_11), yet the groups returned are keyed
         // by creation day (SEP_12, SEP_13) - which is the point: filtering and grouping use different
         // date columns on purpose.
-        List<DailyReceiptSummaryDto> metrics = adapter.getShoppingReceiptMetrics(SEP_10, SEP_10.plusDays(1), null, null);
+        List<ShoppingReceiptCreationDailyMetricDto> metrics = adapter.getShoppingReceiptMetrics(SEP_10, SEP_10.plusDays(1), null, null);
 
-        assertEquals(List.of(SEP_10.plusDays(2), SEP_10.plusDays(3)), metrics.stream().map(DailyReceiptSummaryDto::date).toList());
-        assertEquals(List.of(3L, 1L), metrics.stream().map(DailyReceiptSummaryDto::totalReceipts).toList());
+        assertEquals(List.of(SEP_10.plusDays(2), SEP_10.plusDays(3)), metrics.stream().map(ShoppingReceiptCreationDailyMetricDto::date).toList());
+        assertEquals(List.of(3L, 1L), metrics.stream().map(ShoppingReceiptCreationDailyMetricDto::totalReceipts).toList());
     }
 
     @Test
@@ -95,7 +95,7 @@ class ShoppingReceiptQueryAdapterTest {
         insertReceipt(bobId, kitchenId, SEP_10, SEP_10);
         insertReceipt(aliceId, garageId, SEP_10, SEP_10);
 
-        List<DailyReceiptSummaryDto> metrics = adapter.getShoppingReceiptMetrics(SEP_10, SEP_10, kitchenId, aliceId);
+        List<ShoppingReceiptCreationDailyMetricDto> metrics = adapter.getShoppingReceiptMetrics(SEP_10, SEP_10, kitchenId, aliceId);
 
         assertEquals(1, metrics.size());
         assertEquals(1L, metrics.getFirst().totalReceipts());

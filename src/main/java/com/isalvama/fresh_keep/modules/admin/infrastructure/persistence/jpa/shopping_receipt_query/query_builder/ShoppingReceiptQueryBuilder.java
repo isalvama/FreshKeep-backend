@@ -1,6 +1,7 @@
-package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.query_builder;
 
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection.ReceiptMetricProjection;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.projection.MetricProjection;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.OrderTypeCriteria;
 import com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa.entity.JpaProductEntity;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaReceiptImageEntity;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaShoppingReceiptEntity;
@@ -24,19 +25,6 @@ import java.util.*;
 @RequiredArgsConstructor
 public class ShoppingReceiptQueryBuilder {
     private final EntityManager entityManager;
-
-    public JpaCriteriaQuery<ReceiptMetricProjection> buildReceiptMetricsQuery (PredicateSpecification<JpaShoppingReceiptEntity> filters){
-
-        BaseQuery<ReceiptMetricProjection> base = base(ReceiptMetricProjection.class);
-
-        Expression<LocalDate> createdDay = base.cb().cast(base.receipt().get("createdAt"), LocalDate.class);
-
-        return base.query()
-                .select(base.cb().construct(ReceiptMetricProjection.class, createdDay, base.cb().count(base.receipt())))
-                .where(restriction(filters, base.receipt(), base.cb()))
-                .groupBy(createdDay)
-                .orderBy(base.cb().asc(createdDay));
-    }
 
     public JpaCriteriaQuery<ReceiptSummaryProjection> buildReceiptSummaryProjectionQuery (PredicateSpecification<JpaShoppingReceiptEntity> filters){
 
