@@ -1,9 +1,9 @@
-package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.projection;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection;
 
 import java.time.Instant;
 import java.util.UUID;
 
-public record ReceiptSummaryProjection(
+public record ReceiptDetailProjection(
         UUID id,
         UUID creatorId,
         String creatorEmail,
@@ -13,6 +13,8 @@ public record ReceiptSummaryProjection(
         String storeName,
         Instant purchaseDate,
         Instant createdAt,
-        Long productCount
+        UUID receiptImageId,
+        String receiptImageAssetId,
+        String receiptImageMimeType
 ) {
 }

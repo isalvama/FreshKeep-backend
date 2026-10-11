@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.entity;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

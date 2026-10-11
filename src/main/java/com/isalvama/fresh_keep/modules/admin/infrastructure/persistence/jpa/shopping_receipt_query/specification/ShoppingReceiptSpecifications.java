@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.specification;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.specification;
 
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaShoppingReceiptEntity;
 import org.springframework.data.jpa.domain.PredicateSpecification;

@@ -1,9 +1,9 @@
-package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin;
 
 import com.isalvama.fresh_keep.modules.admin.application.port.out.AdminRepositoryPort;
 import com.isalvama.fresh_keep.modules.admin.domain.model.Admin;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.exception.AdminPersistenceException;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.mapper.AdminMapper;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin.mapper.AdminMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Repository;

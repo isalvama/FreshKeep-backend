@@ -1,11 +1,11 @@
-package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query;
 
 import com.isalvama.fresh_keep.modules.admin.domain.criteria.OrderType;
 import com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa.entity.JpaProductEntity;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaReceiptImageEntity;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaShoppingReceiptEntity;
-import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.projection.ReceiptDetailProjection;
-import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.projection.ReceiptSummaryProjection;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection.ReceiptDetailProjection;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection.ReceiptSummaryProjection;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaSpaceEntity;
 import com.isalvama.fresh_keep.modules.user.infrastructure.persistence.jpa.entity.JpaUserEntity;
 import jakarta.persistence.EntityManager;
@@ -38,8 +38,7 @@ public class ShoppingReceiptQueryBuilder {
 
         query.where(restriction(filters, base.receipt(), base.cb()));
 
-        return setOrder(query, base.cb(), base.receipt(),
-                Map.of(
+        return setOrder(query, base.cb(), base.receipt(), Map.of(
                         "purchaseDate", OrderType.DESC, // TODO use ordertype enum that is not domain
                         "createdAt", OrderType.DESC,
                         "id", OrderType.ASC

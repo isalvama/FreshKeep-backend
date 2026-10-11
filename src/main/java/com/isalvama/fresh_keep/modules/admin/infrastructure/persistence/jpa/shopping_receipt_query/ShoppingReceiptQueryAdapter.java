@@ -1,16 +1,15 @@
-package com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jdbc;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query;
 
 import com.isalvama.fresh_keep.modules.admin.application.port.out.ShoppingReceiptQueryPort;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyReceiptSummaryDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptDetailDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptProductDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptsPageDto;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.ShoppingReceiptQueryBuilder;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.mapper.ShoppingReceiptQueryRepositoryMapper;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin.mapper.ShoppingReceiptQueryRepositoryMapper;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaShoppingReceiptEntity;
-import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.projection.ReceiptDetailProjection;
-import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.projection.ReceiptSummaryProjection;
-import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.specification.ShoppingReceiptSpecifications;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection.ReceiptDetailProjection;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection.ReceiptSummaryProjection;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.specification.ShoppingReceiptSpecifications;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.query.criteria.JpaCriteriaQuery;

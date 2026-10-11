@@ -2,8 +2,10 @@ package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa;
 
 import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
 import com.isalvama.fresh_keep.modules.admin.domain.model.Admin;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.entity.JpaAdminEntity;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.mapper.AdminMapper;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin.JpaAdminRepositoryAdapter;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin.JpaAdminSpringDataRepository;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin.entity.JpaAdminEntity;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin.mapper.AdminMapper;
 import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
