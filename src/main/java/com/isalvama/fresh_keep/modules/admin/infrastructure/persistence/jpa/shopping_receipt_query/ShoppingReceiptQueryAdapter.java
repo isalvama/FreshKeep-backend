@@ -6,6 +6,7 @@ import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptDet
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptProductDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptsPageDto;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin.mapper.ShoppingReceiptQueryRepositoryMapper;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection.ReceiptMetricProjection;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaShoppingReceiptEntity;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection.ReceiptDetailProjection;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection.ReceiptSummaryProjection;
@@ -14,11 +15,9 @@ import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.springframework.data.jpa.domain.PredicateSpecification;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
-import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -33,20 +32,16 @@ public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
 
     @Override
     public List<DailyReceiptSummaryDto> getShoppingReceiptMetrics (LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
-        MapSqlParameterSource parameters = new MapSqlParameterSource();
-        StringBuilder query = new StringBuilder("""
-                SELECT CAST(sr.purchase_date AS DATE) AS metric_date,
-                       COUNT(*) AS total_receipts
-                 FROM shopping_receipts sr
-                 WHERE 1 = 1
-                """);
-        appendFilters(query, parameters, from, to, spaceId, creatorId);
-        query.append(" GROUP BY metric_date ORDER BY metric_date ASC");
 
-        return jdbcTemplate.query(query.toString(), parameters, (rs, rowNum) ->
-                new DailyReceiptSummaryDto(
-                        rs.getObject("metric_date", LocalDate.class),
-                        rs.getLong("total_receipts")));
+        PredicateSpecification<JpaShoppingReceiptEntity> filters =
+                ShoppingReceiptSpecifications.matchingFilters(from, to, spaceId, creatorId);
+
+        JpaCriteriaQuery<ReceiptMetricProjection> query = receiptQueryBuilder.buildReceiptMetricsQuery(filters);
+        List<ReceiptMetricProjection> rows = entityManager.createQuery(query)
+                .getResultList();
+
+        if (rows.isEmpty()) return List.of();
+        return mapper.toDailyReceiptSummaryDto(rows);
     }
 
 
@@ -103,27 +98,5 @@ public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
                 rs.getBigDecimal("price"),
                 rs.getString("currency"),
                 rs.getBoolean("deleted")));
-    }
-
-
-
-    private void appendFilters(StringBuilder query, MapSqlParameterSource parameters,
-                               LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
-        if (from != null) {
-            query.append(" AND sr.purchase_date >= :from");
-            parameters.addValue("from", Timestamp.valueOf(from.atStartOfDay()));
-        }
-        if (to != null) {
-            query.append(" AND sr.purchase_date < :toExclusive");
-            parameters.addValue("toExclusive", Timestamp.valueOf(to.plusDays(1).atStartOfDay()));
-        }
-        if (spaceId != null) {
-            query.append(" AND sr.space_id = :spaceId");
-            parameters.addValue("spaceId", spaceId);
-        }
-        if (creatorId != null) {
-            query.append(" AND sr.creator_id = :creatorId");
-            parameters.addValue("creatorId", creatorId);
-        }
     }
 }

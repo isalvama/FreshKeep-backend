@@ -1,10 +1,13 @@
 package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jdbc;
 
+import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyReceiptSummaryDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptDetailDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptProductDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptSummaryDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptsPageDto;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin.mapper.ShoppingReceiptQueryRepositoryMapper;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.ShoppingReceiptQueryAdapter;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.ShoppingReceiptQueryBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(ShoppingReceiptQueryAdapter.class)
+@Import({ShoppingReceiptQueryAdapter.class, ShoppingReceiptQueryBuilder.class, ShoppingReceiptQueryRepositoryMapper.class})
 class ShoppingReceiptQueryAdapterTest {
 
     @Container
@@ -55,6 +58,47 @@ class ShoppingReceiptQueryAdapterTest {
                 "INSERT INTO storage_spots (id, name, storage_spot_type, space_id) VALUES (?, ?, 'FRIDGE', ?)",
                 storageSpotId, "Fridge", kitchenId);
         aliceId = insertUser("alice@email.com", "alice");
+    }
+
+    @Test
+    void getShoppingReceiptMetrics_groupsByCalendarDayRegardlessOfTimeOfDay() {
+        // The metric counts receipts by the day they were CREATED, not by the shopping date printed on
+        // the receipt - so purchase dates are deliberately different from each other and from the
+        // creation days below. If grouping ever regressed to purchase_date, these two receipts (bought
+        // on different days) would no longer land in the same group.
+        insertReceipt(aliceId, kitchenId, SEP_10, SEP_10.plusDays(2));
+        insertReceipt(aliceId, kitchenId, SEP_10.plusDays(1), SEP_10.plusDays(2));
+        // Same creation day as the two above, different time of day - must still collapse into that
+        // same group, not a third one, which is what breaks if grouping used the raw timestamp instead
+        // of CAST(created_at AS DATE).
+        jdbcTemplate.update(
+                "INSERT INTO shopping_receipts (id, creator_id, space_id, purchase_date, created_at, status) "
+                        + "VALUES (?, ?, ?, ?, ?, 'DRAFT')",
+                UUID.randomUUID(), aliceId, kitchenId, Timestamp.valueOf(SEP_10.atTime(9, 0)), Timestamp.valueOf(SEP_10.plusDays(2).atTime(23, 45)));
+        // Purchased the same day as the first receipt, but created a day later - lands in its own group.
+        insertReceipt(aliceId, kitchenId, SEP_10, SEP_10.plusDays(3));
+
+        // The date range filters by purchase date (SEP_10..SEP_11), yet the groups returned are keyed
+        // by creation day (SEP_12, SEP_13) - which is the point: filtering and grouping use different
+        // date columns on purpose.
+        List<DailyReceiptSummaryDto> metrics = adapter.getShoppingReceiptMetrics(SEP_10, SEP_10.plusDays(1), null, null);
+
+        assertEquals(List.of(SEP_10.plusDays(2), SEP_10.plusDays(3)), metrics.stream().map(DailyReceiptSummaryDto::date).toList());
+        assertEquals(List.of(3L, 1L), metrics.stream().map(DailyReceiptSummaryDto::totalReceipts).toList());
+    }
+
+    @Test
+    void getShoppingReceiptMetrics_filtersBySpaceAndCreator() {
+        UUID bobId = insertUser("bob@email.com", "bob");
+        UUID garageId = insertSpace("Garage");
+        insertReceipt(aliceId, kitchenId, SEP_10, SEP_10);
+        insertReceipt(bobId, kitchenId, SEP_10, SEP_10);
+        insertReceipt(aliceId, garageId, SEP_10, SEP_10);
+
+        List<DailyReceiptSummaryDto> metrics = adapter.getShoppingReceiptMetrics(SEP_10, SEP_10, kitchenId, aliceId);
+
+        assertEquals(1, metrics.size());
+        assertEquals(1L, metrics.getFirst().totalReceipts());
     }
 
     @Test
