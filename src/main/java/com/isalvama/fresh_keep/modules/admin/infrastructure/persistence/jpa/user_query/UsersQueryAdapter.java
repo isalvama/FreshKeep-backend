@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.user.infrastructure.persistence.jdbc;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.user_query;
 
 import com.isalvama.fresh_keep.modules.admin.application.port.out.UsersQueryPort;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.DailyMetricDto;
