@@ -1,9 +1,9 @@
-package com.isalvama.fresh_keep.modules.admin.application.port.out.dto;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.user_query.projection;
 
 import java.time.Instant;
 import java.util.UUID;
 
-public record RegisteredUserDto(
+public record UserDetailsProjection(
         UUID id,
         String email,
         String username,

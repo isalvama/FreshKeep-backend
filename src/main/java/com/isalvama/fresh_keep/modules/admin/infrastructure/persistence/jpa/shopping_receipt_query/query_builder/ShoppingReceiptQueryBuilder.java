@@ -1,6 +1,5 @@
 package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.query_builder;
 
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.projection.MetricProjection;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.OrderTypeCriteria;
 import com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa.entity.JpaProductEntity;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaReceiptImageEntity;
@@ -17,7 +16,6 @@ import org.hibernate.query.criteria.*;
 import org.springframework.data.jpa.domain.PredicateSpecification;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
 import java.util.*;
 
 

@@ -31,7 +31,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({ShoppingReceiptQueryAdapter.class, ShoppingReceiptQueryBuilder.class, ShoppingReceiptQueryMapper.class})
+@Import({ShoppingReceiptQueryAdapter.class, ShoppingReceiptQueryBuilder.class, ShoppingReceiptQueryMapper.class,
+        com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.query_builder.MetricsQueryBuilder.class})
 class ShoppingReceiptQueryAdapterTest {
 
     @Container

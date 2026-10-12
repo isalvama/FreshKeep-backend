@@ -15,6 +15,10 @@ import java.util.List;
 @Component
 public class ShoppingReceiptQueryMapper {
 
+    public List<ShoppingReceiptCreationDailyMetricDto> toShoppingReceiptCreationDailyMetricDto(List<MetricProjection> rows) {
+        return rows.stream().map(row -> new ShoppingReceiptCreationDailyMetricDto(row.date(), row.totalReceipts())).toList();
+    }
+
     public ReceiptSummaryDto toSummaryDto(ReceiptSummaryProjection row) {
         return new ReceiptSummaryDto(
                 row.id(),
@@ -36,9 +40,5 @@ public class ShoppingReceiptQueryMapper {
                 header.purchaseDate().atZone(ZoneOffset.UTC).toLocalDate(),
                 header.createdAt(), header.receiptImageId(), header.receiptImageAssetId(),
                 header.receiptImageMimeType(), products);
-    }
-
-    public List<ShoppingReceiptCreationDailyMetricDto> toShoppingReceiptCreationDailyMetricDto(List<MetricProjection> rows) {
-        return rows.stream().map(row -> new ShoppingReceiptCreationDailyMetricDto(row.date(), row.totalReceipts())).toList();
     }
 }
