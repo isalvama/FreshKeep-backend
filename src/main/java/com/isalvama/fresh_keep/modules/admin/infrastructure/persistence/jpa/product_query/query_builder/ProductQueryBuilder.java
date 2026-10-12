@@ -1,10 +1,11 @@
-package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.query_builder;
 
 import com.isalvama.fresh_keep.modules.admin.domain.criteria.OrderType;
 import com.isalvama.fresh_keep.modules.admin.domain.criteria.ProductSortType;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.projection.ProductDetailsProjection;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.projection.ProductSummaryProjection;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.projection.ProductTypeCountProjection;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.specification.SpecificationBuilder;
 import com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa.entity.JpaProductEntity;
 import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaShoppingReceiptEntity;
 import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaSpaceEntity;
@@ -22,6 +23,7 @@ import org.hibernate.query.criteria.*;
 import org.springframework.data.jpa.domain.PredicateSpecification;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -117,7 +119,6 @@ public class ProductQueryBuilder {
                 creator.get("userName"),
                 creator.get("email"),
                 receipt.get("spaceId"),
-                space.get("id"),
                 space.get("name"),
                 receipt.get("storeName"),
                 receipt.get("purchaseDate"),
@@ -129,6 +130,18 @@ public class ProductQueryBuilder {
                                  JpaRoot<JpaProductEntity> product, HibernateCriteriaBuilder cb) {
         Predicate predicate = filters.toPredicate(product, cb);
         return predicate != null ? predicate : cb.conjunction();
+    }
+
+    public PredicateSpecification<JpaProductEntity> matchingReceiptFilters(LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
+        return (productFrom, cb) -> {
+            JpaFrom<?, JpaProductEntity> product = (JpaFrom<?, JpaProductEntity>) productFrom;
+            JpaEntityJoin<JpaProductEntity, JpaShoppingReceiptEntity> receipt = product.join(JpaShoppingReceiptEntity.class, JoinType.LEFT);
+            receipt.on(cb.equal(receipt.get("id"), product.get("shoppingReceiptId")));
+
+            PredicateSpecification<JpaShoppingReceiptEntity> receiptFilters =
+                    SpecificationBuilder.matchingFilters(from, to, spaceId, creatorId);
+            return receiptFilters.toPredicate(receipt, cb);
+        };
     }
 
     private JpaJoin<JpaProductEntity, JpaStorageSpotEntity> storageSpotJoin(JpaRoot<JpaProductEntity> product, HibernateCriteriaBuilder cb) {

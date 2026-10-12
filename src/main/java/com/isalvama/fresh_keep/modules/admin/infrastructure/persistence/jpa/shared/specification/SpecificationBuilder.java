@@ -28,6 +28,23 @@ public final class SpecificationBuilder {
                 createdBy(creatorId));
     }
 
+    public static <T> PredicateSpecification<T> inDateRange(String dateFieldName, LocalDate from, LocalDate to) {
+        return PredicateSpecification.allOf(
+                onOrAfter(dateFieldName, from),
+                onOrBefore(dateFieldName, to));
+    }
+
+    public static <T> PredicateSpecification<T> onOrAfter(String dateFieldName, LocalDate from) {
+        if (from == null) return PredicateSpecification.unrestricted();
+        return (entity, cb) -> cb.greaterThanOrEqualTo(entity.get(dateFieldName), startOfDay(from));
+    }
+
+    /** [to] is inclusive, so the cut-off is the start of the following day. */
+    public static <T> PredicateSpecification<T> onOrBefore(String dateFieldName, LocalDate to) {
+        if (to == null) return PredicateSpecification.unrestricted();
+        return (entity, cb) -> cb.lessThan(entity.get(dateFieldName), startOfDay(to.plusDays(1)));
+    }
+
     public static <T>  PredicateSpecification<T> purchasedOnOrAfter(LocalDate from) {
         if (from == null) return PredicateSpecification.unrestricted();
         return (entity, cb) -> cb.greaterThanOrEqualTo(entity.get("purchaseDate"), startOfDay(from));

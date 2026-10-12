@@ -10,7 +10,7 @@ import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.user
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.user_query.projection.UserReceiptProjection;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.user_query.projection.UserSpaceProjection;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.user_query.projection.UserSummaryProjection;
-import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaShoppingReceiptEntity;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.user_query.query_builder.UserQueryBuilder;
 import com.isalvama.fresh_keep.modules.user.infrastructure.persistence.jpa.entity.JpaUserEntity;
 import com.isalvama.fresh_keep.shared.domain.Role;
 import jakarta.persistence.EntityManager;
@@ -32,10 +32,10 @@ public class UserQueryAdapter implements UsersQueryPort {
 
     @Override
     public List<UserCreationDailyMetricDto> getUserRegistrations(LocalDate from, LocalDate to) {
-        PredicateSpecification<JpaShoppingReceiptEntity> filters =
-                SpecificationBuilder.matchingFromToFilters(from, to);
+        PredicateSpecification<JpaUserEntity> filters =
+                SpecificationBuilder.inDateRange("createdAt", from, to);
 
-        JpaCriteriaQuery<MetricProjection> query = metricsQueryBuilder.build(filters, "createdAt");
+        JpaCriteriaQuery<MetricProjection> query = metricsQueryBuilder.build(JpaUserEntity.class, filters, "createdAt");
         List<MetricProjection> rows = entityManager.createQuery(query)
                 .getResultList();
 
@@ -46,7 +46,7 @@ public class UserQueryAdapter implements UsersQueryPort {
     @Override
     public RegisteredUsersPageDto findRegisteredUsers(LocalDate from, LocalDate to, int offset, int limit) {
         PredicateSpecification<JpaUserEntity> filters =
-                SpecificationBuilder.matchingFromToFilters(from, to);
+                SpecificationBuilder.inDateRange("createdAt", from, to);
 
         JpaCriteriaQuery<UserSummaryProjection> query = userQueryBuilder.buildUserSummaryProjectionQuery(filters);
 

@@ -38,7 +38,7 @@ public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
         PredicateSpecification<JpaShoppingReceiptEntity> filters =
                 SpecificationBuilder.matchingFilters(from, to, spaceId, creatorId);
 
-        JpaCriteriaQuery<MetricProjection> query = metricsQueryBuilder.build(filters, "createdAt");
+        JpaCriteriaQuery<MetricProjection> query = metricsQueryBuilder.build(JpaShoppingReceiptEntity.class, filters, "createdAt");
         List<MetricProjection> rows = entityManager.createQuery(query)
                 .getResultList();
 

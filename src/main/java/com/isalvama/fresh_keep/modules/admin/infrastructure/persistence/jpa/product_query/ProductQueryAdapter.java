@@ -1,9 +1,8 @@
-package com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jdbc;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query;
 
-import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.ReceiptsPageDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.UserCreationDailyMetricDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.GetAllProductsDto;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.ProductQueryBuilder;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.query_builder.ProductQueryBuilder;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.mapper.ProductQueryMapper;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.projection.ProductDetailsProjection;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.projection.ProductSummaryProjection;
@@ -12,7 +11,6 @@ import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shar
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.query_builder.MetricsQueryBuilder;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.specification.SpecificationBuilder;
 import com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jpa.entity.JpaProductEntity;
-import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaShoppingReceiptEntity;
 import com.isalvama.fresh_keep.modules.product.application.port.out.ProductQueryPort;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductQueryDto;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductDetailDto;
@@ -84,10 +82,10 @@ public class ProductQueryAdapter implements ProductQueryPort {
 
     @Override
     public List<UserCreationDailyMetricDto> getProductsMetrics(LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
-        PredicateSpecification<JpaShoppingReceiptEntity> filters =
-                SpecificationBuilder.matchingFilters(from, to, spaceId, creatorId);
+        PredicateSpecification<JpaProductEntity> filters =
+                productQueryBuilder.matchingReceiptFilters(from, to, spaceId, creatorId);
 
-        JpaCriteriaQuery<MetricProjection> query = metricsQueryBuilder.build(filters, "createdAt");
+        JpaCriteriaQuery<MetricProjection> query = metricsQueryBuilder.build(JpaProductEntity.class, filters, "createdAt");
         List<MetricProjection> rows = entityManager.createQuery(query)
                 .getResultList();
 

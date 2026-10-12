@@ -1,4 +1,4 @@
-package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.user_query;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.user_query.query_builder;
 
 import com.isalvama.fresh_keep.modules.account.infrastructure.persistence.jpa.entity.JpaAccountEntity;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.OrderTypeCriteria;
