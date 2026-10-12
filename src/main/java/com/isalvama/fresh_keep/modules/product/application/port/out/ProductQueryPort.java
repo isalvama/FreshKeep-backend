@@ -21,6 +21,6 @@ public interface ProductQueryPort {
 
     List<ProductTypeCountDto> getProductTypesByCount();
 
-    List<UserCreationDailyMetricDto> getProducts(LocalDate from, LocalDate to, UUID spaceId, UUID creatorId);
+    List<UserCreationDailyMetricDto> getProductsMetrics(LocalDate from, LocalDate to, UUID spaceId, UUID creatorId);
 
 }

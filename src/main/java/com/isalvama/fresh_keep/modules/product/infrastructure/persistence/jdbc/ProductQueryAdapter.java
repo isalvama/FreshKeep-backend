@@ -2,6 +2,13 @@ package com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jdbc;
 
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.UserCreationDailyMetricDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.GetAllProductsDto;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.mapper.ProductQueryMapper;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.projection.MetricProjection;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.query_builder.MetricsQueryBuilder;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.specification.SpecificationBuilder;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.projection.ReceiptSummaryProjection;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shopping_receipt_query.query_builder.ShoppingReceiptQueryBuilder;
+import com.isalvama.fresh_keep.modules.shopping_receipt.infrastructure.persistence.jpa.entity.JpaShoppingReceiptEntity;
 import com.isalvama.fresh_keep.shared.infrastructure.persistence.QueryAppender;
 import com.isalvama.fresh_keep.shared.infrastructure.persistence.QueryAppenderResult;
 import com.isalvama.fresh_keep.modules.product.application.port.out.ProductQueryPort;
@@ -9,8 +16,11 @@ import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductQ
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductDetailDto;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductTypeCountDto;
 import com.isalvama.fresh_keep.modules.product.infrastructure.exception.ProductPersistenceException;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.springframework.dao.DataAccessException;
+import org.springframework.data.jpa.domain.PredicateSpecification;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -26,6 +36,11 @@ import java.util.Optional;
 @Component
 @RequiredArgsConstructor
 public class ProductQueryAdapter implements ProductQueryPort {
+    private final MetricsQueryBuilder metricsQueryBuilder;
+    private final EntityManager entityManager;
+    private final ProductQueryMapper mapper;
+
+
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final ProductQueryResultSetExtractor productQueryResultSetExtractor;
     private final QueryAppender appender;
@@ -181,23 +196,17 @@ public class ProductQueryAdapter implements ProductQueryPort {
     }
 
     @Override
-    public List<UserCreationDailyMetricDto> getProducts(LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
-        MapSqlParameterSource parameters = appender.parameters(from, to, 0, 0);
-        StringBuilder filters = new StringBuilder();
-        if (spaceId != null) {
-            filters.append(" AND sr.space_id = :spaceId");
-            parameters.addValue("spaceId", spaceId);
-        }
-        if (creatorId != null) {
-            filters.append(" AND sr.creator_id = :creatorId");
-            parameters.addValue("creatorId", creatorId);
-        }
-        String query = appender.appendCommonFilters(PRODUCTS_QUERY, parameters, "p", filters.toString(), false);
-        try {
-            return jdbcTemplate.query(query, parameters, appender::mapMetric);
-        } catch (DataAccessException e) {
-            throw new ProductPersistenceException("Failed to retrieve daily product metrics: " + e.getMessage());
-        }
+    public List<UserCreationDailyMetricDto> getProductsMetrics(LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
+
+        PredicateSpecification<JpaShoppingReceiptEntity> filters =
+                SpecificationBuilder.matchingFilters(from, to, spaceId, creatorId);
+
+        JpaCriteriaQuery<MetricProjection> query = metricsQueryBuilder.build(filters, "createdAt");
+        List<MetricProjection> rows = entityManager.createQuery(query)
+                .getResultList();
+
+        if (rows.isEmpty()) return List.of();
+        return mapper.toUserCreationDailyMetricDto(rows);
     }
 
 }
