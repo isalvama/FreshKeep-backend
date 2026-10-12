@@ -3,7 +3,7 @@ package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.use
 import java.time.Instant;
 import java.util.UUID;
 
-public record (
+public record UserReceiptProjection(
         UUID id,
         Instant createdAt,
         Instant purchaseDate,
