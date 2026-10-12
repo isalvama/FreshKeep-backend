@@ -1,7 +1,6 @@
 package com.isalvama.fresh_keep.modules.admin.infrastructure.web.dto.mapper;
 
 import com.isalvama.fresh_keep.modules.admin.application.port.in.result.*;
-import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.RegisteredUserDto;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.web.dto.response.*;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +17,7 @@ public class AdminResponseMapper {
         return new ProductMetricResponse(metric.date(), metric.count());
     }
 
-    public RegisteredUserResponse toRegisteredUserResponse(RegisteredUserDto user) {
+    public RegisteredUserResponse toRegisteredUserResponse(UserSummaryResult user) {
         return new RegisteredUserResponse(user.id(), user.email(), user.username(),
                 user.registeredAt(), user.lastLoggedAt());
     }
