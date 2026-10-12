@@ -84,7 +84,6 @@ public class ProductQueryAdapter implements ProductQueryPort {
 
     @Override
     public List<UserCreationDailyMetricDto> getProductsMetrics(LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
-
         PredicateSpecification<JpaShoppingReceiptEntity> filters =
                 SpecificationBuilder.matchingFilters(from, to, spaceId, creatorId);
 

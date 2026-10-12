@@ -71,10 +71,10 @@ public class ShoppingReceiptQueryAdapter implements ShoppingReceiptQueryPort {
     public Optional<ReceiptDetailDto> findReceiptById(UUID receiptId) {
         JpaCriteriaQuery<ReceiptDetailProjection> query = receiptQueryBuilder.buildReceiptDetailProjectionQuery(receiptId);
 
-        ReceiptDetailProjection header = entityManager.createQuery(query).getSingleResult();
-        if (header == null) return Optional.empty();
+        List<ReceiptDetailProjection> headers = entityManager.createQuery(query).getResultList();
+        if (headers.isEmpty()) return Optional.empty();
 
-        return Optional.of(mapper.toDetailDto(header, findProductsByReceiptId(receiptId)));
+        return Optional.of(mapper.toDetailDto(headers.getFirst(), findProductsByReceiptId(receiptId)));
     }
 
     // Products are a one-to-many list for a single receipt, so they can't be folded into the header's

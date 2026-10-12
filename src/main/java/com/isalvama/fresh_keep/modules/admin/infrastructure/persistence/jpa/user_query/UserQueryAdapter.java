@@ -63,8 +63,8 @@ public class UserQueryAdapter implements UsersQueryPort {
 
     @Override
     public Optional<UserDetailsDto> findByUserId(UUID userId) {
-        UserDetailsProjection user = entityManager.createQuery(userQueryBuilder.buildUserDetailProjectionQuery(userId)).getSingleResult();
-        if (user == null) return Optional.empty();
+        List<UserDetailsProjection> users = entityManager.createQuery(userQueryBuilder.buildUserDetailProjectionQuery(userId)).getResultList();
+        if (users.isEmpty()) return Optional.empty();
 
         List<Role> roles = entityManager.createQuery(userQueryBuilder.buildUserRolesQuery(userId)).getResultList();
 
@@ -72,6 +72,6 @@ public class UserQueryAdapter implements UsersQueryPort {
 
         List<UserSpaceProjection> spaces = entityManager.createQuery(userQueryBuilder.buildUserSpaceDetailProjectionQuery(userId)).getResultList();
 
-        return Optional.of(mapper.toDetailDto(user, roles, spaces, receipts));
+        return Optional.of(mapper.toDetailDto(users.getFirst(), roles, spaces, receipts));
     }
 }
