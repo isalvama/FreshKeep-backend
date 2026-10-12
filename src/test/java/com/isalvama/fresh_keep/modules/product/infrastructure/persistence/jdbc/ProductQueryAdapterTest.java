@@ -2,8 +2,9 @@ package com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jdbc;
 
 import com.isalvama.fresh_keep.modules.admin.domain.criteria.ProductSortType;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.GetAllProductsDto;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.ProductQueryBuilder;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.ProductQueryAdapter;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.mapper.ProductQueryMapper;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.query_builder.ProductQueryBuilder;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.query_builder.MetricsQueryBuilder;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductDetailDto;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductQueryDto;
@@ -26,7 +27,6 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;

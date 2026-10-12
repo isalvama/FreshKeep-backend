@@ -1,7 +1,7 @@
 package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.user_query;
 
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.UserDetailsDto;
-import org.junit.jupiter.api.BeforeEach;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.user_query.query_builder.UserQueryBuilder;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
