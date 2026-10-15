@@ -18,6 +18,7 @@ import com.isalvama.fresh_keep.modules.shopping_receipt.application.port.out.dto
 import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
 import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
 import com.isalvama.fresh_keep.shared.infrastructure.exception.InfrastructureException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ProcessNewShoppingReceiptService implements ProcessNewShoppingReceiptUseCase {
 
     private final SpaceLookUpPort spaceLookUpPort;

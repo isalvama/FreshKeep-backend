@@ -29,7 +29,7 @@ public class GetProductsService implements GetProductsUseCase {
     @Override
     @Transactional(readOnly = true)
     public List<ProductMetricResult> getProductMetrics(GetProductMetricsCommand command) {
-        return productQueryPort.getProducts(command.from(), command.to(), command.spaceId(), command.creatorId()).stream()
+        return productQueryPort.getProductsMetrics(command.from(), command.to(), command.spaceId(), command.creatorId()).stream()
                 .map(metric -> new ProductMetricResult(metric.date(), metric.count()))
                 .toList();
     }

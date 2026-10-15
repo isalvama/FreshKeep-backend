@@ -28,6 +28,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -825,13 +826,14 @@ public class FreshKeepIntegrationTests {
         }
 
         @Test
-        void getReceiptDailySummary_returnsReceiptCountsByPurchaseDate() throws Exception {
+        void getReceiptDailySummary_groupsByCreationDateWhileFilteringByPurchaseDateRange() throws Exception {
             UUID userId = insertUser(LocalDate.of(2026, 4, 10));
             UUID firstReceiptId = insertTicket(userId, LocalDate.of(2026, 4, 10));
             UUID secondReceiptId = insertTicket(userId, LocalDate.of(2026, 4, 10));
             insertMetricProduct(firstReceiptId, LocalDate.of(2026, 4, 10), "Milk");
             insertMetricProduct(secondReceiptId, LocalDate.of(2026, 4, 10), "Apple");
-            // Purchased the day before they were uploaded: the metric must count the purchase day.
+            // Purchased the day before they were uploaded: the from/to filter matches on the purchase
+            // day, but the metric itself is grouped by the day the receipts were CREATED.
             jdbcTemplate.update("UPDATE shopping_receipts SET purchase_date = ? WHERE id IN (?, ?)",
                     Timestamp.valueOf(LocalDate.of(2026, 4, 9).atStartOfDay().plusHours(12)), firstReceiptId, secondReceiptId);
 
@@ -842,7 +844,7 @@ public class FreshKeepIntegrationTests {
                             .header("Authorization", "Bearer " + adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
-                    .andExpect(jsonPath("$[0].date").value("2026-04-09"))
+                    .andExpect(jsonPath("$[0].date").value("2026-04-10"))
                     .andExpect(jsonPath("$[0].totalReceipts").value(2));
         }
 
@@ -1760,8 +1762,8 @@ public class FreshKeepIntegrationTests {
             @Test
             void shouldMoveProductAndPersistTheNewStorageSpotAndExpirationDate() throws Exception {
                 UUID productId = insertProduct(storageSpotId);
-                LocalDate newExpirationDate = LocalDate.of(2026, 9, 25);
-                org.mockito.Mockito.when(expirationDateCalculatorPort.execute(org.mockito.ArgumentMatchers.any()))
+                LocalDate newExpirationDate = LocalDate.now().plusDays(15);
+                org.mockito.Mockito.when(expirationDateCalculatorPort.execute(ArgumentMatchers.any()))
                         .thenReturn(newExpirationDate);
 
                 mockMvc.perform(MockMvcRequestBuilders.patch(API_PRODUCTS + "/" + productId + "/storage-spot")

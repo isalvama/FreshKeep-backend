@@ -7,8 +7,8 @@ import com.isalvama.fresh_keep.modules.admin.application.port.in.GetUsersUseCase
 import com.isalvama.fresh_keep.modules.admin.application.port.in.result.PageResult;
 import com.isalvama.fresh_keep.modules.admin.application.port.in.result.UserDetailsResult;
 import com.isalvama.fresh_keep.modules.admin.application.port.in.result.UserRegistrationMetricResult;
+import com.isalvama.fresh_keep.modules.admin.application.port.in.result.UserSummaryResult;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.UsersQueryPort;
-import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.RegisteredUserDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.RegisteredUsersPageDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.UserDetailsDto;
 import com.isalvama.fresh_keep.modules.admin.domain.exception.NonExistentUserException;
@@ -35,12 +35,16 @@ public class GetUsersService implements GetUsersUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public PageResult<RegisteredUserDto> getUsers(GetRegisteredUsersCommand command) {
+    public PageResult<UserSummaryResult> getUsers(GetRegisteredUsersCommand command) {
         Pagination pagination = Pagination.fromPage(command.page(), command.size());
         RegisteredUsersPageDto dto =  usersQueryPort.findRegisteredUsers(
                 command.from(), command.to(), pagination.offset(), pagination.limit());
 
-        return PageResult.of(dto.content(), pagination.page(), pagination.limit(), dto.totalElements());
+        List<UserSummaryResult> content = dto.content().stream()
+                .map(user -> new UserSummaryResult(
+                        user.id(), user.email(), user.username(), user.registeredAt(), user.lastLoggedAt()))
+                .toList();
+        return PageResult.of(content, pagination.page(), pagination.limit(), dto.totalElements());
     }
 
     @Override

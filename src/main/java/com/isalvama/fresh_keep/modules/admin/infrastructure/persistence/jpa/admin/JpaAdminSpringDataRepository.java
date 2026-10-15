@@ -1,6 +1,6 @@
-package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin;
 
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.entity.JpaAdminEntity;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin.entity.JpaAdminEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

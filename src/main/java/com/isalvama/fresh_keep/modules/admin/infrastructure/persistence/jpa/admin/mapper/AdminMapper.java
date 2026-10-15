@@ -1,13 +1,9 @@
-package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.mapper;
+package com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin.mapper;
 
 import com.isalvama.fresh_keep.modules.account.domain.value_object.AccountId;
 import com.isalvama.fresh_keep.modules.admin.domain.model.Admin;
 import com.isalvama.fresh_keep.modules.admin.domain.value_object.AdminId;
-import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.entity.JpaAdminEntity;
-import com.isalvama.fresh_keep.modules.user.domain.model.User;
-import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
-import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserName;
-import com.isalvama.fresh_keep.modules.user.infrastructure.persistence.jpa.entity.JpaUserEntity;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.admin.entity.JpaAdminEntity;
 import com.isalvama.fresh_keep.shared.domain.value_object.Email;
 import org.springframework.stereotype.Component;
 

@@ -2,7 +2,11 @@ package com.isalvama.fresh_keep.modules.product.infrastructure.persistence.jdbc;
 
 import com.isalvama.fresh_keep.modules.admin.domain.criteria.ProductSortType;
 import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.GetAllProductsDto;
-import com.isalvama.fresh_keep.shared.infrastructure.persistence.QueryAppender;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.ProductQueryAdapter;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.mapper.ProductQueryMapper;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.product_query.query_builder.ProductQueryBuilder;
+import com.isalvama.fresh_keep.modules.admin.infrastructure.persistence.jpa.shared.query_builder.MetricsQueryBuilder;
+import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductDetailDto;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductQueryDto;
 import com.isalvama.fresh_keep.modules.product.application.port.out.dto.ProductTypeCountDto;
 import com.isalvama.fresh_keep.modules.product.domain.model.ProductType;
@@ -20,6 +24,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -29,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @DataJpaTest
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({ProductQueryAdapter.class, ProductQueryResultSetExtractor.class, QueryAppender.class})
+@Import({ProductQueryAdapter.class, ProductQueryBuilder.class, ProductQueryMapper.class, MetricsQueryBuilder.class})
 class ProductQueryAdapterTest {
 
     @Container
@@ -273,6 +278,66 @@ class ProductQueryAdapterTest {
 
         assertEquals(List.of(), adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, unknownId, null)));
         assertEquals(List.of(), adapter.getAllProducts(new GetAllProductsDto(ProductSortType.NAME_ASC, 0, 10, null, null, unknownId)));
+    }
+
+    @Test
+    void getProductById_returnsEmptyForUnknownProduct() {
+        assertTrue(adapter.getProductById(UUID.randomUUID()).isEmpty());
+    }
+
+    @Test
+    void getProductById_returnsCompleteProductDetails() {
+        UUID aliceAccountId = UUID.randomUUID();
+        UUID aliceId = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO accounts (id, email, password_hash) VALUES (?, ?, 'hash')",
+                aliceAccountId, "alice@email.com");
+        jdbcTemplate.update("INSERT INTO users (id, account_id, email, username) VALUES (?, ?, ?, ?)",
+                aliceId, aliceAccountId, "alice@email.com", "alice");
+        UUID detailedReceiptId = UUID.randomUUID();
+        jdbcTemplate.update(
+                "INSERT INTO shopping_receipts (id, creator_id, space_id, store_name, purchase_date, status) "
+                        + "VALUES (?, ?, ?, ?, ?, 'DRAFT')",
+                detailedReceiptId, aliceId, spaceId, "SuperMart", Timestamp.valueOf(LocalDate.of(2026, 9, 1).atTime(12, 0)));
+
+        UUID productId = UUID.randomUUID();
+        insertProduct(productId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY",
+                detailedReceiptId, BigDecimal.valueOf(1.5), "USD");
+
+        ProductDetailDto product = adapter.getProductById(productId).orElseThrow();
+
+        assertEquals(productId, product.id());
+        assertEquals("Milk", product.name());
+        assertEquals("DAIRY", product.productType());
+        assertEquals(LocalDate.of(2026, 9, 20), product.expirationDate());
+        assertEquals(storageSpotId, product.actualStorageSpotId());
+        assertEquals("FRIDGE", product.storageSpotIdType());
+        assertEquals(aliceId, product.creatorId());
+        assertEquals("alice", product.creatorUsername());
+        assertEquals("alice@email.com", product.creatorEmail());
+        assertEquals(spaceId, product.spaceId());
+        assertEquals("Kitchen", product.spaceName());
+        assertEquals("SuperMart", product.storeName());
+        assertEquals(LocalDate.of(2026, 9, 1), product.purchaseDate());
+        assertNotNull(product.createdAt());
+        assertEquals(detailedReceiptId, product.shoppingReceiptId());
+        assertEquals(0, BigDecimal.valueOf(1.5).compareTo(product.price()));
+        assertEquals("USD", product.currency());
+    }
+
+    @Test
+    void getProductById_leavesCreatorAndSpaceNullWhenReceiptHasNeither() {
+        UUID receiptWithNoCreatorOrSpace = insertReceiptCreatedBy(null);
+        UUID productId = UUID.randomUUID();
+        insertProduct(productId, "Milk", LocalDate.of(2026, 9, 20), storageSpotId, "DAIRY",
+                receiptWithNoCreatorOrSpace, null, null);
+
+        ProductDetailDto product = adapter.getProductById(productId).orElseThrow();
+
+        assertNull(product.creatorId());
+        assertNull(product.creatorUsername());
+        assertNull(product.creatorEmail());
+        assertNull(product.spaceId());
+        assertNull(product.spaceName());
     }
 
     @Test

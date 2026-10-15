@@ -27,9 +27,9 @@ import com.isalvama.fresh_keep.modules.admin.infrastructure.web.dto.response.Sho
 import com.isalvama.fresh_keep.modules.admin.infrastructure.web.dto.response.ShoppingReceiptSummaryResponse;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.web.dto.response.RegisteredUserResponse;
 import com.isalvama.fresh_keep.modules.admin.infrastructure.web.dto.response.UserDetailsResponse;
-import com.isalvama.fresh_keep.modules.admin.application.port.out.dto.RegisteredUserDto;
 import com.isalvama.fresh_keep.modules.admin.application.port.in.result.PageResult;
 import com.isalvama.fresh_keep.modules.admin.application.port.in.result.ReceiptSummaryResult;
+import com.isalvama.fresh_keep.modules.admin.application.port.in.result.UserSummaryResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -100,7 +100,7 @@ public class AdminController {
     })
     public ResponseEntity<PageResponse<RegisteredUserResponse>> getRegisteredUsers(
             @Valid @ModelAttribute RegisteredUsersFilterRequest filterRequest) {
-        PageResult<RegisteredUserDto> result = getUsersUseCase.getUsers(new GetRegisteredUsersCommand(
+        PageResult<UserSummaryResult> result = getUsersUseCase.getUsers(new GetRegisteredUsersCommand(
                 filterRequest.from(), filterRequest.to(), filterRequest.page(), filterRequest.size()));
         List<RegisteredUserResponse> content = result.content().stream()
                 .map(adminResponseMapper::toRegisteredUserResponse)

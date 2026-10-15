@@ -27,8 +27,8 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-@Transactional
 @RequiredArgsConstructor
+@Transactional
 public class ReProcessShoppingReceiptService implements ReProcessShoppingReceiptUseCase {
     private final SpaceLookUpPort spaceLookUpPort;
     private final ProductCategoriesLookUpPort productCategoriesLookUpPort;
@@ -117,7 +117,6 @@ public class ReProcessShoppingReceiptService implements ReProcessShoppingReceipt
                 storageSpotDtos.stream().map(SuggestedStorageSpotResult::fromStorageSpotDto).toList()
                 );
     }
-
 
     private ProductExtraction toProductExtraction(ProductCommand c) {
         return new ProductExtraction(
