@@ -13,12 +13,6 @@ public final class SpecificationBuilder {
     private SpecificationBuilder() {
     }
 
-    public static <T> PredicateSpecification<T> matchingFromToFilters(LocalDate from, LocalDate to) {
-        return PredicateSpecification.allOf(
-                purchasedOnOrAfter(from),
-                purchasedOnOrBefore(to));
-    }
-
     public static <T> PredicateSpecification<T> matchingFilters(
             LocalDate from, LocalDate to, UUID spaceId, UUID creatorId) {
         return PredicateSpecification.allOf(
