@@ -261,6 +261,89 @@ The `admin` back office needs cross-module, paginated, aggregated views (users w
 
 This is a deliberate, read-only exception to module isolation. It never loads or modifies another module's aggregates, so their invariants can't be bypassed, and all writes still go through the owning module's use cases.
 
+### AI adapters (Google GenAI & Ollama)
+
+AI is just another outbound dependency. The application layer of `shopping_receipt` and `product` only knows about outbound ports defined in its own vocabulary. The adapters that implement them with Spring AI live together in `shared/infrastructure/ai/`, one sub-package per port:
+
+| Port (consumer, `application/port/out`) | Adapter (`shared/infrastructure/ai/`) | Model | Used by | Task |
+|---|---|---|---|---|
+| `shopping_receipt` · `AiShoppingReceiptProcessorPort` | `shopping_receipt_processor/GenAiShoppingReceiptProcessorAdapter` | Google GenAI (`gemini-3.6-flash`, temperature `0.1`) | `ProcessNewShoppingReceiptService`, `ReProcessShoppingReceiptService` | Read the receipt **image** and extract store, purchase date and products (`process`), or re-examine only the products flagged as wrong (`reprocess`) |
+| `shopping_receipt` · `AiReceiptExtractionReviewerPort` | `receipt_extraction_reviewer/OllamaReceiptExtractionReviewerAdapter` | Ollama (`llama3.1:latest`, local) | `ProcessNewShoppingReceiptService` | Review the extraction as **text** and flag implausible products (garbled name, wrong shelf life, wrong storage spot/type, odd price) |
+| `product` · `ProductMovedExpirationDateCalculatorPort` | `product_moved_expiration_date_calculator/OllamaProductMovedExpirationDateCalculatorAdapter` | Ollama (`llama3.1:latest`, local) | `MoveProductService` | Recalculate a product's expiration date when it's moved to another storage spot, given its spot history |
+
+**Why two providers.** Receipt extraction is the hard, multimodal task: it needs a vision model that can read crumpled, abbreviated receipt lines (`YOG.NAT.X4` → "Plain yogurt"). That's Gemini. Reviewing an extraction and recalculating a date are text-only reasoning over data the backend already has. Those run on a local Ollama model, with no API cost and no rate limits. Because the services only see ports, swapping a provider means writing a new adapter. No service changes.
+
+The models are configured in `application.properties` (`spring.ai.google.genai.chat.model`, `spring.ai.google.genai.chat.temperature`, `spring.ai.ollama.chat.options.model`). The Gemini API key comes from `GOOGLE_GENAI_API_KEY`. In Docker Compose, Ollama is reached on the host via `SPRING_AI_OLLAMA_BASE_URL=http://host.docker.internal:11434`.
+
+#### How a call is built
+
+All three adapters follow the same four steps:
+
+1. **Render the prompt from a template.** Each adapter keeps its prompt as a text-block constant with `{placeholders}`. A builder fills them in using Spring AI's `PromptTemplate`: `PromptBuilder` for GenAI, `ReviewPromptBuilder` for both Ollama adapters. Lists are flattened into one line per item by small static formatters shared across adapters (`StorageSpotsPromptFormatter`, `ProductExtractionsPromptFormatter`, `ProductChangesPromptFormatter`). The prompt is grounded in the caller's real data, never free-form:
+   - `{storageSpots}`: the user's actual storage spots (id, name, type), so the model can only suggest existing spot IDs.
+   - `{productTypes}` / `{moneyCurrencies}`: the valid `ProductType`/`Currency` enum names, obtained from `product` through `ProductCategoriesLookUpPort`, so the model answers with values the domain accepts.
+   - `{language}`: the language product names should be written in (resolved by `LanguageResolver`).
+   - `{today}`: rendered from the injected `Clock`, so it's deterministic in tests.
+2. **Ask for structured output.** A `BeanOutputConverter<T>` is created for the expected result type (`ReceiptExtraction`, `ReceiptExtractionToReview`, `LocalDate`). Its JSON schema is used twice: in the prompt, through the `{format}` placeholder, *and* as a hard constraint in the provider's chat options. GenAI takes `responseMimeType("application/json")` + `responseSchema(...)`, Ollama takes `outputSchema(...)`. The model is forced to return JSON matching the DTO rather than prose.
+3. **Call the model.** GenAI attaches the image to the `UserMessage` as `Media`. On `process` it comes from the uploaded `MultipartFile`. On `reprocess` it's the stored image's bytes, fetched back from image storage, plus its MIME type. Ollama calls are text-only.
+4. **Parse and validate the response** before returning anything to the service (see below).
+
+```java
+// GenAiShoppingReceiptProcessorAdapter.process(...)
+var converter = new BeanOutputConverter<>(ReceiptExtraction.class);
+String promptText = promptBuilder.build(PROCESS_TEMPLATE_PROMPT_TEXT, dto, converter);
+
+var userMessage = UserMessage.builder()
+        .text(promptText)
+        .media(new Media(MimeType.valueOf(file.getContentType()), file.getResource()))
+        .build();
+
+GoogleGenAiChatOptions chatOptions = GoogleGenAiChatOptions.builder()
+        .model(chatModel.getOptions().getModel())
+        .responseMimeType("application/json")
+        .responseSchema(converter.getJsonSchema())
+        .build();
+
+ChatResponse response = chatModel.call(new Prompt(userMessage, chatOptions));
+return parser.parseAndValidate(response, converter);
+```
+
+#### The receipt pipeline: extract → review → re-extract
+
+The three adapters combine into a two-model check on receipt extraction:
+
+1. **Extract (Gemini).** `ProcessNewShoppingReceiptService` calls `process(...)`. The prompt asks for one entry per purchased unit (6 × milk becomes 6 entries) but one entry for a multipack sold as a single item, a per-unit price, an estimated shelf life → expiration date, and a suggested storage spot ID. If the image isn't a legible receipt, the model must fill `errorReason` and return an empty product list.
+2. **Deterministic clean-up (no AI).** Before anything is trusted, the service fixes what the model can get wrong: `ExtractionDataRectifier` clamps a future purchase date to today and shifts every product's expiration date by the same number of days. `StorageSpotSuggestionResolver` replaces any suggested storage spot ID that isn't one of the user's spots with the first spot of the preferred type for that product type (from `product`'s mapping), or leaves it empty.
+3. **Review (Ollama).** The cleaned extraction goes to `review(...)`. The reviewer is told to *catch mistakes, not redo the extraction*, and to flag a product only when it's clearly wrong. It returns the flagged products by `productIndex`, each with a one-sentence reason written for the end user. **The review is best-effort**: if the reviewer fails with any `InfrastructureException` (Ollama down, unparseable answer...), the service logs a warning and continues with no flags. A missing local model never blocks a receipt upload.
+4. **Re-extract (Gemini).** The draft and its flagged products are returned to the client. Once the user has checked the draft, `ReProcessShoppingReceiptService` calls `reprocess(...)` with the stored image, the full previous extraction and the flagged products. The prompt tells Gemini to re-derive only the flagged products, copy the rest unchanged (fixing only invalid spot IDs), and not add, remove or reorder anything. The result goes through the same rectifier/resolver, then the products are registered through `ProductRegistrationPort`.
+
+Moving a product is a single call: `MoveProductService` gathers the product, its purchase date (`ProductShoppingDateLookUpPort`), its full spot history and the old/new spots (`StorageSpotLookUpPort`), then calls the calculator. The prompt carries domain rules, e.g. colder spot → longer shelf life, warmer → shorter, never reset the clock (adjust from the latest expiration date), never return a date in the past unless the product has already expired. The returned date is passed to `Product.updateStorageSpot(...)`, so the aggregate still enforces its own invariants.
+
+#### Response validation
+
+The model's output is treated as untrusted input. It's checked before it reaches the application layer:
+
+- `ReceiptExtractionParser` (GenAI) and the private `parseAndValidate` methods of the Ollama adapters reject a missing result, or text that is blank or doesn't start with `{` (or `"` for the date calculator, whose schema is a bare JSON string), with `UnparseableAiResponseException`. Conversion errors from `BeanOutputConverter.convert(...)` are wrapped the same way.
+- For receipts, **an empty product list is the authoritative error signal**, not `errorReason`. The schema makes `errorReason` non-nullable, so the model fills it with placeholders (`""`, `"none"`...) even when nothing went wrong. An empty list raises `AiUnprocessableInputException`, using `errorReason` as the user-facing message when it contains a real explanation.
+
+#### Errors and retries
+
+Spring Retry is enabled in `shared/config/AppConfig` (`@EnableRetry`), and every adapter method is `@Retryable(retryFor = AiRetryableException.class)`: `process`/`reprocess`/`review` make 2 attempts with a 1 s delay, the expiration date calculator makes 3 attempts with backoff 2 s → 4 s. Only transient failures are retried. Input the model rejects is never retried.
+
+Provider exceptions are translated into the shared `InfrastructureException` hierarchy, so the services and `GlobalExceptionHandler` never see Google- or Ollama-specific types:
+
+- **GenAI**: `GenAiExceptionTranslator` maps the Google SDK exceptions. Spring AI's `GoogleGenAiChatModel` wraps every SDK failure in a generic `RuntimeException("Failed to generate content", cause)`, so the translator checks the exception itself *and then its cause*.
+- **Ollama**: any `RuntimeException` from the call becomes `AiRetryableException` (the local server is unreachable or failed).
+
+| Exception (`shared/infrastructure/exception`) | Raised when | Retried | HTTP |
+|---|---|---|---|
+| `AiRetryableException` | Network error (`GenAiIOException`), provider 5xx (`ServerException`), Ollama unreachable | Yes | `503` + `Retry-After: 5` |
+| `UnparseableAiResponseException` (extends `AiRetryableException`) | Empty, non-JSON or unconvertible model output | Yes, the next answer may be valid | `502` |
+| `AiRateLimitedException` | Gemini `429` | No | `429` |
+| `AiUnprocessableInputException` | Other Gemini 4xx (image rejected), or no products extracted | No | `422` |
+| `TicketProcessingException` | Gemini `401`/`403` (bad API key) or any unrecognized error | No | `500` |
+| `ExpirationDateCalculationException` | Invalid input to the calculator (null DTO, empty spot history) | No | `500` (generic `InfrastructureException` handler) |
+
 ## Authentication & roles
 
 Authentication is stateless, via JWT bearer tokens. Two roles exist: `USER` (regular household members) and `ADMIN` (back-office access to users/receipts across spaces).
