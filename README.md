@@ -377,6 +377,73 @@ How they're implemented:
 
 This is a deliberate exception to module isolation, and it's safe because it's **read-only**: no aggregate is loaded or changed, so no invariant can be bypassed, and every write still goes through the owning module's use cases. The cost is coupling to other modules' table and entity shapes, so a schema change in `user`, `shopping_receipt` or `product` may also require updating these adapters.
 
+### Exception hierarchy & HTTP error responses
+
+Code never throws a raw `RuntimeException` for an expected failure. Every module throws a subtype of a small shared hierarchy, and **the type alone decides the HTTP status**. `GlobalExceptionHandler` (`shared/infrastructure/web/handler/`) translates it into an RFC 7807 `ProblemDetail` response. Services and controllers contain no status codes or `try/catch` blocks for this.
+
+```
+RuntimeException
+├── FreshKeepException                       (shared/domain/exception)
+│   ├── DomainException ─────────────────────────────────────── 400  "Business Rule Error"
+│   │   ├── Invalid*Exception, NonExistent*Exception, ...         400  (validation / not found / rule broken)
+│   │   │     e.g. InvalidEmailException, InvalidProductException → InvalidMoneyException → InvalidAmountException
+│   │   ├── UnauthorizedException ────────────────────────────── 401  "Unauthorized Error"
+│   │   │   └── InvalidCredentialsException
+│   │   ├── ForbiddenException ───────────────────────────────── 403  "Forbidden Request"
+│   │   │   └── DisabledAccountException
+│   │   └── ConflictException ────────────────────────────────── 409  "Conflict Error"
+│   │       └── AccountAlreadyExistsException, UserAlreadyExistsException,
+│   │           ProductConcurrentlyModifiedException, ShoppingReceiptAlreadyConfirmedException,
+│   │           SpaceNotAccessibleException, SpaceNotAvailableForParticipantException
+│   └── InfrastructureException              (shared/infrastructure/exception) ── 500  "Server Error"
+│       ├── *PersistenceException, ImageStorageException, ExpirationDateCalculationException  500
+│       ├── IdentityMappingException, InvalidResolvedEntitiesException,
+│       │   UserProvisioningPendingException, AdminProvisioningPendingException              500
+│       ├── TicketProcessingException ─────────────────────────── 500  "Internal AI Server Error"
+│       ├── AiUnprocessableInputException ─────────────────────── 422  "Unprocessable Ticket Data Error"
+│       ├── AiRateLimitedException ────────────────────────────── 429  "AI Rate Limit Exceedance"
+│       └── AiRetryableException ──────────────────────────────── 503  "AI Server Error" + Retry-After: 5
+│           └── UnparseableAiResponseException ────────────────── 502  "AI Server Error"
+└── ApplicationException                     (shared/application/exception) ── 500  "Application Server Error"
+    └── MoveProductDataUnavailableException
+```
+
+**How to read it:**
+
+- **`DomainException` = the caller's fault (4xx).** The request breaks a business rule or refers to something invalid. The handler returns the exception's message as `detail`, so messages are written for the client. Its four branches pick the status: the plain branch is `400`, and `UnauthorizedException`, `ForbiddenException` and `ConflictException` are `401`, `403` and `409`.
+- **`InfrastructureException` = the system's fault (5xx).** A broken invariant or a failed external dependency (database, image storage, missing `User`/`Admin` row for an account...). The AI subtypes are the exception, with specific statuses so the client can react: `422` means change the image, `429` and `503` mean try again later (`503` carries a `Retry-After` header). Retry behaviour is detailed in [Errors and retries](#errors-and-retries).
+- **`ApplicationException` = a use case couldn't gather the data it needs** from its own ports (e.g. a product's purchase date or storage spot history is missing when moving it). It sits outside `FreshKeepException` and maps to `500`.
+- **Spring picks the most specific handler**, so a subtype with its own `@ExceptionHandler` overrides its parent's status (`UnparseableAiResponseException` returns `502` even though it's an `AiRetryableException`). A new exception only needs the right parent to get the right status. A new handler is only needed for a new status.
+
+Some mappings are deliberate choices worth knowing about:
+
+- There's no `404` type: `NonExistent*Exception`s (`NonExistentProductException`, `NonExistentSpaceException`...) are plain `DomainException`s and return `400`.
+- `SpaceNotAccessibleException` (user isn't a participant of the space) is a `ConflictException`, so it returns `409`, not `403`.
+
+**Errors raised outside the domain hierarchy** are handled too, always as `ProblemDetail`:
+
+| Source | Status | Title |
+|---|---|---|
+| Bean Validation on a request body (`MethodArgumentNotValidException`) | 400 | "Validation Error In Body Data", plus an `errors` map of field → message |
+| Bean Validation on a path/query parameter (`ConstraintViolationException`) | 400 | "Validation Error in Parameter", plus an `errors` map |
+| Missing or malformed JSON body (`HttpMessageNotReadableException`) | 400 | "Message Not Readable" |
+| Parameter of the wrong type, e.g. a non-UUID ID (`MethodArgumentTypeMismatchException`) | 400 | "Type Mismatch Error" |
+| Unwrapped `DataAccessException` from Spring Data | 500 | "Server Error", with a generic detail: the raw database message is logged, never returned |
+| No or invalid JWT (`CustomAuthenticationEntryPoint`, security filter chain) | 401 | "Unauthorized" |
+| Authenticated but missing the role (`CustomAccessDeniedHandler`) | 403 | "Forbidden" |
+
+The last two are produced by Spring Security before the request reaches a controller, so they don't go through `GlobalExceptionHandler`. They return the same `ProblemDetail` shape so the client only has one error format to parse:
+
+```json
+{
+  "type": "about:blank",
+  "title": "Conflict Error",
+  "status": 409,
+  "detail": "A user account with the email address jane@example.com already exists.",
+  "instance": "/api/v1/auth/register/user"
+}
+```
+
 ## Authentication & roles
 
 Authentication is stateless, via JWT bearer tokens. Two roles exist: `USER` (regular household members) and `ADMIN` (back-office access to users/receipts across spaces).
