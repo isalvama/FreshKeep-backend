@@ -20,9 +20,6 @@ public class GenAiExceptionTranslator {
             return translated;
         }
 
-        // Spring AI's GoogleGenAiChatModel wraps every failure from the underlying Google SDK call in a
-        // generic RuntimeException("Failed to generate content", cause) - the actual, specific exception
-        // (rate limit, bad request, outage...) is only reachable via getCause(), not via e itself.
         RuntimeException translatedCause = translateKnownType(e.getCause());
         if (translatedCause != null) {
             return translatedCause;

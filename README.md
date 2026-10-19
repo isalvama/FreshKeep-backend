@@ -255,11 +255,9 @@ Same shape as a look-up port (consumer-owned interface, provider-owned adapter),
 
 When a shopping receipt is confirmed, `shopping_receipt` doesn't create `Product`s itself, because products belong to `product`. `ConfirmShoppingReceiptService` calls `ProductRegistrationPort.registerProducts(List<RegisterProductDto>)` (`shopping_receipt/application/port/out`). `ProductRegistrationAdapter` (`product/infrastructure/product_registration/`) maps those DTOs to a `RegisterProductsCommand` and runs `product`'s own `RegisterProductsUseCase`, so all of `product`'s validation and invariants apply. It then maps the `RegisteredProductResult`s back into `shopping_receipt`'s `RegisteredProductDto`s. Both services are `@Transactional`, so the product registration joins the confirmation's transaction and either both succeed or both roll back.
 
-#### Read side: admin query ports
+#### Read side: query ports
 
-The `admin` back office needs cross-module, paginated, aggregated views (users with their spaces and receipts, receipts with their products, daily creation metrics). Rebuilding those from several look-up ports would mean N+1 calls and in-memory joins. Instead, `admin` defines read-only query ports (`UsersQueryPort`, `ShoppingReceiptQueryPort`, plus `product`'s `ProductQueryPort`), and their adapters (`admin/infrastructure/persistence/jpa/*_query/`) build JPA Criteria queries straight over other modules' JPA entities (`JpaUserEntity`, `JpaShoppingReceiptEntity`, `JpaProductEntity`) into flat projections/DTOs.
-
-This is a deliberate, read-only exception to module isolation. It never loads or modifies another module's aggregates, so their invariants can't be bypassed, and all writes still go through the owning module's use cases.
+Cross-module, read-only views (mainly for the admin back office) don't go through these three mechanisms. They use query ports that read other modules' tables directly. See [Query ports (read side)](#query-ports-read-side).
 
 ### AI adapters (Google GenAI & Ollama)
 
@@ -332,7 +330,19 @@ Spring Retry is enabled in `shared/config/AppConfig` (`@EnableRetry`), and every
 
 Provider exceptions are translated into the shared `InfrastructureException` hierarchy, so the services and `GlobalExceptionHandler` never see Google- or Ollama-specific types:
 
-- **GenAI**: `GenAiExceptionTranslator` maps the Google SDK exceptions. Spring AI's `GoogleGenAiChatModel` wraps every SDK failure in a generic `RuntimeException("Failed to generate content", cause)`, so the translator checks the exception itself *and then its cause*.
+- **GenAI**: `GenAiExceptionTranslator` maps the Google SDK exceptions (`GenAiIOException`, `ServerException`, `ClientException` + its HTTP code) to the types below. One thing to be aware of: `GoogleGenAiChatModel` doesn't let those exceptions through as they are. It catches every failure from the underlying Google SDK call and rethrows it wrapped in a generic `RuntimeException("Failed to generate content", cause)`. The specific error (rate limit, bad request, outage...) can only be reached through `getCause()`, not through the exception the adapter catches. If the translator only inspected that exception, nothing would ever match. Every Gemini failure would fall through to the `TicketProcessingException` fallback: a rate limit would never surface as `429`, and a temporary outage would return `500` instead of being retried. So `translate(...)` checks in three steps:
+
+  ```java
+  RuntimeException translated = translateKnownType(e);              // 1. the exception itself, in case it arrives unwrapped
+  if (translated != null) return translated;
+
+  RuntimeException translatedCause = translateKnownType(e.getCause()); // 2. the SDK exception wrapped by Spring AI
+  if (translatedCause != null) return translatedCause;
+
+  return new TicketProcessingException(...);                        // 3. unknown error
+  ```
+
+  It only looks one level deep, which matches how Spring AI currently wraps the error. If a future Spring AI version adds another wrapping layer, failures will start showing up as `TicketProcessingException`/`500`, and this is the place to check.
 - **Ollama**: any `RuntimeException` from the call becomes `AiRetryableException` (the local server is unreachable or failed).
 
 | Exception (`shared/infrastructure/exception`) | Raised when | Retried | HTTP |
@@ -343,6 +353,29 @@ Provider exceptions are translated into the shared `InfrastructureException` hie
 | `AiUnprocessableInputException` | Other Gemini 4xx (image rejected), or no products extracted | No | `422` |
 | `TicketProcessingException` | Gemini `401`/`403` (bad API key) or any unrecognized error | No | `500` |
 | `ExpirationDateCalculationException` | Invalid input to the calculator (null DTO, empty spot history) | No | `500` (generic `InfrastructureException` handler) |
+
+### Query ports (read side)
+
+The admin back office needs paginated, filtered and aggregated views that span several modules: users with their spaces and receipts, receipts with their products, daily creation metrics. Building those from look-up ports would mean N+1 calls and joins in memory, and loading whole aggregates just to display a few columns. Query ports skip the domain model and read straight into flat DTOs. In CQRS terms, this is a separate read side.
+
+| Port (`application/port/out`) | Adapter (`admin/infrastructure/persistence/jpa/`) | Used by | Answers |
+|---|---|---|---|
+| `admin` · `UsersQueryPort` | `user_query/UserQueryAdapter` | `GetUsersService` | daily registrations, paginated user list, user detail (roles, spaces, receipts) |
+| `admin` · `ShoppingReceiptQueryPort` | `shopping_receipt_query/ShoppingReceiptQueryAdapter` | `GetShoppingReceiptsService` | daily receipt metrics, paginated receipts (by date range/space/creator), receipt detail with its products |
+| `product` · `ProductQueryPort` | `product_query/ProductQueryAdapter` | `GetProductsService`, `GetProductTypesService`, `product`'s `SpaceProductsLookUpAdapter` | product lists/detail, counts per product type, daily product metrics, products in a space |
+
+How they're implemented:
+
+- **Criteria queries over other modules' JPA entities.** Adapters query `JpaUserEntity`, `JpaShoppingReceiptEntity`, `JpaProductEntity`... with Hibernate's `HibernateCriteriaBuilder` and select straight into constructor projections (`*Projection` records). A `mapper/` per adapter turns those into the port's DTOs.
+- **Reusable building blocks** in `persistence/jpa/shared/`:
+  - `SpecificationBuilder` composes optional filters as Spring Data `PredicateSpecification`s (`inDateRange`, `inSpace`, `createdBy`, `withProductType`...).
+  - `MetricsQueryBuilder.build(rootEntityClass, filters, dateFieldName)` produces the generic "count per day" query behind every metrics endpoint: it casts the date field to a day, then groups and orders by it.
+  - Per-adapter `query_builder/` classes hold each view's query plus its matching `countQuery` for pagination.
+- **Pagination** is an `offset`/`limit` on the page query plus a separate count query, so `totalElements` counts every match, not just the current page. The count query is skipped when the page is empty.
+- **Plain JDBC where Criteria can't do the job.** `JpaProductEntity` has `@SQLRestriction("deleted_at IS NULL")`, which silently hides soft-deleted products from every JPQL/Criteria query. A receipt's detail must still list them, flagged as deleted, so `ShoppingReceiptQueryAdapter` fetches those products with `NamedParameterJdbcTemplate`.
+- The calling services are `@Transactional(readOnly = true)`.
+
+This is a deliberate exception to module isolation, and it's safe because it's **read-only**: no aggregate is loaded or changed, so no invariant can be bypassed, and every write still goes through the owning module's use cases. The cost is coupling to other modules' table and entity shapes, so a schema change in `user`, `shopping_receipt` or `product` may also require updating these adapters.
 
 ## Authentication & roles
 
