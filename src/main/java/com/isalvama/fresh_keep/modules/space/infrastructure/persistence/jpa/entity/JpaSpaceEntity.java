@@ -1,0 +1,53 @@
+package com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
+
+import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(name = "spaces")
+public class JpaSpaceEntity {
+
+    @Id
+    @Column(name = "id", updatable = false, nullable = false)
+    @JdbcTypeCode(SqlTypes.UUID)
+    private UUID id;
+
+    @Column(name = "name", nullable = false, length = 30)
+    private String name;
+
+    @Column(name = "emoji", nullable = false, length = 8)
+    private String emoji;
+
+    @Column(name = "creator_id", nullable = false)
+    @JdbcTypeCode(SqlTypes.UUID)
+    private UUID creatorId;
+
+    @OneToMany(mappedBy = "space", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Set<JpaStorageSpotEntity> storageSpots;
+
+    @OneToMany(mappedBy = "space", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<JpaSpaceParticipantEntity> participants = new HashSet<>();
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false, nullable = false)
+    private Instant createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "last_updated_at")
+    private Instant lastUpdatedAt;
+}

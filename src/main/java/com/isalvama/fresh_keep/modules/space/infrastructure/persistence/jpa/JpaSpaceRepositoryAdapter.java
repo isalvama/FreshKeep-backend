@@ -1,0 +1,136 @@
+package com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa;
+
+import com.isalvama.fresh_keep.modules.product.infrastructure.exception.ProductPersistenceException;
+import com.isalvama.fresh_keep.modules.space.application.port.out.SpaceRepositoryPort;
+import com.isalvama.fresh_keep.modules.space.domain.model.Space;
+import com.isalvama.fresh_keep.modules.space.domain.model.StorageSpot;
+import com.isalvama.fresh_keep.modules.space.domain.model.value_object.SpaceId;
+import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotId;
+import com.isalvama.fresh_keep.modules.space.domain.model.value_object.StorageSpotName;
+import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaSpaceEntity;
+import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.entity.JpaStorageSpotEntity;
+import com.isalvama.fresh_keep.modules.space.infrastructure.exception.SpacePersistenceException;
+import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.mapper.SpaceMapper;
+import com.isalvama.fresh_keep.modules.space.infrastructure.persistence.jpa.mapper.SpaceParticipantMapper;
+import com.isalvama.fresh_keep.modules.user.domain.model.value_object.UserId;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
+import org.springframework.stereotype.Repository;
+
+import java.time.Clock;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Repository
+@RequiredArgsConstructor
+public class JpaSpaceRepositoryAdapter implements SpaceRepositoryPort {
+    private final JpaSpaceSpringDataRepository spaceSpringDataRepository;
+    private final JpaSpaceParticipantSpringDataRepository spaceParticipantSpringDataRepository;
+    private final SpaceMapper spaceMapper;
+    private final SpaceParticipantMapper spaceParticipantMapper;
+    private final Clock clock;
+
+    @Override
+    public void save (Space space){
+        try {
+            spaceSpringDataRepository.save(spaceMapper.toEntity(space, clock));
+        } catch (DataAccessException e) {
+            throw new SpacePersistenceException(
+                    "Failed to persist space with id " + space.getId().toString() + ": " + e.getMessage());
+        }
+    }
+
+    @Override
+    public List<Space> getByParticipantId(UserId id) {
+        try {
+            List<JpaSpaceEntity> jpaEntities = spaceSpringDataRepository.findByParticipantId(id.value());
+        if (jpaEntities.isEmpty()){
+            return List.of();
+        }
+            return jpaEntities.stream().map(spaceMapper::toDomain).toList();
+        } catch (DataAccessException e) {
+            throw new SpacePersistenceException(
+                    "Failed to retrieve data of spaces where user with id " + id + " is participant in: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean existsStorageSpotByIdAndParticipantId(UserId userId, StorageSpotId storageSpotId) {
+        try {
+             return spaceSpringDataRepository.existsStorageSpotByIdAndParticipantId(userId.value(), storageSpotId.value());
+        } catch (DataAccessException e) {
+            throw new SpacePersistenceException(
+                    "Failed to validate the existence of the storage spot with id " + storageSpotId + " and the participancy of the user with id " + userId + " in it: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean existsSpaceByIdAndParticipantId(UserId userId, SpaceId spaceId) {
+        try {
+        return spaceSpringDataRepository.existsSpaceByIdAndParticipantId(userId.value(), spaceId.value());
+        } catch (DataAccessException e) {
+            throw new SpacePersistenceException(
+                    "Failed to validate the existence of the space with id " + spaceId + " and the participancy of the user with id " + userId + " in it: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public Set<String> findAccessible(String userId, List<StorageSpotId> storageSpotIds) {
+        if (storageSpotIds.isEmpty()){
+            return Set.of();
+        }
+
+        List<UUID> ids = storageSpotIds.stream().map(StorageSpotId::value).toList();
+
+        try {
+
+        Set<UUID> resultantIds = spaceSpringDataRepository.findAccessible(UUID.fromString(userId), ids);
+        return resultantIds.stream().map(UUID::toString).collect(Collectors.toSet());
+
+        } catch (DataAccessException e) {
+            String storageSpotIdsString = storageSpotIds.stream().map(StorageSpotId::toString).collect(Collectors.joining(", "));
+            throw new SpacePersistenceException(
+                    "Failed to validate the accessibility of the storage spots with id " + storageSpotIdsString + " and the participancy of the user with id " + userId + " in it: " + e.getMessage());
+        }
+
+    }
+
+    @Override
+    public Optional<Space> findById(SpaceId spaceId) {
+        try {
+        return spaceSpringDataRepository.findByIdWithRelations(spaceId.value()).map(spaceMapper::toDomain);
+        } catch (DataAccessException e) {
+            throw new SpacePersistenceException(
+                    "Failed to retrieve the space data with id " + spaceId + ": " + e.getMessage());
+        }
+    }
+
+    @Override
+    public List<StorageSpot> findStorageSpotsByIds(Set<StorageSpotId> storageSpotIds) {
+        Set<UUID> ids = storageSpotIds.stream().map(StorageSpotId::value).collect(Collectors.toSet());
+        try {
+        List<JpaStorageSpotEntity> entities = spaceSpringDataRepository.findStorageSpotsByIds(ids);
+        return entities.stream()
+                .map(e -> StorageSpot.reconstitute(StorageSpotId.of(e.getId()), StorageSpotName.from(e.getName()), e.getType()))
+                .toList();
+        } catch (DataAccessException e) {
+            String storageSpotIdsString = storageSpotIds.stream().map(StorageSpotId::toString).collect(Collectors.joining(", "));
+            throw new SpacePersistenceException(
+                    "Failed to retrieve the storage spots data of spots with id " + storageSpotIdsString + ": " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void addParticipant(UserId userId, SpaceId spaceId) {
+        try {
+            JpaSpaceEntity spaceEntity = spaceSpringDataRepository.findById(spaceId.value())
+                    .orElseThrow(() -> new ProductPersistenceException("Failed to save participant with id " + userId.toString() + " in space with id " + spaceId + " because the space was not found."));
+            spaceParticipantSpringDataRepository.save(spaceParticipantMapper.toEntity(spaceEntity, userId, clock));
+        } catch (DataAccessException e){
+            throw new ProductPersistenceException("Failed to save participant with id " + userId.toString() + " in space with id " + spaceId + ". " + e.getMessage());
+        }
+    }
+}
